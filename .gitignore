@@ -141,3 +141,19 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Project
+.next/
+dist/
+build/
+coverage/
+.env.local
+.env.production
+__pycache__/
+.pytest_cache/
+*.pyc
+.vscode/
+.idea/
+.DS_Store
+postgres-data/
+redis-data/
