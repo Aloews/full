@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kontur"
+version = "0.1.0"
+description = "Kontur — Yandex-first SEO / AEO / GEO platform with a test-governance layer"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    "pydantic>=2.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "httpx>=0.26",
+    "ruff>=0.4",
+    "mypy>=1.9",
+]
+
+[project.scripts]
+kontur = "kontur.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["kontur*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-ra --strict-markers"
+markers = [
+    "unit: isolated logic, no I/O",
+    "integration: several components wired together",
+    "api: HTTP surface of the FastAPI app",
+    "e2e: full pipeline from ingest to decision/report",
+    "security: input handling, escaping, secrets, abuse-prevention",
+    "seo: indexation / faceted / GET-parameter rules",
+    "aeo: answer-first and extraction-readiness rules",
+    "geo: Alice AI visibility, snapshots, provenance",
+    "regression: locks in behaviour that must never silently change",
+    "meta: tests that test the test suite itself",
+    "mutation: runs the mutation engine (slow)",
+    "slow: takes more than a couple of seconds",
+    "positive: asserts the rule fires on data that should trigger it",
+    "negative: asserts the rule does NOT fire / raises on invalid input",
+    "boundary: exercises threshold edges of a scoring function",
+    "rule(rule_id): links the test to a rule id from kontur.core.registry",
+    "endpoint(path): links the test to an API route path",
+    "scoring(name): links the test to a scoring function from the registry",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["kontur"]
+omit = ["kontur/api/serve.py"]
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+ignore = ["S101", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "B011"]
+"tools/*" = ["S"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
