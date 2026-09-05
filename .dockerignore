@@ -1,0 +1,12 @@
+.git
+.github
+tests
+tools
+docs
+reports
+data
+__pycache__
+*.pyc
+*.sqlite
+.pytest_cache
+.coverage
