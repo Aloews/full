@@ -11,9 +11,10 @@ any search engine or assistant will do with the page.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Iterable
+from typing import Any
 
 from kontur.core.errors import ConfigurationError
 

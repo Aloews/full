@@ -13,10 +13,11 @@ inherits the mark, so it can never be presented as a real measurement.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from enum import StrEnum
-from typing import Any, Generic, Iterable, TypeVar
+from typing import Any, Generic, TypeVar
 
 from kontur.core.errors import (
     InvalidProvenanceError,
@@ -44,7 +45,7 @@ class Confidence(StrEnum):
         return {"low": 1, "medium": 2, "high": 3}[self.value]
 
     @classmethod
-    def weakest(cls, values: Iterable["Confidence"]) -> "Confidence":
+    def weakest(cls, values: Iterable[Confidence]) -> Confidence:
         items = list(values)
         if not items:
             return cls.LOW
@@ -64,8 +65,10 @@ def _coerce_retrieved_at(value: Any) -> datetime:
     else:
         raise InvalidProvenanceError(f"retrieved_at must be a date/datetime/ISO string, got {type(value).__name__}")
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        # A naive timestamp in an export means UTC, not "whatever this machine's
+        # clock is set to" — the export was produced somewhere else.
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,7 +94,7 @@ class Provenance:
         if self.retrieved_at is None:
             raise MissingProvenanceError("provenance.retrieved_at is required")
         retrieved = _coerce_retrieved_at(self.retrieved_at)
-        if retrieved > datetime.now(timezone.utc):
+        if retrieved > datetime.now(UTC):
             raise InvalidProvenanceError("provenance.retrieved_at is in the future")
         object.__setattr__(self, "retrieved_at", retrieved)
 
@@ -108,9 +111,9 @@ class Provenance:
         return self.source.startswith(SAMPLE_SOURCE_PREFIXES)
 
     def age_days(self, now: datetime | None = None) -> float:
-        now = now or datetime.now(timezone.utc)
+        now = now or datetime.now(UTC)
         if now.tzinfo is None:
-            now = now.replace(tzinfo=timezone.utc)
+            now = now.replace(tzinfo=UTC)
         return (now - self.retrieved_at).total_seconds() / 86400.0
 
     def to_dict(self) -> dict[str, Any]:
@@ -145,7 +148,7 @@ class Sourced(Generic[T]):
     def confidence(self) -> Confidence:
         return self.provenance.confidence
 
-    def map(self, fn) -> "Sourced":
+    def map(self, fn) -> Sourced:
         return Sourced(fn(self.value), self.provenance)
 
     def to_dict(self) -> dict[str, Any]:
@@ -159,7 +162,7 @@ class EvidenceSet:
     items: tuple[Provenance, ...] = field(default_factory=tuple)
 
     @classmethod
-    def of(cls, *sources: Provenance | Sourced | None) -> "EvidenceSet":
+    def of(cls, *sources: Provenance | Sourced | None) -> EvidenceSet:
         collected: list[Provenance] = []
         for item in sources:
             if item is None:
@@ -187,7 +190,7 @@ class EvidenceSet:
         """A decision is never more confident than its weakest supporting fact."""
         return Confidence.weakest(p.confidence for p in self.items)
 
-    def merge(self, other: "EvidenceSet") -> "EvidenceSet":
+    def merge(self, other: EvidenceSet) -> EvidenceSet:
         seen: dict[tuple[str, str], Provenance] = {}
         for p in (*self.items, *other.items):
             seen[(p.source, p.retrieved_at.isoformat())] = p

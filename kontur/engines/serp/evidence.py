@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import statistics
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, InsufficientDataError
 from kontur.core.provenance import EvidenceSet

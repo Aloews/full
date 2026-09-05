@@ -8,9 +8,10 @@ visible across repeated measurements (rule GEO-003).
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, InsufficientDataError
 from kontur.engines.geo.models import AliceObservation, AliceSnapshot
@@ -24,8 +25,6 @@ def _jaccard_distance(a: frozenset[str], b: frozenset[str]) -> float:
     if not a and not b:
         return 0.0
     union = a | b
-    if not union:
-        return 0.0
     return 1.0 - len(a & b) / len(union)
 
 
@@ -41,8 +40,9 @@ def answer_volatility(source_sets: Sequence[Iterable[str]]) -> float:
         raise InsufficientDataError(
             "answer_volatility needs at least two snapshots; one capture has no variance"
         )
+    # Each Jaccard distance is within [0, 1], so their mean is too.
     distances = [_jaccard_distance(sets[i], sets[i + 1]) for i in range(len(sets) - 1)]
-    return min(1.0, max(0.0, sum(distances) / len(distances)))
+    return sum(distances) / len(distances)
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,7 +167,7 @@ class SnapshotStore:
 
     snapshots: list[AliceSnapshot] = field(default_factory=list)
 
-    def add(self, snapshot: AliceSnapshot) -> "SnapshotStore":
+    def add(self, snapshot: AliceSnapshot) -> SnapshotStore:
         if not isinstance(snapshot, AliceSnapshot):
             raise ConfigurationError("SnapshotStore stores AliceSnapshot objects")
         replaced = [

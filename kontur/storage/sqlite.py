@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterable, Sequence
 from contextlib import closing
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from kontur.core.decisions import DecisionRecord
 from kontur.core.errors import ConfigurationError
@@ -85,7 +86,7 @@ class KonturStore:
     def close(self) -> None:
         self._connection.close()
 
-    def __enter__(self) -> "KonturStore":
+    def __enter__(self) -> KonturStore:
         return self
 
     def __exit__(self, *exc_info: object) -> None:

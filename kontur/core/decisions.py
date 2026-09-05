@@ -7,9 +7,10 @@ that was consulted. A decision without reasons is a bug, not a shortcut.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from kontur.core.errors import ConfigurationError
 from kontur.core.provenance import Confidence, EvidenceSet

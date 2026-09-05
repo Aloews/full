@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Iterable
+from datetime import UTC, datetime
+from typing import Any
 
 from kontur.core.errors import ConfigurationError
 from kontur.core.provenance import EvidenceSet, Provenance
@@ -53,10 +54,10 @@ class PageProfile:
     def freshness_days(self, now: datetime | None = None) -> float | None:
         if self.last_modified is None:
             return None
-        now = now or datetime.now(timezone.utc)
+        now = now or datetime.now(UTC)
         last = self.last_modified
         if last.tzinfo is None:
-            last = last.replace(tzinfo=timezone.utc)
+            last = last.replace(tzinfo=UTC)
         return (now - last).total_seconds() / 86400.0
 
 

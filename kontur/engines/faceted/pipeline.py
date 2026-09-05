@@ -9,8 +9,9 @@ stage runs the rule chain. The result is a single explainable verdict per URL.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from kontur.core.decisions import Decision, DecisionRecord
 from kontur.core.errors import ConfigurationError
@@ -26,8 +27,8 @@ from kontur.engines.faceted.models import (
 from kontur.engines.faceted.providers import (
     BusinessValueProvider,
     DemandProvider,
-    InventoryProvider,
     IntentProvider,
+    InventoryProvider,
     LabelQueryResolver,
     QueryResolver,
     SerpProvider,

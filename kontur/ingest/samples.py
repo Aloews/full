@@ -11,12 +11,17 @@ into a reported Yandex figure.
 from __future__ import annotations
 
 import random
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from kontur.core.provenance import Confidence, Provenance, Sourced
 from kontur.engines.faceted.models import FilterInventory
-from kontur.engines.faceted.signals import BusinessValue, IntentAssessment, IntentLabel, SearchDemand
+from kontur.engines.faceted.signals import (
+    BusinessValue,
+    IntentAssessment,
+    IntentLabel,
+    SearchDemand,
+)
 from kontur.engines.geo.models import AliceObservation, AliceSnapshot, AnswerType
 from kontur.engines.getparams.models import ParamDemand, ParamObservation
 
@@ -27,7 +32,7 @@ _SEED = 20260401
 def sample_provenance(kind: str, *, days_ago: int = 3, confidence: Confidence = Confidence.LOW) -> Provenance:
     return Provenance(
         source=f"sample:{kind}",
-        retrieved_at=datetime.now(timezone.utc) - timedelta(days=days_ago),
+        retrieved_at=datetime.now(UTC) - timedelta(days=days_ago),
         confidence=confidence,
         note="Generated fixture. Not a measurement.",
     )
@@ -115,7 +120,8 @@ def sample_filter_states() -> dict[str, dict[str, Any]]:
 def sample_alice_snapshots(*, weeks: int = 8) -> list[AliceSnapshot]:
     """Weekly Alice AI visibility fixtures for the last ``weeks`` weeks."""
     provenance = sample_provenance("alice_visibility")
-    rng = random.Random(_SEED)
+    # Fixture generation, not cryptography.
+    rng = random.Random(_SEED)  # noqa: S311
     queries = [
         ("что такое megaways", "https://casino.example/slots/megaways/", AnswerType.GENERATED),
         ("слоты pragmatic play", "https://casino.example/slots/?provider=pragmatic", AnswerType.LIST),

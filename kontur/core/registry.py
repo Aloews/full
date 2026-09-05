@@ -7,9 +7,9 @@ never fire under an id that nobody is allowed to test.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Iterable
 
 from kontur.core.errors import ConfigurationError, UnknownRuleError
 
@@ -140,7 +140,8 @@ RULES: dict[str, Rule] = _rules(
          "Lists, tables, FAQ blocks and definitions are what gets quoted."),
     Rule("AEO-004", "No effect claim without a linked experiment result",
          RuleKind.AEO, C, "kontur.core.claims",
-         "'+120% AI visibility' is a marketing sentence, not a measurement."),
+         "A percentage uplift with no experiment behind it is a sales sentence, "
+         "not a measurement."),
     # ------------------------------------------------------------------ GEO / Alice AI
     Rule("GEO-001", "AI visibility metrics require provenance on every input row",
          RuleKind.GEO, C, "kontur.engines.geo.metrics",
@@ -183,7 +184,8 @@ RULES: dict[str, Rule] = _rules(
     # ------------------------------------------------------------------ Behaviour
     Rule("BEH-001", "Behavioural output is labelled correlational, never causal",
          RuleKind.BEHAVIOR, C, "kontur.engines.behavior.correlation",
-         "'3 minutes on page' is not a documented ranking factor."),
+         "Time on page is an observation about users, not a documented input to "
+         "how any search engine ranks."),
     Rule("BEH-002", "Correlation requires a minimum sample before it is reported",
          RuleKind.BEHAVIOR, S, "kontur.engines.behavior.correlation",
          "Five sessions produce a beautiful, meaningless r."),

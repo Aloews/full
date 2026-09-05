@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from kontur.core.errors import ConfigurationError
 from kontur.core.provenance import EvidenceSet, Sourced, require_provenance
@@ -65,7 +66,7 @@ def classify_parameter(
 
     family = family_of(observation.name, facet_candidates=facet_candidates)
     evidence = EvidenceSet.of(observation.provenance)
-    common = {
+    common: dict[str, Any] = {
         "name": observation.name,
         "detected_urls": observation.detected_urls,
         "distinct_values": observation.distinct_values,
@@ -129,7 +130,7 @@ def _classify_facet_candidate(
     demand: Sourced | None,
     config: ClassifierConfig,
     evidence: EvidenceSet,
-    common: dict,
+    common: dict[str, Any],
 ) -> ParamRuling:
     if observation.distinct_values > config.max_distinct_values_for_hub:
         return ParamRuling(

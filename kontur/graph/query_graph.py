@@ -15,9 +15,10 @@ the graph keeps both.
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, InsufficientDataError, MissingProvenanceError
 from kontur.core.provenance import EvidenceSet, Provenance
@@ -65,7 +66,7 @@ class GraphObservation:
         observation: AliceObservation,
         *,
         serp_position: int | None = None,
-    ) -> "GraphObservation":
+    ) -> GraphObservation:
         return cls(
             query=observation.query,
             observed_on=observation.week_start,
@@ -130,7 +131,7 @@ class QueryAnswerGraph:
             raise ConfigurationError("QueryAnswerGraph needs a site")
 
     # ------------------------------------------------------------------ ingest
-    def add(self, observation: GraphObservation) -> "QueryAnswerGraph":
+    def add(self, observation: GraphObservation) -> QueryAnswerGraph:
         if not isinstance(observation, GraphObservation):
             raise ConfigurationError("QueryAnswerGraph stores GraphObservation objects")
         self.observations = [
@@ -143,7 +144,7 @@ class QueryAnswerGraph:
 
     def ingest_snapshot(
         self, snapshot: AliceSnapshot, *, serp_positions: Mapping[str, int] | None = None
-    ) -> "QueryAnswerGraph":
+    ) -> QueryAnswerGraph:
         positions = {k.lower(): v for k, v in (serp_positions or {}).items()}
         for observation in snapshot.observations:
             self.add(

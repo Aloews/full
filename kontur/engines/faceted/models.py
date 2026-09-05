@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from kontur.core.errors import ConfigurationError
 from kontur.core.urls import build_url, parse_url
@@ -52,7 +53,7 @@ class FacetCatalog:
         object.__setattr__(self, "facets", dict(self.facets))
 
     @classmethod
-    def of(cls, definitions: Iterable[FacetDefinition], max_depth: int = 2) -> "FacetCatalog":
+    def of(cls, definitions: Iterable[FacetDefinition], max_depth: int = 2) -> FacetCatalog:
         return cls({d.name: d for d in definitions}, max_depth=max_depth)
 
     def has(self, name: str) -> bool:
@@ -95,10 +96,10 @@ class FilterState:
                 return value
         return None
 
-    def without(self, facet: str) -> "FilterState":
+    def without(self, facet: str) -> FilterState:
         return FilterState(self.path, tuple(s for s in self.selections if s[0] != facet))
 
-    def parent(self) -> "FilterState":
+    def parent(self) -> FilterState:
         """Drop the last selection; the bare listing is its own parent."""
         if not self.selections:
             return self
@@ -108,7 +109,7 @@ class FilterState:
         return build_url(self.path, self.selections)
 
     @classmethod
-    def from_url(cls, url: str, catalog: FacetCatalog) -> tuple["FilterState", tuple[tuple[str, str], ...]]:
+    def from_url(cls, url: str, catalog: FacetCatalog) -> tuple[FilterState, tuple[tuple[str, str], ...]]:
         """Split a URL into (facet selections, everything else)."""
         parsed = parse_url(url)
         selections: list[tuple[str, str]] = []
@@ -155,6 +156,9 @@ class FacetConfig:
     min_monthly_demand: float = 30.0
     min_uniqueness: float = 0.35
     min_business_value: float = 0.20
+    #: Demand below ``weak_demand_multiplier * min_monthly_demand`` is not strong
+    #: enough on its own to keep a facet with no commercial worth in the index.
+    weak_demand_multiplier: float = 5.0
     min_pages_for_deep_pagination: int = 2
     require_serp_evidence: bool = False
 
@@ -169,6 +173,8 @@ class FacetConfig:
             raise ConfigurationError("min_items must be >= 0")
         if self.min_monthly_demand < 0:
             raise ConfigurationError("min_monthly_demand must be >= 0")
+        if self.weak_demand_multiplier < 1:
+            raise ConfigurationError("weak_demand_multiplier must be >= 1")
 
 
 DEFAULT_FACET_CONFIG = FacetConfig()

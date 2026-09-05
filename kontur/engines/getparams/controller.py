@@ -10,8 +10,9 @@ variant (rule GETP-002).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 from kontur.core.errors import ConfigurationError
 from kontur.core.provenance import EvidenceSet, Provenance, Sourced
@@ -36,7 +37,6 @@ class ParamPolicy:
     note: str
     provenance: Provenance
     reasons: tuple[ParamReason, ...] = (ParamReason.MANUAL_OVERRIDE,)
-    replaces_automatic: bool = False
 
     def __post_init__(self) -> None:
         if not self.note or not self.note.strip():
@@ -47,11 +47,16 @@ class ParamPolicy:
         object.__setattr__(self, "decision", ParamDecision(self.decision))
 
     def as_ruling(self, observation: ParamObservation | None) -> ParamRuling:
+        """A declaration, not a rule outcome.
+
+        GETP-002 is recorded by :func:`merge_rulings` and only when the sources
+        actually disagree, so a policy that merely restates the classifier does
+        not look like a resolved conflict in the audit trail.
+        """
         return ParamRuling(
             name=self.name,
             decision=self.decision,
             reasons=self.reasons,
-            rule_ids=rule_ids("GETP-002"),
             detected_urls=observation.detected_urls if observation else 0,
             distinct_values=observation.distinct_values if observation else 0,
             evidence=EvidenceSet.of(self.provenance),
@@ -71,14 +76,14 @@ class GetParameterController:
     _policies: dict[str, list[ParamPolicy]] = field(default_factory=dict, init=False)
 
     # ------------------------------------------------------------------ inputs
-    def observe(self, observations: Iterable[ParamObservation]) -> "GetParameterController":
+    def observe(self, observations: Iterable[ParamObservation]) -> GetParameterController:
         for observation in observations:
             existing = self._observations.get(observation.name)
             if existing is None or observation.detected_urls >= existing.detected_urls:
                 self._observations[observation.name] = observation
         return self
 
-    def set_demand(self, parameter: str, demand: Sourced) -> "GetParameterController":
+    def set_demand(self, parameter: str, demand: Sourced) -> GetParameterController:
         if not isinstance(demand, Sourced):
             raise ConfigurationError(
                 f"demand for {parameter!r} must be Sourced(...) with source + retrieved_at + confidence"
@@ -86,19 +91,12 @@ class GetParameterController:
         self._demand[parameter.strip().lower()] = demand
         return self
 
-    def override(self, policy: ParamPolicy) -> "GetParameterController":
+    def override(self, policy: ParamPolicy) -> GetParameterController:
         """Replace the automatic classification for a parameter (audited)."""
-        self._overrides[policy.name] = ParamPolicy(
-            name=policy.name,
-            decision=policy.decision,
-            note=policy.note,
-            provenance=policy.provenance,
-            reasons=policy.reasons,
-            replaces_automatic=True,
-        )
+        self._overrides[policy.name] = policy
         return self
 
-    def add_policy(self, policy: ParamPolicy) -> "GetParameterController":
+    def add_policy(self, policy: ParamPolicy) -> GetParameterController:
         """Add a co-equal policy (e.g. imported robots.txt / previous settings).
 
         Co-equal policies never loosen a decision: the most restrictive of all

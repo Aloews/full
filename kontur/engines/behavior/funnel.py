@@ -9,10 +9,11 @@ change (see :mod:`kontur.engines.behavior.correlation`).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
-from typing import Any, Sequence
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, InsufficientDataError
 from kontur.core.provenance import EvidenceSet, Provenance

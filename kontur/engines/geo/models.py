@@ -9,10 +9,11 @@ different moments, so a single row is evidence about one moment only.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from enum import StrEnum
-from typing import Any, Iterable
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, MissingProvenanceError
 from kontur.core.provenance import EvidenceSet, Provenance
@@ -148,7 +149,7 @@ class AliceSnapshot:
         return None
 
     def age_days(self, now: datetime | None = None) -> float:
-        now = now or datetime.now(timezone.utc)
+        now = now or datetime.now(UTC)
         return (now.date() - self.week_start).days
 
 

@@ -55,7 +55,7 @@ SORT_PARAMS: frozenset[str] = frozenset({
 #: Presentation state (grid/list, page size, currency switcher, ...).
 DISPLAY_PARAMS: frozenset[str] = frozenset({
     "view", "display", "layout", "mode", "per_page", "perpage", "limit", "count",
-    "columns", "theme", "currency", "lang_switcher", "compact",
+    "columns", "ui_theme", "skin", "currency", "lang_switcher", "compact",
 })
 
 #: Position inside a result set. Meaning depends on the value.
@@ -111,8 +111,10 @@ def family_of(name: str, *, facet_candidates: dict[str, FacetCandidate] | None =
         return ParamFamily.SORT
     if key in PAGINATION_PARAMS:
         return ParamFamily.PAGINATION
-    if key in DISPLAY_PARAMS:
-        return ParamFamily.DISPLAY
+    # A facet declared for this vertical wins over the generic display list:
+    # `theme` is a UI switcher on a shop and a content facet on a slots catalogue.
     if key in candidates:
         return ParamFamily.FACET_CANDIDATE
+    if key in DISPLAY_PARAMS:
+        return ParamFamily.DISPLAY
     return ParamFamily.UNKNOWN

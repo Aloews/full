@@ -9,8 +9,9 @@ statement, run an experiment: :mod:`kontur.engines.experiment`.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, InsufficientDataError
 from kontur.engines.experiment.stats import student_t_sf
@@ -46,7 +47,7 @@ def pearson(x: Sequence[float], y: Sequence[float]) -> float:
     if n < 2:
         raise InsufficientDataError("pearson() needs at least two pairs")
     mean_x, mean_y = sum(x) / n, sum(y) / n
-    numerator = sum((a - mean_x) * (b - mean_y) for a, b in zip(x, y))
+    numerator = sum((a - mean_x) * (b - mean_y) for a, b in zip(x, y, strict=True))
     denominator = math.sqrt(sum((a - mean_x) ** 2 for a in x) * sum((b - mean_y) ** 2 for b in y))
     if denominator == 0:
         return 0.0

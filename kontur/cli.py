@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 from kontur.core.errors import KonturError
 from kontur.workspace import Workspace, demo_workspace

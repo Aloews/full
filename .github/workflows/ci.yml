@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  quality:
+    name: Test governance pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          mkdir -p reports
+
+      # Every stage records its own verdict so the final gate can report the
+      # whole picture instead of stopping at the first red stage.
+      - name: Lint
+        continue-on-error: true
+        run: |
+          python -m ruff check kontur tests tools && echo PASS > reports/lint.status || echo FAIL > reports/lint.status
+
+      - name: Type check
+        continue-on-error: true
+        run: |
+          python -m mypy kontur && echo PASS > reports/typecheck.status || echo FAIL > reports/typecheck.status
+
+      - name: Unit tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/unit -q && echo PASS > reports/unit.status || echo FAIL > reports/unit.status
+
+      - name: Integration tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/integration -q && echo PASS > reports/integration.status || echo FAIL > reports/integration.status
+
+      - name: SEO tests
+        continue-on-error: true
+        run: |
+          python -m pytest -m seo -q && echo PASS > reports/seo.status || echo FAIL > reports/seo.status
+
+      - name: AEO tests
+        continue-on-error: true
+        run: |
+          python -m pytest -m aeo -q && echo PASS > reports/aeo.status || echo FAIL > reports/aeo.status
+
+      - name: GEO tests
+        continue-on-error: true
+        run: |
+          python -m pytest -m geo -q && echo PASS > reports/geo.status || echo FAIL > reports/geo.status
+
+      - name: Security tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/security -q && echo PASS > reports/security.status || echo FAIL > reports/security.status
+
+      - name: Regression tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/regression -q && echo PASS > reports/regression.status || echo FAIL > reports/regression.status
+
+      - name: API tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/api -q && echo PASS > reports/api.status || echo FAIL > reports/api.status
+
+      - name: End-to-end tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/e2e -q && echo PASS > reports/e2e.status || echo FAIL > reports/e2e.status
+
+      - name: Meta tests
+        continue-on-error: true
+        run: |
+          python -m pytest tests/meta -q && echo PASS > reports/meta.status || echo FAIL > reports/meta.status
+
+      - name: Suite integrity (T-META-001)
+        continue-on-error: true
+        run: python -m tools.mutation.sentinel --json reports/sentinel.json
+
+      - name: Mutation tests
+        continue-on-error: true
+        run: python -m tools.mutation.runner --json reports/mutation.json
+
+      - name: Coverage
+        continue-on-error: true
+        run: python -m pytest -q --cov=kontur --cov-report=json:reports/coverage.json --cov-report=term
+
+      - name: Build
+        continue-on-error: true
+        run: |
+          python -m pip install build
+          python -m build --wheel
+
+      - name: Docker test
+        continue-on-error: true
+        run: |
+          docker build -t kontur:ci .
+          docker run -d --name kontur-ci -p 8000:8000 kontur:ci
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8000/health; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/health | grep -q '"status":"ok"'
+          curl -fsS http://127.0.0.1:8000/indexation/parameters | grep -q "GET Parameters"
+          docker rm -f kontur-ci
+
+      - name: Final quality gate
+        run: python -m tools.quality_gate --reports reports --json reports/gate.json
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kontur-quality-reports
+          path: reports/

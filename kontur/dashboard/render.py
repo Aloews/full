@@ -7,8 +7,9 @@ attacker-influenced input, not trusted content.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping, Sequence
 from html import escape
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 _STYLE = """
 :root{--bg:#0f1115;--panel:#171a21;--line:#262b36;--text:#e6e8ee;--muted:#98a1b3;
@@ -61,7 +62,7 @@ SAMPLE_WARNING = (
 )
 
 
-def _tag(value: str) -> str:
+def _tag(value: object) -> str:
     css = escape(str(value).replace(" ", "").replace("-", "_"))
     return f'<span class="tag {css}">{escape(str(value))}</span>'
 

@@ -10,9 +10,10 @@ The rules are deliberately unexciting:
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from kontur.core.claims import EffectClaim
 from kontur.core.errors import ConfigurationError

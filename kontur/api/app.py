@@ -7,9 +7,10 @@ without the provenance and sample marks that travel with it.
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
-from fastapi import Body, FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
@@ -29,7 +30,7 @@ from kontur.engines.aeo.answer import assess_answer_first
 from kontur.engines.aeo.content import parse_html
 from kontur.engines.aeo.extraction import extraction_report
 from kontur.engines.backlinks.risk import AnchorType, Backlink, analyse_backlinks
-from kontur.ingest.validation import parse_date
+from kontur.ingest.validation import parse_date, parse_datetime
 from kontur.workspace import Workspace, demo_workspace
 
 MAX_URLS_PER_REQUEST = 200
@@ -188,7 +189,7 @@ def create_app(workspace: Workspace | None = None) -> FastAPI:
         try:
             provenance = Provenance(
                 source=request.source,
-                retrieved_at=parse_date(request.retrieved_at, field="retrieved_at"),
+                retrieved_at=parse_datetime(request.retrieved_at, field="retrieved_at"),
                 confidence=Confidence(request.confidence.lower()),
             )
             links = [
@@ -249,13 +250,11 @@ def create_app(workspace: Workspace | None = None) -> FastAPI:
 
 def endpoint_paths(app: FastAPI) -> Sequence[str]:
     """Every route path the app serves (used by meta-test MT-008)."""
+    paths = {str(getattr(route, "path", "")) for route in app.routes}
     return sorted(
-        {
-            route.path
-            for route in app.routes
-            if getattr(route, "path", "").startswith(("/api", "/health", "/indexation", "/ai-visibility"))
-            or getattr(route, "path", "") == "/"
-        }
+        path
+        for path in paths
+        if path == "/" or path.startswith(("/api", "/health", "/indexation", "/ai-visibility"))
     )
 
 

@@ -8,8 +8,9 @@ export fails loudly at the door instead of corrupting a report.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
-from typing import Any, Iterable, Mapping
+from collections.abc import Iterable, Mapping
+from datetime import UTC, date, datetime
+from typing import Any
 
 from kontur.core.errors import ConfigurationError
 
@@ -104,9 +105,9 @@ def parse_date(value: Any, *, field: str) -> date:
 
 def parse_datetime(value: Any, *, field: str) -> datetime:
     if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
     parsed = parse_date(value, field=field)
-    return datetime(parsed.year, parsed.month, parsed.day, tzinfo=timezone.utc)
+    return datetime(parsed.year, parsed.month, parsed.day, tzinfo=UTC)
 
 
 def require_columns(row: Mapping[str, Any], columns: Iterable[str], *, where: str) -> None:

@@ -8,10 +8,11 @@ re-running the analysis never reshuffles the arms (rule EXP-004).
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from kontur.core.claims import HYPOTHESES
 from kontur.core.errors import ConfigurationError
@@ -161,7 +162,7 @@ class ExperimentRegistry:
 
     experiments: dict[str, Experiment] = field(default_factory=dict)
 
-    def register(self, experiment: Experiment) -> "ExperimentRegistry":
+    def register(self, experiment: Experiment) -> ExperimentRegistry:
         if experiment.id in self.experiments:
             raise ConfigurationError(f"experiment {experiment.id} is already registered")
         self.experiments[experiment.id] = experiment

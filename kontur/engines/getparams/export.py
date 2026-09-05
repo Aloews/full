@@ -16,9 +16,10 @@ reviewed in a pull request.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Iterable, Sequence
+from datetime import UTC, datetime
+from typing import Any
 
 from kontur.core.errors import ConfigurationError
 from kontur.engines.getparams.models import ParamDecision, ParamRuling
@@ -41,7 +42,7 @@ class YandexGetParametersExport:
     def to_dict(self) -> dict[str, Any]:
         return {
             "tool": "yandex_webmaster.get_parameters",
-            "generated_at": self.generated_at.astimezone(timezone.utc).isoformat(),
+            "generated_at": self.generated_at.astimezone(UTC).isoformat(),
             "exclude": list(self.exclude),
             "consider": list(self.consider),
             "review": list(self.review),
@@ -61,7 +62,7 @@ def build_export(
     rulings: Iterable[ParamRuling], *, generated_at: datetime | None = None
 ) -> YandexGetParametersExport:
     rulings = list(rulings)
-    generated_at = generated_at or datetime.now(timezone.utc)
+    generated_at = generated_at or datetime.now(UTC)
 
     def names(*decisions: ParamDecision) -> tuple[str, ...]:
         wanted = set(decisions)

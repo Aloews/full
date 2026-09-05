@@ -15,9 +15,10 @@ can say "in experiment EXP-12 the variant's cited-URL rate was 4.1pp higher,
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Iterable
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, UnprovenClaimError
 

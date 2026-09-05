@@ -16,9 +16,10 @@ exist in an export, and every report states the window it was computed over.
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, InsufficientDataError, SampleDataError
 from kontur.core.provenance import EvidenceSet
@@ -45,13 +46,16 @@ def share_of_voice(observations: Sequence[AliceObservation]) -> float:
     for observation in observations:
         if not observation.ai_answer_present:
             continue
-        sources = observation.sources
-        total_citations += len(sources)
-        if observation.our_domain_mentioned:
-            our_citations += 1
+        # A mention counts as one citation for us whether or not the export
+        # captured which of our URLs was used.
+        ours = 1 if observation.our_domain_mentioned else 0
+        our_citations += ours
+        total_citations += len(observation.competitor_domains) + ours
     if total_citations == 0:
         return 0.0
-    return min(1.0, max(0.0, our_citations / total_citations))
+    # our_citations counts at most one source per row and is included in the
+    # denominator, so the ratio cannot leave [0, 1] and needs no clamp.
+    return our_citations / total_citations
 
 
 def mention_rate(observations: Sequence[AliceObservation]) -> float:
@@ -97,7 +101,8 @@ def competitor_overlap(observations: Sequence[AliceObservation]) -> list[dict[st
             "queries": count,
             "share": count / total,
             "co_cited_with_us": together.get(domain, 0),
-            "overlap": (together.get(domain, 0) / count) if count else 0.0,
+            # ``count`` came from this very Counter, so it is at least 1.
+            "overlap": together.get(domain, 0) / count,
         }
         for domain, count in appearances.items()
     ]

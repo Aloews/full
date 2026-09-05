@@ -20,10 +20,11 @@ Factors, each normalised to [0, 1]:
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from enum import StrEnum
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, InsufficientDataError
 from kontur.core.provenance import EvidenceSet, Provenance

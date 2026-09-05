@@ -9,14 +9,14 @@ shows exactly which rule stopped the URL and why.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from kontur.core.decisions import Decision, DecisionRecord, ReasonCode
 from kontur.core.registry import rule_ids
 from kontur.core.urls import strip_params
 from kontur.engines.faceted.context import FacetContext
 from kontur.engines.faceted.models import FacetStatus
-from kontur.engines.faceted.signals import content_uniqueness_score, demand_score
+from kontur.engines.faceted.signals import content_uniqueness_score
 from kontur.engines.getparams.models import ParamDecision
 
 Rule = Callable[[FacetContext], DecisionRecord | None]
@@ -222,12 +222,15 @@ def rule_low_business_value(ctx: FacetContext) -> DecisionRecord | None:
     value = business.score
     if value >= ctx.config.min_business_value:
         return None
-    if demand_score(demand.monthly_volume) >= 0.5:
+    strong_demand = ctx.config.min_monthly_demand * ctx.config.weak_demand_multiplier
+    if demand.monthly_volume >= strong_demand:
         return None
     ctx.record(
         "business_value",
-        f"business value {value:.2f} below {ctx.config.min_business_value:.2f} with weak demand",
+        f"business value {value:.2f} below {ctx.config.min_business_value:.2f} with demand "
+        f"{demand.monthly_volume:.0f}/month under the {strong_demand:.0f} strong-demand mark",
         business_value=value,
+        strong_demand_threshold=strong_demand,
     )
     return _record(ctx, Decision.NOINDEX, (ReasonCode.LOW_BUSINESS_VALUE,), "FACET-008")
 

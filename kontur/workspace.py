@@ -7,8 +7,9 @@ provenance marks.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from kontur.core.errors import InsufficientDataError
 from kontur.core.provenance import Sourced
@@ -48,18 +49,18 @@ class Workspace:
     # ------------------------------------------------------------------ setup
     def load_parameters(
         self, observations: Sequence[ParamObservation], demand: Mapping[str, Sourced] | None = None
-    ) -> "Workspace":
+    ) -> Workspace:
         self.parameters.observe(observations)
         for name, value in (demand or {}).items():
             self.parameters.set_demand(name, value)
         return self
 
-    def load_alice(self, snapshots: Sequence[AliceSnapshot]) -> "Workspace":
+    def load_alice(self, snapshots: Sequence[AliceSnapshot]) -> Workspace:
         for snapshot in snapshots:
             self.snapshots.add(snapshot)
         return self
 
-    def register_experiment(self, experiment: Experiment) -> "Workspace":
+    def register_experiment(self, experiment: Experiment) -> Workspace:
         self.experiments.register(experiment)
         return self
 

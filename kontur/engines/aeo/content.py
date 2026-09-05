@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from html.parser import HTMLParser
-from typing import Any, Iterable
+from typing import Any
 
 from kontur.core.errors import ConfigurationError
 

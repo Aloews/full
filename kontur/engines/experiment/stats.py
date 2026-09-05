@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
+from typing import Any
 
 from kontur.core.errors import ConfigurationError, InsufficientDataError
 
@@ -235,7 +236,8 @@ def bootstrap_ci(
     if iterations < 100:
         raise ConfigurationError("iterations must be >= 100 for a usable interval")
     stat = statistic or (lambda values: sum(values) / len(values))
-    rng = random.Random(seed)
+    # Resampling, not cryptography: the seed is what makes the interval reproducible.
+    rng = random.Random(seed)  # noqa: S311
     diffs: list[float] = []
     for _ in range(iterations):
         sample_c = [control[rng.randrange(len(control))] for _ in range(len(control))]

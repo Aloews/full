@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Iterable, Mapping, Sequence
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from kontur.core.errors import ConfigurationError
@@ -34,7 +34,7 @@ class ParsedUrl:
     def values_of(self, name: str) -> tuple[str, ...]:
         return tuple(v for k, v in self.params if k == name)
 
-    def with_params(self, params: Iterable[tuple[str, str]]) -> "ParsedUrl":
+    def with_params(self, params: Iterable[tuple[str, str]]) -> ParsedUrl:
         return ParsedUrl(self.scheme, self.host, self.path, tuple(params), self.fragment)
 
     def to_url(self) -> str:
