@@ -28,6 +28,7 @@ Elite Estate is the first delivery target. The remaining domains are registered 
 - `POST /api/v1/properties/{id}/submit` — submit for independent review.
 - `POST /api/v1/properties/{id}/review` — reviewer/admin approves or rejects; self-review is blocked.
 - `GET /public/properties` — public verified inventory only.
+- `GET /public/properties/{id}` — public verified property details.
 - `POST /public/properties/{id}/enquiries` — consent-gated enquiry for a public verified listing.
 
 Protected endpoints require an HS256 JWT signed by the AUREL identity issuer. Required claims: `sub` (actor UUID), `org_id` (organization UUID), `role`, `iss=aurel`, `aud=aurel-api`, and `exp`. Allowed write roles: `owner`, `broker`, `admin`; review roles: `reviewer`, `admin`. The API does not issue user tokens; connect a real identity provider before onboarding users.
