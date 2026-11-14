@@ -64,3 +64,45 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 - The PostgreSQL integration test proves cross-tenant isolation, rejects creator self-review and rejects publication without evidence, and allows independently reviewed evidence-backed publication.
 - Vercel status for this candidate is failed with `build-rate-limit` (free-plan daily deployment cap). No workaround or plan upgrade was attempted.
 - This is a tested technical vertical slice, not a production release. Do not merge or deploy until the dedicated database, identity provider, enquiry abuse controls, licensed supply, jurisdiction review and staging/rollback gates are completed.
+
+
+## AI engineering toolchain — required project standard
+
+A repository entry is not proof that an integration is installed or active.
+
+### Caveman — concise agent output
+- Upstream: https://github.com/JuliusBrussee/caveman
+- Claude Code: `claude plugin marketplace add JuliusBrussee/caveman && claude plugin install caveman@caveman`
+- Codex CLI: `npx -y github:JuliusBrussee/caveman -- --only codex` (or `npx skills add JuliusBrussee/caveman -a codex -g`).
+- Restart/reload the actual host and verify skill discovery. Never compress code, identifiers, errors, assertions, contracts, negations or acceptance criteria.
+
+### codebase-memory-mcp — persistent code graph
+- Upstream: https://github.com/DeusData/codebase-memory-mcp
+- Host install (macOS/Linux): `curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash`
+- Restart the coding agent, verify the MCP server is visible, then index this repository.
+- Keep its graph on a persistent host. Ephemeral CI/cron runners are not persistent memory hosts. Pin and verify release/checksum before production use.
+
+### Spotify Portal AI Plugins — AiKA delegation
+- Upstream: https://github.com/spotify/portal-ai-plugins
+- Claude Code: `claude plugin marketplace add spotify/portal-ai-plugins`, `claude plugin install portal@portal`, `claude plugin install shunt@portal`.
+- Codex: `codex plugin marketplace add spotify/portal-ai-plugins`, then install Spotify Portal from `/plugins`. Cursor uses its team marketplace.
+- In a new supported session run `/portal:setup`, authenticate Portal CLI and run readiness diagnostics. Shunt is Claude Code-only; verify AiKA modes `bulk-reader` and `code-writer`.
+- Never commit Portal credentials or local MCP config.
+
+### Runtime compatibility and evidence
+- These are coding-agent integrations, not generic application dependencies. An HTTP-only Starimg worker cannot load Claude/Codex plugins or use a local MCP server without the corresponding runtime and MCP client.
+- Do not use ephemeral CI or cron containers as persistent MCP/Portal hosts.
+- Record each tool independently as `not installed`, `installed`, `connected`, `indexed`, `verified`; advance only after observing its runtime check.
+- Last Fable/Starimg request returned HTTP 402 before model execution. Do not retry billable generation until an authenticated test request succeeds.
+
+### GitHub Actions fallback
+- Use Actions only when a repository-owned agent workflow, trigger, permissions, model invocation and draft-PR output are verified.
+- This repository's current PR/CI workflow is a test gate, not an autonomous coding agent. Do not label it an agent fallback without adding and verifying an agent runner.
+- No automatic merge, production deployment, paid resource creation, or production data migration.
+
+### Installation status — 2026-11-14
+| Integration | Documentation | Active runtime |
+|---|---|---|
+| Caveman | Recorded here | Not verified |
+| codebase-memory-mcp | Recorded here | Not installed/indexed on a persistent supported host |
+| Spotify Portal / shunt | Recorded here | Not connected; Portal auth and AiKA readiness not established |
