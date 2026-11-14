@@ -474,6 +474,56 @@ mod tests {
         assert_eq!(input.validate(), Err("invalid_description"));
     }
 
+
+    #[tokio::test]
+    async fn postgres_rls_isolates_tenants_and_exposes_only_independently_verified_listings() {
+        use sqlx::postgres::PgPoolOptions;
+        use std::env;
+
+        let Ok(admin_url) = env::var("TEST_DATABASE_ADMIN_URL") else { return; };
+        let Ok(app_url) = env::var("TEST_DATABASE_URL") else { return; };
+        let admin = PgPoolOptions::new().max_connections(2).connect(&admin_url).await.unwrap();
+        sqlx::migrate!("./migrations").run(&admin).await.unwrap();
+        sqlx::query("GRANT USAGE ON SCHEMA public TO aurel_app").execute(&admin).await.unwrap();
+        sqlx::query("GRANT SELECT, INSERT, UPDATE, DELETE ON organizations, properties, property_evidence, property_audit_events, property_enquiries TO aurel_app").execute(&admin).await.unwrap();
+
+        let app = PgPoolOptions::new().max_connections(2).connect(&app_url).await.unwrap();
+        let org_a = Uuid::new_v4();
+        let org_b = Uuid::new_v4();
+        let creator = Uuid::new_v4();
+        let reviewer = Uuid::new_v4();
+        sqlx::query("INSERT INTO organizations (id,name) VALUES ($1,'Tenant A'),($2,'Tenant B')")
+            .bind(org_a).bind(org_b).execute(&admin).await.unwrap();
+
+        let mut create = app.begin().await.unwrap();
+        sqlx::query("SELECT set_config('app.organization_id',$1,true),set_config('app.actor_id',$2,true),set_config('app.role','broker',true)")
+            .bind(org_a.to_string()).bind(creator.to_string()).execute(&mut *create).await.unwrap();
+        let property_id: Uuid = sqlx::query_scalar("INSERT INTO properties (organization_id,created_by,title,description,country_code,city,property_type,currency) VALUES ($1,$2,'Verified residence','A detailed description of the property for a real listing.','MC','Monaco','villa','EUR') RETURNING id")
+            .bind(org_a).bind(creator).fetch_one(&mut *create).await.unwrap();
+        sqlx::query("INSERT INTO property_evidence (organization_id,property_id,added_by,evidence_type,note,observed_at) VALUES ($1,$2,$3,'mandate','Signed representation mandate inspected by the team',now())")
+            .bind(org_a).bind(property_id).bind(creator).execute(&mut *create).await.unwrap();
+        create.commit().await.unwrap();
+
+        let mut other_tenant = app.begin().await.unwrap();
+        sqlx::query("SELECT set_config('app.organization_id',$1,true),set_config('app.actor_id',$2,true),set_config('app.role','broker',true)")
+            .bind(org_b.to_string()).bind(Uuid::new_v4().to_string()).execute(&mut *other_tenant).await.unwrap();
+        let hidden: Option<Uuid> = sqlx::query_scalar("SELECT id FROM properties WHERE id=$1")
+            .bind(property_id).fetch_optional(&mut *other_tenant).await.unwrap();
+        assert!(hidden.is_none(), "a different tenant must not read private inventory");
+        other_tenant.rollback().await.unwrap();
+
+        let mut review = app.begin().await.unwrap();
+        sqlx::query("SELECT set_config('app.organization_id',$1,true),set_config('app.actor_id',$2,true),set_config('app.role','reviewer',true)")
+            .bind(org_a.to_string()).bind(reviewer.to_string()).execute(&mut *review).await.unwrap();
+        sqlx::query("UPDATE properties SET verification_state='verified',visibility='public',reviewed_by=$1,verified_at=now() WHERE id=$2")
+            .bind(reviewer).bind(property_id).execute(&mut *review).await.unwrap();
+        review.commit().await.unwrap();
+
+        let public_row: Option<Uuid> = sqlx::query_scalar("SELECT id FROM properties WHERE id=$1")
+            .bind(property_id).fetch_optional(&app).await.unwrap();
+        assert_eq!(public_row, Some(property_id), "only verified and independently reviewed public inventory is visible");
+    }
+
     #[test]
     fn role_boundaries_are_explicit() {
         assert!(can_edit("broker"));
