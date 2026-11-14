@@ -503,12 +503,6 @@ mod tests {
             .await
             .unwrap();
         sqlx::migrate!("./migrations").run(&admin).await.unwrap();
-        sqlx::query("GRANT USAGE ON SCHEMA public TO aurel_app")
-            .execute(&admin)
-            .await
-            .unwrap();
-        sqlx::query("GRANT SELECT, INSERT, UPDATE, DELETE ON organizations, properties, property_evidence, property_audit_events, property_enquiries TO aurel_app").execute(&admin).await.unwrap();
-
         let role_exists: bool =
             sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='aurel_app')")
                 .fetch_one(&admin)
@@ -525,6 +519,19 @@ mod tests {
                 .await
                 .unwrap();
         }
+        sqlx::query("GRANT USAGE ON SCHEMA public TO aurel_app")
+            .execute(&admin)
+            .await
+            .unwrap();
+        sqlx::query("GRANT SELECT, INSERT, UPDATE, DELETE ON organizations, properties, property_evidence, property_audit_events, property_enquiries TO aurel_app")
+            .execute(&admin)
+            .await
+            .unwrap();
+        sqlx::query("GRANT USAGE, SELECT ON SEQUENCE property_audit_events_id_seq TO aurel_app")
+            .execute(&admin)
+            .await
+            .unwrap();
+
         let app = PgPoolOptions::new()
             .max_connections(2)
             .connect(&app_url)
