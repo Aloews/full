@@ -37,7 +37,9 @@ Protected endpoints require an HS256 JWT signed by the AUREL identity issuer. Re
 - `DATABASE_URL`: dedicated AUREL PostgreSQL database; the application role must not be superuser or have `BYPASSRLS`.
 - `AUREL_JWT_SECRET`: at least 32 bytes, stored only in the deployment secret manager.
 - `AUREL_WEB_ORIGIN`: exact HTTPS origin of the deployed web client; CORS does not allow wildcard origins.
-- `PORT: optional, defaults to 8080.
+- `AUREL_API_URL`: server-side API base URL for the property collection and detail pages.
+- `NEXT_PUBLIC_AUREL_API_URL`: public API base URL used by the browser enquiry form.
+- `PORT`: optional, defaults to 8080.
 
 The service applies embedded migrations at startup. Never point it at Sherlock Scholes, Novel Forge or another production database. The Docker image includes the migration directory at compile time.
 
