@@ -65,7 +65,7 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 - No real licensed property supply, partner agreements, evidence or listing data have been provided; no sample properties are fabricated.
 - No launch jurisdiction, legal entity or brokerage/partner model has been approved.
 - No API staging deployment, production deployment, rollback rehearsal or end-to-end browser journey has been verified.
-- API hosting decision remains open: the current API is Rust/Axum in `services/platform-api`; Neon Functions runtime is Node.js 24 and cannot run this Rust binary directly. Do not claim the Rust API is deployed there. Prefer a verified existing container host within the free-tier budget, or deliberately port API routes to Next.js/Neon Functions with equivalent RLS, auth and integration tests before changing the runtime.
+- Staging API runtime decision: implement the active API as Next.js route handlers in the existing `aurel-private-property` Vercel project, backed by the provisioned Neon database and Managed Auth. `AUREL_API_URL` and `NEXT_PUBLIC_AUREL_API_URL` now point to the same-project `/api` base for preview/development. The existing Rust/Axum service remains unhosted legacy code until a compatible free-tier container runtime is verified; Neon Functions is Node.js-only and cannot run the Rust binary. Do not claim the Rust API is deployed.
 - Frontend still contains concept copy and is not yet wired to the live API.
 
 ## Latest checks
