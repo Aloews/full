@@ -16,7 +16,8 @@ Elite Estate is the first release target. The other nine AUREL domains remain re
 - Next.js is presentation-only.
 
 ## API contract
-- `GET /health`
+- `GET /health` — liveness.
+- `GET /ready` — database readiness.
 - `GET /api/v1/modules`
 - `POST /api/v1/properties` — owner/broker/admin JWT.
 - `GET /api/v1/properties` — tenant-scoped list.
