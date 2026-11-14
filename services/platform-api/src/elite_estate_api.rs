@@ -417,6 +417,21 @@ async fn public_properties(
     }
 }
 
+
+async fn public_property(
+    State(state): State<AppState>,
+    Path(property_id): Path<Uuid>,
+) -> Response {
+    let row = sqlx::query_as::<_, PropertyRow>(
+        "SELECT id,title,description,country_code,city,property_type,currency,asking_price_minor,verification_state,visibility,created_at,updated_at FROM properties WHERE id=$1 AND visibility='public' AND verification_state='verified'"
+    ).bind(property_id).fetch_optional(&state.pool).await;
+    match row {
+        Ok(Some(row)) => Json(row).into_response(),
+        Ok(None) => error(StatusCode::NOT_FOUND, "public_property_not_found"),
+        Err(_) => error(StatusCode::INTERNAL_SERVER_ERROR, "database_error"),
+    }
+}
+
 async fn create_enquiry(
     State(state): State<AppState>,
     Path(property_id): Path<Uuid>,
@@ -451,6 +466,7 @@ pub fn routes(state: AppState) -> Router {
         .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
     Router::new()
         .route("/public/properties", get(public_properties))
+        .route("/public/properties/{id}", get(public_property))
         .route("/public/properties/{id}/enquiries", post(create_enquiry))
         .nest("/api/v1", protected)
         .with_state(state)
