@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 
 export default function EnquiryForm({ propertyId }: { propertyId: string }) {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -9,7 +10,8 @@ export default function EnquiryForm({ propertyId }: { propertyId: string }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!consent || status === "sending") return;
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const api = process.env.NEXT_PUBLIC_AUREL_API_URL;
     if (!api) { setStatus("error"); return; }
     setStatus("sending");
@@ -25,7 +27,7 @@ export default function EnquiryForm({ propertyId }: { propertyId: string }) {
         }),
       });
       setStatus(response.ok ? "sent" : "error");
-      if (response.ok) event.currentTarget.reset();
+      if (response.ok) form.reset();
     } catch {
       setStatus("error");
     }
