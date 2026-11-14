@@ -653,7 +653,10 @@ mod tests {
             .bind(property_id)
             .execute(&mut *self_review)
             .await;
-        assert!(self_review_result.is_err(), "a listing creator must not approve their own property");
+        assert!(
+            self_review_result.is_err(),
+            "a listing creator must not approve their own property"
+        );
         self_review.rollback().await.unwrap();
 
         let property_without_evidence: Uuid = sqlx::query_scalar("INSERT INTO properties (organization_id,created_by,title,description,country_code,city,property_type,currency) VALUES ($1,$2,'Unverified residence','A property record that has not supplied supporting evidence.','MC','Monaco','villa','EUR') RETURNING id")
@@ -674,7 +677,10 @@ mod tests {
             .bind(property_without_evidence)
             .execute(&mut *missing_evidence_review)
             .await;
-        assert!(missing_evidence_result.is_err(), "a listing without evidence must not be published");
+        assert!(
+            missing_evidence_result.is_err(),
+            "a listing without evidence must not be published"
+        );
         missing_evidence_review.rollback().await.unwrap();
 
         let mut other_tenant = app.begin().await.unwrap();
