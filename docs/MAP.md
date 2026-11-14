@@ -65,6 +65,7 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 - No real licensed property supply, partner agreements, evidence or listing data have been provided; no sample properties are fabricated.
 - No launch jurisdiction, legal entity or brokerage/partner model has been approved.
 - No API staging deployment, production deployment, rollback rehearsal or end-to-end browser journey has been verified.
+- API hosting decision remains open: the current API is Rust/Axum in `services/platform-api`; Neon Functions runtime is Node.js 24 and cannot run this Rust binary directly. Do not claim the Rust API is deployed there. Prefer a verified existing container host within the free-tier budget, or deliberately port API routes to Next.js/Neon Functions with equivalent RLS, auth and integration tests before changing the runtime.
 - Frontend still contains concept copy and is not yet wired to the live API.
 
 ## Latest checks
