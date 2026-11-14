@@ -417,11 +417,7 @@ async fn public_properties(
     }
 }
 
-
-async fn public_property(
-    State(state): State<AppState>,
-    Path(property_id): Path<Uuid>,
-) -> Response {
+async fn public_property(State(state): State<AppState>, Path(property_id): Path<Uuid>) -> Response {
     let row = sqlx::query_as::<_, PropertyRow>(
         "SELECT id,title,description,country_code,city,property_type,currency,asking_price_minor,verification_state,visibility,created_at,updated_at FROM properties WHERE id=$1 AND visibility='public' AND verification_state='verified'"
     ).bind(property_id).fetch_optional(&state.pool).await;
@@ -490,27 +486,45 @@ mod tests {
         assert_eq!(input.validate(), Err("invalid_description"));
     }
 
-
     #[tokio::test]
     async fn postgres_rls_isolates_tenants_and_exposes_only_independently_verified_listings() {
         use sqlx::postgres::PgPoolOptions;
         use std::env;
 
-        let Ok(admin_url) = env::var("TEST_DATABASE_ADMIN_URL") else { return; };
-        let Ok(app_url) = env::var("TEST_DATABASE_URL") else { return; };
-        let admin = PgPoolOptions::new().max_connections(2).connect(&admin_url).await.unwrap();
+        let Ok(admin_url) = env::var("TEST_DATABASE_ADMIN_URL") else {
+            return;
+        };
+        let Ok(app_url) = env::var("TEST_DATABASE_URL") else {
+            return;
+        };
+        let admin = PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&admin_url)
+            .await
+            .unwrap();
         sqlx::migrate!("./migrations").run(&admin).await.unwrap();
-        sqlx::query("GRANT USAGE ON SCHEMA public TO aurel_app").execute(&admin).await.unwrap();
+        sqlx::query("GRANT USAGE ON SCHEMA public TO aurel_app")
+            .execute(&admin)
+            .await
+            .unwrap();
         sqlx::query("GRANT SELECT, INSERT, UPDATE, DELETE ON organizations, properties, property_evidence, property_audit_events, property_enquiries TO aurel_app").execute(&admin).await.unwrap();
 
         sqlx::query("DO $ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='aurel_app') THEN CREATE ROLE aurel_app LOGIN PASSWORD 'aurel_test_password'; ELSE ALTER ROLE aurel_app WITH LOGIN PASSWORD 'aurel_test_password'; END IF; END $;").execute(&admin).await.unwrap();
-        let app = PgPoolOptions::new().max_connections(2).connect(&app_url).await.unwrap();
+        let app = PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&app_url)
+            .await
+            .unwrap();
         let org_a = Uuid::new_v4();
         let org_b = Uuid::new_v4();
         let creator = Uuid::new_v4();
         let reviewer = Uuid::new_v4();
         sqlx::query("INSERT INTO organizations (id,name) VALUES ($1,'Tenant A'),($2,'Tenant B')")
-            .bind(org_a).bind(org_b).execute(&admin).await.unwrap();
+            .bind(org_a)
+            .bind(org_b)
+            .execute(&admin)
+            .await
+            .unwrap();
 
         let mut create = app.begin().await.unwrap();
         sqlx::query("SELECT set_config('app.organization_id',$1,true),set_config('app.actor_id',$2,true),set_config('app.role','broker',true)")
@@ -525,8 +539,14 @@ mod tests {
         sqlx::query("SELECT set_config('app.organization_id',$1,true),set_config('app.actor_id',$2,true),set_config('app.role','broker',true)")
             .bind(org_b.to_string()).bind(Uuid::new_v4().to_string()).execute(&mut *other_tenant).await.unwrap();
         let hidden: Option<Uuid> = sqlx::query_scalar("SELECT id FROM properties WHERE id=$1")
-            .bind(property_id).fetch_optional(&mut *other_tenant).await.unwrap();
-        assert!(hidden.is_none(), "a different tenant must not read private inventory");
+            .bind(property_id)
+            .fetch_optional(&mut *other_tenant)
+            .await
+            .unwrap();
+        assert!(
+            hidden.is_none(),
+            "a different tenant must not read private inventory"
+        );
         other_tenant.rollback().await.unwrap();
 
         let mut review = app.begin().await.unwrap();
@@ -537,8 +557,15 @@ mod tests {
         review.commit().await.unwrap();
 
         let public_row: Option<Uuid> = sqlx::query_scalar("SELECT id FROM properties WHERE id=$1")
-            .bind(property_id).fetch_optional(&app).await.unwrap();
-        assert_eq!(public_row, Some(property_id), "only verified and independently reviewed public inventory is visible");
+            .bind(property_id)
+            .fetch_optional(&app)
+            .await
+            .unwrap();
+        assert_eq!(
+            public_row,
+            Some(property_id),
+            "only verified and independently reviewed public inventory is visible"
+        );
     }
 
     #[test]
