@@ -1,12 +1,11 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE IF NOT EXISTS organizations (
+CREATE TABLE organizations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL CHECK (length(trim(name)) BETWEEN 2 AND 160),
     created_at timestamptz NOT NULL DEFAULT now()
 );
-
-CREATE TABLE IF NOT EXISTS properties (
+CREATE TABLE properties (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id uuid NOT NULL REFERENCES organizations(id),
     created_by uuid NOT NULL,
@@ -18,8 +17,7 @@ CREATE TABLE IF NOT EXISTS properties (
     property_type text NOT NULL CHECK (property_type IN ('apartment','house','villa','penthouse','land','commercial','other')),
     currency char(3) NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
     asking_price_minor bigint CHECK (asking_price_minor IS NULL OR asking_price_minor > 0),
-    verification_state text NOT NULL DEFAULT 'unverified'
-      CHECK (verification_state IN ('unverified','in_review','verified','rejected','stale')),
+    verification_state text NOT NULL DEFAULT 'unverified' CHECK (verification_state IN ('unverified','in_review','verified','rejected','stale')),
     visibility text NOT NULL DEFAULT 'private' CHECK (visibility IN ('private','public','off_market')),
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
@@ -27,8 +25,7 @@ CREATE TABLE IF NOT EXISTS properties (
     CHECK (verification_state <> 'verified' OR (reviewed_by IS NOT NULL AND verified_at IS NOT NULL)),
     CHECK (visibility <> 'public' OR verification_state = 'verified')
 );
-
-CREATE TABLE IF NOT EXISTS property_evidence (
+CREATE TABLE property_evidence (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id uuid NOT NULL REFERENCES organizations(id),
     property_id uuid NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
@@ -40,8 +37,7 @@ CREATE TABLE IF NOT EXISTS property_evidence (
     observed_at timestamptz NOT NULL,
     created_at timestamptz NOT NULL DEFAULT now()
 );
-
-CREATE TABLE IF NOT EXISTS property_audit_events (
+CREATE TABLE property_audit_events (
     id bigserial PRIMARY KEY,
     organization_id uuid NOT NULL REFERENCES organizations(id),
     property_id uuid NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
@@ -50,8 +46,7 @@ CREATE TABLE IF NOT EXISTS property_audit_events (
     details jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now()
 );
-
-CREATE TABLE IF NOT EXISTS property_enquiries (
+CREATE TABLE property_enquiries (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     property_id uuid NOT NULL REFERENCES properties(id),
     name text NOT NULL CHECK (length(trim(name)) BETWEEN 2 AND 120),
@@ -61,12 +56,11 @@ CREATE TABLE IF NOT EXISTS property_enquiries (
     created_at timestamptz NOT NULL DEFAULT now(),
     status text NOT NULL DEFAULT 'new' CHECK (status IN ('new','assigned','contacted','closed','spam'))
 );
-
-CREATE INDEX IF NOT EXISTS properties_org_updated_idx ON properties (organization_id, updated_at DESC);
-CREATE INDEX IF NOT EXISTS properties_public_search_idx ON properties (country_code, city, property_type) WHERE verification_state = 'verified' AND visibility = 'public';
-CREATE INDEX IF NOT EXISTS property_evidence_property_idx ON property_evidence (property_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS property_audit_property_idx ON property_audit_events (property_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS property_enquiries_property_idx ON property_enquiries (property_id, created_at DESC);
+CREATE INDEX properties_org_updated_idx ON properties (organization_id, updated_at DESC);
+CREATE INDEX properties_public_search_idx ON properties (country_code, city, property_type) WHERE verification_state = 'verified' AND visibility = 'public';
+CREATE INDEX property_evidence_property_idx ON property_evidence (property_id, created_at DESC);
+CREATE INDEX property_audit_property_idx ON property_audit_events (property_id, created_at DESC);
+CREATE INDEX property_enquiries_property_idx ON property_enquiries (property_id, created_at DESC);
 
 ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE properties FORCE ROW LEVEL SECURITY;
@@ -81,9 +75,7 @@ CREATE POLICY properties_tenant_access ON properties
   USING (organization_id = nullif(current_setting('app.organization_id', true), '')::uuid)
   WITH CHECK (organization_id = nullif(current_setting('app.organization_id', true), '')::uuid);
 CREATE POLICY properties_public_read ON properties FOR SELECT
-  USING (visibility = 'public' AND verification_state = 'verified' AND reviewed_by IS NOT NULL AND EXISTS (
-    SELECT 1 FROM property_evidence e WHERE e.property_id = properties.id
-  ));
+  USING (visibility = 'public' AND verification_state = 'verified' AND reviewed_by IS NOT NULL);
 
 CREATE POLICY evidence_tenant_access ON property_evidence
   USING (organization_id = nullif(current_setting('app.organization_id', true), '')::uuid)
@@ -95,7 +87,6 @@ CREATE POLICY evidence_public_read ON property_evidence FOR SELECT
 CREATE POLICY audit_tenant_access ON property_audit_events
   USING (organization_id = nullif(current_setting('app.organization_id', true), '')::uuid)
   WITH CHECK (organization_id = nullif(current_setting('app.organization_id', true), '')::uuid);
-
 CREATE POLICY enquiries_tenant_read ON property_enquiries FOR SELECT
   USING (EXISTS (SELECT 1 FROM properties p WHERE p.id = property_enquiries.property_id
     AND p.organization_id = nullif(current_setting('app.organization_id', true), '')::uuid));
