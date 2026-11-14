@@ -1,7 +1,7 @@
 use axum::{Json, Router, routing::get};
 use serde::Serialize;
 
-use crate::modules;
+use crate::{elite_estate_api::{self, AppState}, modules};
 
 #[derive(Serialize)]
 struct HealthResponse {
@@ -18,8 +18,9 @@ async fn health() -> Json<HealthResponse> {
     })
 }
 
-pub fn router() -> Router {
+pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/api/v1/modules", get(modules::list))
+        .merge(elite_estate_api::routes(state))
 }
