@@ -1,4 +1,6 @@
-# AUREL — Private Property Platform
+# AUREL
+
+[Project map](./docs/MAP.md) — architecture, release gates and AI agent toolchain. — Private Property Platform
 
 A premium platform for verified exceptional property, buyer mandates, private inventory and property ownership services.
 
