@@ -13,10 +13,10 @@ Backend domain logic is Rust-only. The web client is presentation-only. Begin wi
 7. Go-to-market: secure supply before demand generation; onboard a small vetted partner group.
 
 ## Milestones
-- M0: Rust workspace, API foundation, web shell and CI.
-- M1: dedicated database, schema migrations, Auth/JWT validation and row-level security.
-- M2: property ingestion and verification queue with audit history.
-- M3: search and listing publication workflow.
+- M0: **Implemented** — Rust workspace, API foundation, web shell and CI.
+- M1: **Partially implemented** — PostgreSQL schema/migrations, tenant RLS and JWT validation contract. Dedicated runtime database and identity-provider integration remain unconfigured.
+- M2: **API workflow implemented** — property creation, evidence append, review queue state, independent reviewer approval/rejection and append-only audit history. Real source onboarding and licensed inventory remain external prerequisites.
+- M3: **API/UI implemented, not deployed** — verified-only public search/detail and consent-gated enquiry flow. Rate limiting, abuse controls and retention remain release blockers.
 - M4: buyer mandates, enquiry pipeline and broker workspace.
 - M5: Off-Market access grants and secure deal-room MVP.
 - M6: security review, test suite, monitoring and launch rehearsal.
