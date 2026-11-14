@@ -13,6 +13,8 @@ pub struct PropertyTask {
 }
 impl PropertyTask {
     pub fn can_dispatch(&self) -> bool {
-        !self.description.trim().is_empty() && (!self.owner_approval_required || self.owner_approved) && self.estimated_cost_minor.is_none_or(|v| v >= 0)
+        !self.description.trim().is_empty()
+            && (!self.owner_approval_required || self.owner_approved)
+            && self.estimated_cost_minor.is_none_or(|v| v >= 0)
     }
 }
