@@ -10,5 +10,9 @@ pub struct ResidencyCase {
     pub client_consent: bool,
 }
 impl ResidencyCase {
-    pub fn can_refer_to_partner(&self) -> bool { self.client_consent && self.licensed_partner_id.is_some() && self.jurisdiction_code.len() == 2 }
+    pub fn can_refer_to_partner(&self) -> bool {
+        self.client_consent
+            && self.licensed_partner_id.is_some()
+            && self.jurisdiction_code.len() == 2
+    }
 }
