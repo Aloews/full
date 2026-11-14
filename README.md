@@ -21,6 +21,7 @@ Elite Estate is the first delivery target. The remaining domains are registered 
 
 ## Elite Estate API
 - `GET /health` — liveness.
+- `GET /ready` — database readiness.
 - `GET /api/v1/modules` — domain catalogue.
 - `POST /api/v1/properties` — create a private listing (JWT owner/broker/admin).
 - `GET /api/v1/properties` — tenant-scoped inventory.
