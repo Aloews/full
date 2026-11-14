@@ -54,7 +54,8 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 - Default branch: `main` (`br-dry-lake-b91cdjc5`); database `aurel`; owner role `aurel_owner`.
 - Initial Elite Estate SQL migration `services/platform-api/migrations/0001_elite_estate.sql` was applied transactionally. Verified tables: `organizations`, `properties`, `property_evidence`, `property_audit_events`, `property_enquiries`; RLS policies and append-only/publication triggers were created.
 - Neon Managed Better Auth is provisioned on the same branch. Email/password sign-up requires OTP email verification; organization plugin enabled. Shared Neon SMTP is staging-only, not production mail delivery.
-- Trusted auth origins: the AUREL Vercel production alias and the current preview alias. Vercel project `aurel-private-property` has `NEON_AUTH_BASE_URL` and `NEON_AUTH_COOKIE_SECRET` configured for preview and development only. Do not enable either on production until custom SMTP, token integration and security review pass.
+- Least-privilege application role `aurel_app` is created with read/write access to `public` and read-only access to `neon_auth.user`, `neon_auth.organization`, and `neon_auth.member`. Verified `rolsuper=false`, `rolbypassrls=false`, `rolcreaterole=false`, `rolcreatedb=false`; a direct query as `aurel_app` returned `row_security=on` and zero rows without tenant context.
+- Trusted auth origins: the AUREL Vercel production alias and the current preview alias. Vercel project `aurel-private-property` has `DATABASE_URL`, `AUREL_API_URL`, `NEXT_PUBLIC_AUREL_API_URL`, `NEON_AUTH_BASE_URL`, `NEON_AUTH_JWKS_URL`, `NEON_AUTH_COOKIE_SECRET`, and `NEXT_PUBLIC_NEON_AUTH_URL` configured for preview/development only. Both API URL variables point to the same-project `/api` base. No AUREL database or auth variables are enabled on production until custom SMTP, token integration and security review pass.
 - No database URL, password, JWT, cookie secret or API token is stored in Git. Neon Functions can inject the branch-scoped `DATABASE_URL` if selected for the API runtime.
 
 ## Release blockers / not yet verified
@@ -64,7 +65,7 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 - Browser property collection/detail/enquiry screens are wired to `AUREL_API_URL` and `NEXT_PUBLIC_AUREL_API_URL`; they remain empty until an API runtime is deployed and verified inventory is available. Those API URL variables are not yet configured.
 - No real licensed property supply, partner agreements, evidence or listing data have been provided; no sample properties are fabricated.
 - No launch jurisdiction, legal entity or brokerage/partner model has been approved.
-- No API staging deployment, production deployment, rollback rehearsal or end-to-end browser journey has been verified.
+- Staging API implementation and end-to-end browser journey are still pending. The selected staging runtime is Next.js route handlers in the existing Vercel project, backed by the dedicated Neon database and Managed Auth. The existing Rust/Axum API remains unhosted legacy code; Neon Functions cannot run that Rust binary.
 - Staging API runtime decision: implement the active API as Next.js route handlers in the existing `aurel-private-property` Vercel project, backed by the provisioned Neon database and Managed Auth. `AUREL_API_URL` and `NEXT_PUBLIC_AUREL_API_URL` now point to the same-project `/api` base for preview/development. The existing Rust/Axum service remains unhosted legacy code until a compatible free-tier container runtime is verified; Neon Functions is Node.js-only and cannot run the Rust binary. Do not claim the Rust API is deployed.
 - Frontend still contains concept copy and is not yet wired to the live API.
 
