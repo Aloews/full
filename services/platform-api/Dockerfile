@@ -3,6 +3,7 @@ WORKDIR /app
 COPY Cargo.toml ./
 COPY services/platform-api/Cargo.toml services/platform-api/Cargo.toml
 COPY services/platform-api/src services/platform-api/src
+COPY services/platform-api/migrations services/platform-api/migrations
 RUN cargo build --release -p aurel-platform-api
 
 FROM debian:bookworm-slim
