@@ -641,6 +641,42 @@ mod tests {
             .bind(org_a).bind(property_id).bind(creator).execute(&mut *create).await.unwrap();
         create.commit().await.unwrap();
 
+        let mut self_review = app.begin().await.unwrap();
+        sqlx::query("SELECT set_config('app.organization_id',$1,true),set_config('app.actor_id',$2,true),set_config('app.role','reviewer',true)")
+            .bind(org_a.to_string())
+            .bind(creator.to_string())
+            .execute(&mut *self_review)
+            .await
+            .unwrap();
+        let self_review_result = sqlx::query("UPDATE properties SET verification_state='verified',visibility='public',reviewed_by=$1,verified_at=now() WHERE id=$2")
+            .bind(creator)
+            .bind(property_id)
+            .execute(&mut *self_review)
+            .await;
+        assert!(self_review_result.is_err(), "a listing creator must not approve their own property");
+        self_review.rollback().await.unwrap();
+
+        let property_without_evidence: Uuid = sqlx::query_scalar("INSERT INTO properties (organization_id,created_by,title,description,country_code,city,property_type,currency) VALUES ($1,$2,'Unverified residence','A property record that has not supplied supporting evidence.','MC','Monaco','villa','EUR') RETURNING id")
+            .bind(org_a)
+            .bind(creator)
+            .fetch_one(&admin)
+            .await
+            .unwrap();
+        let mut missing_evidence_review = app.begin().await.unwrap();
+        sqlx::query("SELECT set_config('app.organization_id',$1,true),set_config('app.actor_id',$2,true),set_config('app.role','reviewer',true)")
+            .bind(org_a.to_string())
+            .bind(reviewer.to_string())
+            .execute(&mut *missing_evidence_review)
+            .await
+            .unwrap();
+        let missing_evidence_result = sqlx::query("UPDATE properties SET verification_state='verified',visibility='public',reviewed_by=$1,verified_at=now() WHERE id=$2")
+            .bind(reviewer)
+            .bind(property_without_evidence)
+            .execute(&mut *missing_evidence_review)
+            .await;
+        assert!(missing_evidence_result.is_err(), "a listing without evidence must not be published");
+        missing_evidence_review.rollback().await.unwrap();
+
         let mut other_tenant = app.begin().await.unwrap();
         sqlx::query("SELECT set_config('app.organization_id',$1,true),set_config('app.actor_id',$2,true),set_config('app.role','broker',true)")
             .bind(org_b.to_string()).bind(Uuid::new_v4().to_string()).execute(&mut *other_tenant).await.unwrap();
