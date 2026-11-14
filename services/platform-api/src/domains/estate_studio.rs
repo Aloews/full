@@ -11,5 +11,7 @@ pub struct Campaign {
     pub rights_confirmed: bool,
 }
 impl Campaign {
-    pub fn can_publish(&self) -> bool { !self.title.trim().is_empty() && self.approved_by_client && self.rights_confirmed }
+    pub fn can_publish(&self) -> bool {
+        !self.title.trim().is_empty() && self.approved_by_client && self.rights_confirmed
+    }
 }
