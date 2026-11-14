@@ -13,14 +13,18 @@ Elite Estate is the first release target. The other nine AUREL domains remain re
 - Property creation, tenant-scoped listing, evidence append, submission for review, independent reviewer approval/rejection, public verified listing search and consent-gated enquiry capture.
 - Database-level publication guard: a listing cannot become verified/public without evidence and a reviewer distinct from its creator.
 - Evidence and audit records are append-only.
-- Next.js is presentation-only.
+- Next.js is the selected staging runtime for the active API: route handlers in the existing Vercel project will use the dedicated Neon database and Managed Auth. The Rust/Axum service remains unhosted legacy code until a compatible free-tier container runtime is verified.
+
+## Operating standard
+
+- Apply the shared Reality-First Business skill at `.claude/skills/reality-first-business/SKILL.md` in every agent session. Separate verified facts, estimates, assumptions, unknowns and disputed evidence. Inspect the actual repository and environment before changing anything; define acceptance criteria; run and inspect relevant checks; never claim completion, test success, deployment, sales or data freshness without direct evidence. Every project map must record real blockers and evidence, not optimistic status.
 
 ## Owner-approved launch decisions (2026-11-14)
 
 - Launch scope: international market. This is a product direction, not a determination that the service may legally operate in every country. Before enabling listings or transactions in a country, complete a country-by-country legal, licensing, privacy, consumer-protection, sanctions and tax review.
 - Property supply: both (1) licensed/contracted agencies and property owners, and (2) lawful open/public sources. Every listing must retain source attribution, retrieval time, permitted-use basis, and verification state. Publicly accessible data is not automatically licensed for republication; do not scrape or republish where terms or law prohibit it.
 - Infrastructure budget: prefer free tiers and existing connected services. Do not create paid resources, exceed free quotas, enable paid plans, or incur recurring charges without explicit owner approval. Report exact free-tier constraints when they block production.
-- These decisions do not waive the existing release gates for dedicated database, real identity/JWT issuance, abuse controls, legal review, licensed supply, staging, end-to-end verification and rollback.
+- These decisions do not waive the existing release gates for Neon Auth/JWKS integration, abuse controls, legal review, licensed supply, staging, end-to-end verification and rollback. The dedicated Neon database and staging auth provider are now provisioned; their integration into the active API remains pending.
 
 ## API contract
 - `GET /health` — liveness.
@@ -62,11 +66,10 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 - The Rust API still validates the legacy HS256 AUREL token and does not yet verify Neon Auth EdDSA/JWKS tokens or resolve application roles from verified organization membership. The API accepts only correctly signed AUREL JWTs; it does not issue user tokens.
 - Public enquiry endpoint still needs edge/API rate limiting, abuse controls beyond OTP identity verification, and a retention policy before internet exposure.
 - Production email requires a custom SMTP provider; shared Neon SMTP is staging-only.
-- Browser property collection/detail/enquiry screens are wired to `AUREL_API_URL` and `NEXT_PUBLIC_AUREL_API_URL`; they remain empty until an API runtime is deployed and verified inventory is available. Those API URL variables are not yet configured.
+- Browser property collection/detail/enquiry screens are wired to `AUREL_API_URL` and `NEXT_PUBLIC_AUREL_API_URL`; both variables now point to the same-project `/api` base for preview/development. They remain empty until route handlers are implemented and verified inventory is available.
 - No real licensed property supply, partner agreements, evidence or listing data have been provided; no sample properties are fabricated.
 - No launch jurisdiction, legal entity or brokerage/partner model has been approved.
-- Staging API implementation and end-to-end browser journey are still pending. The selected staging runtime is Next.js route handlers in the existing Vercel project, backed by the dedicated Neon database and Managed Auth. The existing Rust/Axum API remains unhosted legacy code; Neon Functions cannot run that Rust binary.
-- Staging API runtime decision: implement the active API as Next.js route handlers in the existing `aurel-private-property` Vercel project, backed by the provisioned Neon database and Managed Auth. `AUREL_API_URL` and `NEXT_PUBLIC_AUREL_API_URL` now point to the same-project `/api` base for preview/development. The existing Rust/Axum service remains unhosted legacy code until a compatible free-tier container runtime is verified; Neon Functions is Node.js-only and cannot run the Rust binary. Do not claim the Rust API is deployed.
+- Staging API implementation and end-to-end browser journey are still pending. The selected staging runtime is Next.js route handlers in the existing `aurel-private-property` Vercel project, backed by the dedicated Neon database and Managed Auth. The Rust/Axum service remains unhosted legacy code; Neon Functions cannot run that Rust binary. Do not claim it is deployed.
 - Frontend still contains concept copy and is not yet wired to the live API.
 
 ## Latest checks
