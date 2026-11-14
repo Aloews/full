@@ -17,8 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let database_url = env::var("DATABASE_URL")
         .map_err(|_| "DATABASE_URL is required; configure a dedicated AUREL PostgreSQL database")?;
-    let jwt_secret = env::var("AUREL_JWT_SECRET")
-        .map_err(|_| "AUREL_JWT_SECRET is required")?;
+    let jwt_secret = env::var("AUREL_JWT_SECRET").map_err(|_| "AUREL_JWT_SECRET is required")?;
     let pool = PgPoolOptions::new()
         .max_connections(10)
         .connect(&database_url)
@@ -29,7 +28,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let address: SocketAddr = format!(
         "0.0.0.0:{}",
         env::var("PORT").unwrap_or_else(|_| "8080".into())
-    ).parse()?;
+    )
+    .parse()?;
     let app = routes::router(state)
         .layer(RequestBodyLimitLayer::new(1_048_576))
         .layer(TraceLayer::new_for_http());

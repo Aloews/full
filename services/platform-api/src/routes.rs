@@ -1,7 +1,10 @@
 use axum::{Json, Router, routing::get};
 use serde::Serialize;
 
-use crate::{elite_estate_api::{self, AppState}, modules};
+use crate::{
+    elite_estate_api::{self, AppState},
+    modules,
+};
 
 #[derive(Serialize)]
 struct HealthResponse {
