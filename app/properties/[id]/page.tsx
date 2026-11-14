@@ -31,7 +31,7 @@ function formatPrice(value: number | null, currency: string): string {
   if (value === null) return "Price on request";
   try {
     const formatter = new Intl.NumberFormat("en", { style: "currency", currency });
-    const digits = formatter.resolvedOptions().maximumFractionDigits;
+    const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
     return formatter.format(value / 10 ** digits);
   } catch {
     return "Price on request";
