@@ -487,6 +487,7 @@ mod tests {
         sqlx::query("GRANT USAGE ON SCHEMA public TO aurel_app").execute(&admin).await.unwrap();
         sqlx::query("GRANT SELECT, INSERT, UPDATE, DELETE ON organizations, properties, property_evidence, property_audit_events, property_enquiries TO aurel_app").execute(&admin).await.unwrap();
 
+        sqlx::query("DO $ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='aurel_app') THEN CREATE ROLE aurel_app LOGIN PASSWORD 'aurel_test_password'; ELSE ALTER ROLE aurel_app WITH LOGIN PASSWORD 'aurel_test_password'; END IF; END $;").execute(&admin).await.unwrap();
         let app = PgPoolOptions::new().max_connections(2).connect(&app_url).await.unwrap();
         let org_a = Uuid::new_v4();
         let org_b = Uuid::new_v4();
