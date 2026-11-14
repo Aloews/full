@@ -105,4 +105,4 @@ A repository entry is not proof that an integration is installed or active.
 |---|---|---|
 | Caveman | Project skills at `.agents/skills/caveman/` and `.claude/skills/caveman/` | Included in this PR; host discovery/activation not yet verified |
 | codebase-memory-mcp | Pinned project config `.mcp.json` (`0.12.1`) | MCP startup and indexing not yet verified on a persistent host |
-| Spotify Portal / shunt | Setup instructions recorded here | Not installed/connected; Portal authentication and AiKA readiness not established |
+| Spotify Portal / shunt | `.claude/settings.json` registers marketplace, enables `portal@portal`, disables `shunt@portal` | Portal auth/session setup pending; shunt blocked pending upstream hook fix and AiKA verification |
