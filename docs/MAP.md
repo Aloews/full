@@ -9,7 +9,7 @@ Elite Estate is the first release target. The other nine AUREL domains remain re
 - Rust workspace and Axum/Tokio API.
 - PostgreSQL migration for organizations, properties, evidence, append-only audit events and buyer enquiries.
 - Tenant-scoped PostgreSQL row-level security for internal records.
-- HS256 JWT authentication contract for protected API routes. Claims: `sub` (actor UUID), `org_id` (organization UUID), `role`, `iss=aurel`, `aud=aurel-api`, `exp`.
+- The current Rust API still expects HS256 JWTs with `sub`, `org_id`, `role`, `iss=aurel`, `aud=aurel-api`, `exp`; this is a legacy contract and must be replaced or explicitly adapted before Neon Auth tokens are accepted.
 - Property creation, tenant-scoped listing, evidence append, submission for review, independent reviewer approval/rejection, public verified listing search and consent-gated enquiry capture.
 - Database-level publication guard: a listing cannot become verified/public without evidence and a reviewer distinct from its creator.
 - Evidence and audit records are append-only.
@@ -45,16 +45,26 @@ Elite Estate is the first release target. The other nine AUREL domains remain re
 - `NEXT_PUBLIC_AUREL_API_URL`: browser API base URL for enquiries.
 - `PORT`: optional; defaults to 8080.
 
-The API applies embedded SQL migrations at startup. Do not point it at Sherlock Scholes, Novel Forge or any other production database. No AUREL database credentials have been verified in this repository.
+The API applies embedded SQL migrations at startup. Do not point it at Sherlock Scholes, Novel Forge or any other production database. The dedicated AUREL Neon database is now provisioned; connection strings and secrets must remain in provider secret stores, never in this map or Git.
+
+## Dedicated AUREL staging infrastructure — 2026-11-14
+
+- Neon free organization: `org-orange-math-56999528`.
+- Dedicated project: `aurel-production` (`quiet-band-32908169`), region `aws-eu-central-1`, PostgreSQL 17.
+- Default branch: `main` (`br-dry-lake-b91cdjc5`); database `aurel`; owner role `aurel_owner`.
+- Initial Elite Estate SQL migration `services/platform-api/migrations/0001_elite_estate.sql` was applied transactionally. Verified tables: `organizations`, `properties`, `property_evidence`, `property_audit_events`, `property_enquiries`; RLS policies and append-only/publication triggers were created.
+- Neon Managed Better Auth is provisioned on the same branch. Email/password sign-up requires OTP email verification; organization plugin enabled. Shared Neon SMTP is staging-only, not production mail delivery.
+- Trusted auth origins: the AUREL Vercel production alias and the current preview alias. Vercel project `aurel-private-property` has `NEON_AUTH_BASE_URL` and `NEON_AUTH_COOKIE_SECRET` configured for preview and development only. Do not enable either on production until custom SMTP, token integration and security review pass.
+- No database URL, password, JWT, cookie secret or API token is stored in Git. Neon Functions can inject the branch-scoped `DATABASE_URL` if selected for the API runtime.
 
 ## Release blockers / not yet verified
-- No dedicated AUREL PostgreSQL instance or deployment credentials are connected/verified.
-- JWT issuer and token-issuance integration with a real identity provider is not connected. The API accepts only correctly signed AUREL JWTs; it does not issue user tokens.
-- Public enquiry endpoint still needs edge/API rate limiting, abuse controls, email verification and retention policy before internet exposure.
-- Browser property collection/detail/enquiry screens are wired to `AUREL_API_URL` and `NEXT_PUBLIC_AUREL_API_URL`; they remain empty until a dedicated API and verified inventory are deployed.
+- The Rust API still validates the legacy HS256 AUREL token and does not yet verify Neon Auth EdDSA/JWKS tokens or resolve application roles from verified organization membership. The API accepts only correctly signed AUREL JWTs; it does not issue user tokens.
+- Public enquiry endpoint still needs edge/API rate limiting, abuse controls beyond OTP identity verification, and a retention policy before internet exposure.
+- Production email requires a custom SMTP provider; shared Neon SMTP is staging-only.
+- Browser property collection/detail/enquiry screens are wired to `AUREL_API_URL` and `NEXT_PUBLIC_AUREL_API_URL`; they remain empty until an API runtime is deployed and verified inventory is available. Those API URL variables are not yet configured.
 - No real licensed property supply, partner agreements, evidence or listing data have been provided; no sample properties are fabricated.
 - No launch jurisdiction, legal entity or brokerage/partner model has been approved.
-- No staging deployment, production deployment, rollback rehearsal or end-to-end browser journey has been verified.
+- No API staging deployment, production deployment, rollback rehearsal or end-to-end browser journey has been verified.
 - Frontend still contains concept copy and is not yet wired to the live API.
 
 ## Latest checks
