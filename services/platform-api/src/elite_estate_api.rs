@@ -509,12 +509,21 @@ mod tests {
             .unwrap();
         sqlx::query("GRANT SELECT, INSERT, UPDATE, DELETE ON organizations, properties, property_evidence, property_audit_events, property_enquiries TO aurel_app").execute(&admin).await.unwrap();
 
-        let role_exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='aurel_app')")
-            .fetch_one(&admin).await.unwrap();
+        let role_exists: bool =
+            sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='aurel_app')")
+                .fetch_one(&admin)
+                .await
+                .unwrap();
         if role_exists {
-            sqlx::query("ALTER ROLE aurel_app WITH LOGIN PASSWORD 'aurel_test_password'").execute(&admin).await.unwrap();
+            sqlx::query("ALTER ROLE aurel_app WITH LOGIN PASSWORD 'aurel_test_password'")
+                .execute(&admin)
+                .await
+                .unwrap();
         } else {
-            sqlx::query("CREATE ROLE aurel_app LOGIN PASSWORD 'aurel_test_password'").execute(&admin).await.unwrap();
+            sqlx::query("CREATE ROLE aurel_app LOGIN PASSWORD 'aurel_test_password'")
+                .execute(&admin)
+                .await
+                .unwrap();
         }
         let app = PgPoolOptions::new()
             .max_connections(2)
