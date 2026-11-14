@@ -11,5 +11,7 @@ pub struct ConciergeRequest {
     pub client_consent: bool,
 }
 impl ConciergeRequest {
-    pub fn can_route(&self) -> bool { self.client_consent && !self.category.trim().is_empty() && !self.details.trim().is_empty() }
+    pub fn can_route(&self) -> bool {
+        self.client_consent && !self.category.trim().is_empty() && !self.details.trim().is_empty()
+    }
 }
