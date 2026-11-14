@@ -10,5 +10,7 @@ pub struct AccessGrant {
     pub expires_at: String,
 }
 impl AccessGrant {
-    pub fn allows_access(&self, now_iso: &str) -> bool { self.nda_accepted && self.expires_at.as_str() > now_iso }
+    pub fn allows_access(&self, now_iso: &str) -> bool {
+        self.nda_accepted && self.expires_at.as_str() > now_iso
+    }
 }
