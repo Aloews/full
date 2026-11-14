@@ -15,10 +15,22 @@ pub struct BuyerMandate {
 
 impl BuyerMandate {
     pub fn validate(&self) -> Result<(), &'static str> {
-        if self.country_codes.is_empty() { return Err("market_required"); }
-        if self.currency.len() != 3 { return Err("invalid_currency"); }
-        if self.budget_min_minor.zip(self.budget_max_minor).is_some_and(|(min, max)| min > max) { return Err("invalid_budget_range"); }
+        if self.country_codes.is_empty() {
+            return Err("market_required");
+        }
+        if self.currency.len() != 3 {
+            return Err("invalid_currency");
+        }
+        if self
+            .budget_min_minor
+            .zip(self.budget_max_minor)
+            .is_some_and(|(min, max)| min > max)
+        {
+            return Err("invalid_budget_range");
+        }
         Ok(())
     }
-    pub fn can_start_search(&self) -> bool { self.consent_recorded && self.validate().is_ok() }
+    pub fn can_start_search(&self) -> bool {
+        self.consent_recorded && self.validate().is_ok()
+    }
 }

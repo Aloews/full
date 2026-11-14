@@ -1,4 +1,4 @@
-use axum::{routing::get, Json, Router};
+use axum::{Json, Router, routing::get};
 use serde::Serialize;
 
 use crate::modules;
@@ -11,7 +11,11 @@ struct HealthResponse {
 }
 
 async fn health() -> Json<HealthResponse> {
-    Json(HealthResponse { status: "ok", service: "aurel-platform-api", version: env!("CARGO_PKG_VERSION") })
+    Json(HealthResponse {
+        status: "ok",
+        service: "aurel-platform-api",
+        version: env!("CARGO_PKG_VERSION"),
+    })
 }
 
 pub fn router() -> Router {
