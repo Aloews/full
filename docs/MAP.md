@@ -64,3 +64,11 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 - The PostgreSQL integration test proves cross-tenant isolation, rejects creator self-review and rejects publication without evidence, and allows independently reviewed evidence-backed publication.
 - Vercel status for this candidate is failed with `build-rate-limit` (free-plan daily deployment cap). No workaround or plan upgrade was attempted.
 - This is a tested technical vertical slice, not a production release. Do not merge or deploy until the dedicated database, identity provider, enquiry abuse controls, licensed supply, jurisdiction review and staging/rollback gates are completed.
+
+## AI delivery runtime — 2026-11-14
+
+- AUREL is the first Product Factory target; its code repository does not host the coding-agent process.
+- The control plane `Aloews/russian-dev-projects` runs Claude Code/Fable 5.2 with the pinned Caveman 4.1.0 plugin and a local Qwen2.5-Coder 3B fallback on isolated GitHub Actions runners.
+- Qwen is installed per run through Ollama, its exact model is checked before inference, and the generated patch is restricted to application/source/tests/docs before the existing database, Rust, frontend and browser verification pipeline.
+- No model or agent receives production database credentials, identity-provider secrets, live property inventory or deployment access.
+- The current AUREL branch remains a technical vertical slice, not a production release. The Product Factory agent setup does not waive dedicated database, real JWT issuance, abuse controls, licensed supply, jurisdiction review, staging E2E or rollback gates.
