@@ -39,3 +39,5 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: cargo build --release --workspace
+      - name: Build production container image
+        run: docker build --tag aurel-platform-api:ci --file services/platform-api/Dockerfile .
