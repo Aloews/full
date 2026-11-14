@@ -48,7 +48,11 @@ Elite Estate is the first release target. The other nine AUREL domains remain re
 The API applies embedded SQL migrations at startup. Do not point it at Sherlock Scholes, Novel Forge or any other production database. No AUREL database credentials have been verified in this repository.
 
 ## Release blockers / not yet verified
-- No dedicated AUREL PostgreSQL instance or deployment credentials are connected/verified.
+- Dedicated Neon project `aurel-production` is provisioned in `aws-eu-central-1` (project `quiet-band-32908169`), with default branch `main` (`br-dry-lake-b91cdjc5`) and database `aurel`. Managed Better Auth is active with mandatory email OTP verification and the organization plugin. AUREL `aurel_app` is a login role with neither SUPERUSER nor BYPASSRLS; verified RLS is enabled and forced on `organizations`, `properties`, `property_evidence`, `property_audit_events` and `property_enquiries`. A pooled TLS-required connection URI for `aurel_app` and a separately generated 48-byte staging cookie secret have been stored in the Vercel project `aurel-private-property` as sensitive `DATABASE_URL` and `NEON_AUTH_COOKIE_SECRET` variables for Preview/Development only. No secret values are committed.
+
+- Vercel project `aurel-private-property` is confirmed to exist and has successful Preview deployments. Its staging API/auth variables are scoped to Preview/Development; production auth and database variables have not been enabled. SSO protection remains enabled.
+- The Neon `aurel_app` role has SELECT/INSERT on organizations and the append-only evidence/audit/enquiry tables, SELECT/INSERT/UPDATE on properties, and no DELETE privileges on the application tables. This is a privilege snapshot, not a substitute for endpoint-level authorization tests.
+
 - JWT issuer and token-issuance integration with a real identity provider is not connected. The API accepts only correctly signed AUREL JWTs; it does not issue user tokens.
 - Public enquiry endpoint still needs edge/API rate limiting, abuse controls, email verification and retention policy before internet exposure.
 - Browser property collection/detail/enquiry screens are wired to `AUREL_API_URL` and `NEXT_PUBLIC_AUREL_API_URL`; they remain empty until a dedicated API and verified inventory are deployed.
