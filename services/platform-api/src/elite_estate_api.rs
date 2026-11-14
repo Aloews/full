@@ -1,7 +1,7 @@
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    http::{HeaderMap, StatusCode, request::Parts},
+    http::StatusCode,
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -40,7 +40,8 @@ struct Claims {
     sub: Uuid,
     org_id: Uuid,
     role: String,
-    exp: usize,
+    #[serde(rename = "exp")]
+    _exp: usize,
     iss: String,
     aud: String,
 }
@@ -304,11 +305,11 @@ async fn create_enquiry(
         || !input.email.contains('@') || !(10..=4000).contains(&input.message.trim().len()) {
         return error(StatusCode::UNPROCESSABLE_ENTITY, "invalid_enquiry");
     }
-    let result = sqlx::query("INSERT INTO property_enquiries (property_id,name,email,message,consent_recorded) SELECT id,$2,$3,$4,true FROM properties WHERE id=$1 AND visibility='public' AND verification_state='verified' RETURNING id")
+    let result = sqlx::query_scalar::<_, Uuid>("INSERT INTO property_enquiries (property_id,name,email,message,consent_recorded) SELECT id,$2,$3,$4,true FROM properties WHERE id=$1 AND visibility='public' AND verification_state='verified' RETURNING id")
         .bind(property_id).bind(input.name.trim()).bind(input.email.trim().to_lowercase()).bind(input.message.trim())
         .fetch_one(&state.pool).await;
     match result {
-        Ok(row) => (StatusCode::CREATED, Json(CreatedId { id: sqlx::Row::get(&row, "id") })).into_response(),
+        Ok(id) => (StatusCode::CREATED, Json(CreatedId { id })).into_response(),
         Err(sqlx::Error::RowNotFound) => error(StatusCode::NOT_FOUND, "public_property_not_found"),
         Err(_) => error(StatusCode::INTERNAL_SERVER_ERROR, "enquiry_failed"),
     }
