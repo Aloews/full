@@ -17,9 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
-      - name: Apply non-breaking dependency security fixes
-        run: npm audit fix
+      - run: npm ci
       - name: Dependency security audit
         run: npm audit --audit-level=low
       - run: npm run build
