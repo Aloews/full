@@ -168,6 +168,18 @@ struct EvidenceInput {
     observed_at: DateTime<Utc>,
 }
 
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+struct EvidenceRow {
+    id: Uuid,
+    evidence_type: String,
+    source_url: Option<String>,
+    reference_code: Option<String>,
+    note: String,
+    observed_at: DateTime<Utc>,
+    created_at: DateTime<Utc>,
+}
+
 #[derive(Debug, Deserialize)]
 struct ReviewInput {
     approved: bool,
@@ -357,6 +369,41 @@ async fn submit_for_review(
     }
 }
 
+
+async fn review_queue(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Query(query): Query<ListQuery>,
+) -> Response {
+    if !can_review(&auth.role) { return error(StatusCode::FORBIDDEN, "reviewer_role_required"); }
+    let limit = query.limit.unwrap_or(30).clamp(1, 100);
+    let offset = query.offset.unwrap_or(0).max(0);
+    let mut tx = match tenant_transaction(&state.pool, &auth).await { Ok(tx) => tx, Err(_) => return error(StatusCode::INTERNAL_SERVER_ERROR, "database_error") };
+    let rows = sqlx::query_as::<_, PropertyRow>(
+        "SELECT id,title,description,country_code,city,property_type,currency,asking_price_minor,verification_state,visibility,created_at,updated_at FROM properties WHERE verification_state='in_review' ORDER BY updated_at ASC LIMIT $1 OFFSET $2"
+    ).bind(limit).bind(offset).fetch_all(&mut *tx).await;
+    match rows {
+        Ok(rows) => { if tx.commit().await.is_err() { return error(StatusCode::INTERNAL_SERVER_ERROR,"database_error"); } Json(rows).into_response() }
+        Err(_) => error(StatusCode::INTERNAL_SERVER_ERROR, "database_error")
+    }
+}
+
+async fn list_evidence(
+    State(state): State<AppState>,
+    Extension(auth): Extension<AuthContext>,
+    Path(property_id): Path<Uuid>,
+) -> Response {
+    if !can_edit(&auth.role) && !can_review(&auth.role) { return error(StatusCode::FORBIDDEN, "insufficient_role"); }
+    let mut tx = match tenant_transaction(&state.pool, &auth).await { Ok(tx) => tx, Err(_) => return error(StatusCode::INTERNAL_SERVER_ERROR, "database_error") };
+    let rows = sqlx::query_as::<_, EvidenceRow>(
+        "SELECT e.id,e.evidence_type,e.source_url,e.reference_code,e.note,e.observed_at,e.created_at FROM property_evidence e JOIN properties p ON p.id=e.property_id WHERE p.id=$1 ORDER BY e.created_at ASC"
+    ).bind(property_id).fetch_all(&mut *tx).await;
+    match rows {
+        Ok(rows) => { if tx.commit().await.is_err() { return error(StatusCode::INTERNAL_SERVER_ERROR,"database_error"); } Json(rows).into_response() }
+        Err(_) => error(StatusCode::INTERNAL_SERVER_ERROR, "database_error")
+    }
+}
+
 async fn review_property(
     State(state): State<AppState>,
     Extension(auth): Extension<AuthContext>,
@@ -463,7 +510,8 @@ async fn ready(State(state): State<AppState>) -> StatusCode {
 pub fn routes(state: AppState) -> Router {
     let protected = Router::new()
         .route("/properties", get(list_properties).post(create_property))
-        .route("/properties/{id}/evidence", post(add_evidence))
+        .route("/properties/{id}/evidence", get(list_evidence).post(add_evidence))
+        .route("/review-queue", get(review_queue))
         .route("/properties/{id}/submit", post(submit_for_review))
         .route("/properties/{id}/review", post(review_property))
         .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
