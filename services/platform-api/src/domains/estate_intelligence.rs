@@ -14,6 +14,10 @@ pub struct MarketObservation {
 }
 impl MarketObservation {
     pub fn is_publishable(&self) -> bool {
-        self.value.is_finite() && !self.metric.trim().is_empty() && !self.source_uri.trim().is_empty() && !self.observed_at.trim().is_empty() && !self.methodology.trim().is_empty()
+        self.value.is_finite()
+            && !self.metric.trim().is_empty()
+            && !self.source_uri.trim().is_empty()
+            && !self.observed_at.trim().is_empty()
+            && !self.methodology.trim().is_empty()
     }
 }
