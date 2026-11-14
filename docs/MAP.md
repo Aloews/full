@@ -15,6 +15,13 @@ Elite Estate is the first release target. The other nine AUREL domains remain re
 - Evidence and audit records are append-only.
 - Next.js is presentation-only.
 
+## Owner-approved launch decisions (2026-11-14)
+
+- Launch scope: international market. This is a product direction, not a determination that the service may legally operate in every country. Before enabling listings or transactions in a country, complete a country-by-country legal, licensing, privacy, consumer-protection, sanctions and tax review.
+- Property supply: both (1) licensed/contracted agencies and property owners, and (2) lawful open/public sources. Every listing must retain source attribution, retrieval time, permitted-use basis, and verification state. Publicly accessible data is not automatically licensed for republication; do not scrape or republish where terms or law prohibit it.
+- Infrastructure budget: prefer free tiers and existing connected services. Do not create paid resources, exceed free quotas, enable paid plans, or incur recurring charges without explicit owner approval. Report exact free-tier constraints when they block production.
+- These decisions do not waive the existing release gates for dedicated database, real identity/JWT issuance, abuse controls, legal review, licensed supply, staging, end-to-end verification and rollback.
+
 ## API contract
 - `GET /health` — liveness.
 - `GET /ready` — database readiness.
