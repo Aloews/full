@@ -1,8 +1,5 @@
-mod domains;
-mod modules;
-mod routes;
-
 use std::{env, net::SocketAddr};
+use aurel_platform_api::routes;
 use tokio::net::TcpListener;
 use tower_http::{limit::RequestBodyLimitLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
