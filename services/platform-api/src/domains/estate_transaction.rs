@@ -12,4 +12,11 @@ pub struct DealRoom {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum DealStatus { Draft, DueDiligence, Offer, UnderContract, Completed, Cancelled }
+pub enum DealStatus {
+    Draft,
+    DueDiligence,
+    Offer,
+    UnderContract,
+    Completed,
+    Cancelled,
+}
