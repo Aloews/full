@@ -72,3 +72,8 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 - Qwen is installed per run through Ollama, its exact model is checked before inference, and the generated patch is restricted to application/source/tests/docs before the existing database, Rust, frontend and browser verification pipeline.
 - No model or agent receives production database credentials, identity-provider secrets, live property inventory or deployment access.
 - The current AUREL branch remains a technical vertical slice, not a production release. The Product Factory agent setup does not waive dedicated database, real JWT issuance, abuse controls, licensed supply, jurisdiction review, staging E2E or rollback gates.
+
+### Other requested agent integrations
+
+- `codebase-memory-mcp`: documented but not installed/indexed. The current Product Factory runner is ephemeral; a durable MCP graph needs an explicit persistent host or a separately validated cache strategy and agent MCP configuration.
+- Spotify Portal / shunt: documented but not connected. Portal CLI authentication and AiKA readiness have not been established; do not treat the GitHub Actions Qwen fallback as Spotify delegation.
