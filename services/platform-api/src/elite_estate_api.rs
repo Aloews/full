@@ -453,6 +453,13 @@ async fn create_enquiry(
     }
 }
 
+async fn ready(State(state): State<AppState>) -> StatusCode {
+    match sqlx::query("SELECT 1").execute(&state.pool).await {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::SERVICE_UNAVAILABLE,
+    }
+}
+
 pub fn routes(state: AppState) -> Router {
     let protected = Router::new()
         .route("/properties", get(list_properties).post(create_property))
@@ -461,6 +468,7 @@ pub fn routes(state: AppState) -> Router {
         .route("/properties/{id}/review", post(review_property))
         .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
     Router::new()
+        .route("/ready", get(ready))
         .route("/public/properties", get(public_properties))
         .route("/public/properties/{id}", get(public_property))
         .route("/public/properties/{id}/enquiries", post(create_enquiry))
