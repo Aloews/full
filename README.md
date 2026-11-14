@@ -25,6 +25,8 @@ Elite Estate is the first delivery target. The remaining domains are registered 
 - `GET /api/v1/modules` — domain catalogue.
 - `POST /api/v1/properties` — create a private listing (JWT owner/broker/admin).
 - `GET /api/v1/properties` — tenant-scoped inventory.
+- `GET /api/v1/review-queue` — reviewer/admin queue for listings awaiting independent review.
+- `GET /api/v1/properties/{id}/evidence` — inspect tenant-scoped evidence.
 - `POST /api/v1/properties/{id}/evidence` — append source and verification evidence.
 - `POST /api/v1/properties/{id}/submit` — submit for independent review.
 - `POST /api/v1/properties/{id}/review` — reviewer/admin approves or rejects; self-review is blocked.
