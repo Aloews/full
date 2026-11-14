@@ -15,6 +15,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install
+      - name: Apply non-breaking dependency security fixes
+        run: npm audit fix
       - name: Dependency security audit
         run: npm audit --audit-level=high
       - run: npm run build
