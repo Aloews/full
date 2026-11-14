@@ -101,3 +101,32 @@ END;
 $$;
 CREATE TRIGGER property_audit_no_update BEFORE UPDATE OR DELETE ON property_audit_events
   FOR EACH ROW EXECUTE FUNCTION prevent_audit_mutation();
+
+CREATE OR REPLACE FUNCTION enforce_property_publication_evidence() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.verification_state = 'verified' OR NEW.visibility = 'public' THEN
+    IF NEW.reviewed_by IS NULL OR NEW.reviewed_by = NEW.created_by THEN
+      RAISE EXCEPTION 'independent_reviewer_required';
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM property_evidence e
+      WHERE e.property_id = NEW.id AND e.organization_id = NEW.organization_id
+    ) THEN
+      RAISE EXCEPTION 'property_evidence_required';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER property_publication_requires_evidence
+  BEFORE INSERT OR UPDATE OF verification_state, visibility, reviewed_by
+  ON properties FOR EACH ROW EXECUTE FUNCTION enforce_property_publication_evidence();
+
+CREATE OR REPLACE FUNCTION prevent_evidence_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'property_evidence_is_append_only';
+END;
+$$;
+CREATE TRIGGER property_evidence_no_update_or_delete
+  BEFORE UPDATE OR DELETE ON property_evidence
+  FOR EACH ROW EXECUTE FUNCTION prevent_evidence_mutation();
