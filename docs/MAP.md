@@ -51,7 +51,9 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 - Frontend still contains concept copy and is not yet wired to the live API.
 
 ## Latest checks
-- Earlier foundation SHA `492ab94372d1d1d965d7a425f2d3ed41b8915a5a`: Rust fmt, Clippy, workspace tests and release build passed; frontend npm install and Next.js production build passed.
-- The current Rust CI adds a disposable PostgreSQL 16 service and a non-superuser RLS integration test covering cross-tenant isolation and independently reviewed public publication.
-- The latest code is newer than the earlier green SHA. CI must pass on the exact final branch HEAD; no later code is called validated before that evidence exists.
-- Do not merge or deploy until all required checks pass on the exact candidate SHA, the security review approves RLS/auth/public enquiry boundaries, and staging smoke tests pass.
+- Candidate code SHA `b001f29bc1588ae102988087ab11a4310cac9a8c` passed GitHub Actions:
+  - Rust CI run `43579101241`: `cargo fmt --check`, Clippy with warnings denied, unit + PostgreSQL 16 RLS integration tests, release build and production Docker image build all passed.
+  - Frontend CI run `43579101266`: `npm ci`, `npm audit --audit-level=low` and Next.js production build all passed.
+- The PostgreSQL integration test proves cross-tenant isolation, rejects creator self-review and rejects publication without evidence, and allows independently reviewed evidence-backed publication.
+- Vercel status for this candidate is failed with `build-rate-limit` (free-plan daily deployment cap). No workaround or plan upgrade was attempted.
+- This is a tested technical vertical slice, not a production release. Do not merge or deploy until the dedicated database, identity provider, enquiry abuse controls, licensed supply, jurisdiction review and staging/rollback gates are completed.
