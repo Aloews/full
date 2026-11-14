@@ -1,17 +1,11 @@
 # AUREL — Private Property Platform
 
-A premium platform for exceptional residential property, buyer mandates, private inventory and property ownership services.
+A premium platform for verified exceptional property, buyer mandates, private inventory and property ownership services.
 
-## Technology decision
-All backend business services and domain logic are implemented in **Rust**. The initial architecture is a modular Rust application, not ten independently deployed microservices: this keeps deployment and operations manageable while preserving strict domain boundaries. The web presentation layer remains Next.js/TypeScript; it is a client interface, not a business-service runtime.
+## Technology
+All backend business services and domain logic are implemented in **Rust** (Axum/Tokio). Next.js/TypeScript is the presentation layer only. PostgreSQL is the system of record with tenant row-level security and versioned SQL migrations.
 
-- Rust workspace: `services/platform-api` (Axum, Tokio).
-- Web client: Next.js + TypeScript, deployed independently.
-- Target data platform: a dedicated PostgreSQL/Supabase project for AUREL. Existing unrelated projects are not reused.
-- Target API hosting: a dedicated Railway project.
-- Source control and CI: GitHub.
-
-## Ten product domains
+## Product domains
 1. Elite Estate — verified property discovery.
 2. Private Buyer — buyer mandates and advisory workflow.
 3. Estate Studio — property media and campaigns.
@@ -23,21 +17,35 @@ All backend business services and domain logic are implemented in **Rust**. The 
 9. Developer Intelligence — developer inventory, leads and sales analytics.
 10. Elite Lifestyle — vetted concierge provider network.
 
-## Current implementation state
-- Rust workspace and API service scaffold.
-- Health endpoint: `GET /health`.
-- Domain catalogue endpoint: `GET /api/v1/modules`.
-- Rust formatting, Clippy, test and release-build CI workflow.
-- Responsive web shell and product catalogue.
+Elite Estate is the first delivery target. The remaining domains are registered boundaries, not completed products.
 
-The ten domains are registered in the API, but their business workflows are not yet implemented. No property listings, client records, prices, valuations, partners or completed transactions are fabricated.
+## Elite Estate API
+- `GET /health` — liveness.
+- `GET /api/v1/modules` — domain catalogue.
+- `POST /api/v1/properties` — create a private listing (JWT owner/broker/admin).
+- `GET /api/v1/properties` — tenant-scoped inventory.
+- `POST /api/v1/properties/{id}/evidence` — append source and verification evidence.
+- `POST /api/v1/properties/{id}/submit` — submit for independent review.
+- `POST /api/v1/properties/{id}/review` — reviewer/admin approves or rejects; self-review is blocked.
+- `GET /public/properties` — public verified inventory only.
+- `POST /public/properties/{id}/enquiries` — consent-gated enquiry for a public verified listing.
 
-## Local development
+Protected endpoints require an HS256 JWT signed by the AUREL identity issuer. Required claims: `sub` (actor UUID), `org_id` (organization UUID), `role`, `iss=aurel`, `aud=aurel-api`, and `exp`. Allowed write roles: `owner`, `broker`, `admin`; review roles: `reviewer`, `admin`. The API does not issue user tokens; connect a real identity provider before onboarding users.
+
+## Runtime configuration
+- `DATABASE_URL`: dedicated AUREL PostgreSQL database; the application role must not be superuser or have `BYPASSRLS`.
+- `AUREL_JWT_SECRET`: at least 32 bytes, stored only in the deployment secret manager.
+- `PORT`: optional, defaults to 8080.
+
+The service applies embedded migrations at startup. Never point it at Sherlock Scholes, Novel Forge or another production database. The Docker image includes the migration directory at compile time.
+
+## Local checks
 ```bash
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
-cargo run -p aurel-platform-api
-``
+cargo build --release --workspace
+```
 
-API listens on `PORT` (default 8080). This is a foundation build, not yet a live brokerage or production transaction system.
+## Release status
+This is an implementation increment, not a live brokerage release. No real listings or partner credentials are fabricated. Dedicated database/identity configuration, enquiry abuse controls, jurisdiction and licensing review, staging deployment, browser E2E tests and rollback rehearsal remain required. See [the project map](docs/MAP.md) and [delivery plan](docs/DELIVERY_PLAN.md).
