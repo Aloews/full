@@ -21,6 +21,8 @@ Elite Estate is the first release target. The other nine AUREL domains remain re
 - `GET /api/v1/modules`
 - `POST /api/v1/properties` — owner/broker/admin JWT.
 - `GET /api/v1/properties` — tenant-scoped list.
+- `GET /api/v1/review-queue` — reviewer/admin list of records awaiting review.
+- `GET /api/v1/properties/{id}/evidence` — inspect tenant-scoped evidence.
 - `POST /api/v1/properties/{id}/evidence` — append source/ownership/mandate/price/media evidence.
 - `POST /api/v1/properties/{id}/submit` — submit a record with evidence for review.
 - `POST /api/v1/properties/{id}/review` — reviewer/admin only; reviewer cannot approve their own record.
