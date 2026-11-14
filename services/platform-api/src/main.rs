@@ -1,13 +1,9 @@
 use aurel_platform_api::{elite_estate_api::AppState, routes};
-use axum::http::{header, HeaderValue, Method};
+use axum::http::{HeaderValue, Method, header};
 use sqlx::postgres::PgPoolOptions;
 use std::{env, net::SocketAddr};
 use tokio::net::TcpListener;
-use tower_http::{
-    cors::CorsLayer,
-    limit::RequestBodyLimitLayer,
-    trace::TraceLayer,
-};
+use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -20,8 +16,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer().json())
         .init();
 
-    let database_url = env::var("DATABASE_URL")
-        .map_err(|_| std::io::Error::other("DATABASE_URL is required; configure a dedicated AUREL PostgreSQL database"))?;
+    let database_url = env::var("DATABASE_URL").map_err(|_| {
+        std::io::Error::other(
+            "DATABASE_URL is required; configure a dedicated AUREL PostgreSQL database",
+        )
+    })?;
     let jwt_secret = env::var("AUREL_JWT_SECRET")
         .map_err(|_| std::io::Error::other("AUREL_JWT_SECRET is required"))?;
     let web_origin = env::var("AUREL_WEB_ORIGIN")
@@ -32,8 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(&database_url)
         .await?;
     sqlx::migrate!("./migrations").run(&pool).await?;
-    let state = AppState::new(pool, jwt_secret)
-        .map_err(std::io::Error::other)?;
+    let state = AppState::new(pool, jwt_secret).map_err(std::io::Error::other)?;
 
     let address: SocketAddr = format!(
         "0.0.0.0:{}",
