@@ -35,6 +35,15 @@ struct MembershipRow {
 }
 
 impl NeonAuth {
+    pub fn map_role(role: &str) -> Option<&'static str> {
+        match role {
+            "owner" => Some("owner"),
+            "admin" => Some("admin"),
+            "member" => Some("broker"),
+            _ => None,
+        }
+    }
+
     pub async fn new(jwks_url: String, issuer: String) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         if !jwks_url.starts_with("https://") || !issuer.starts_with("https://") {
             return Err("Neon Auth JWKS and issuer must use HTTPS".into());
@@ -118,12 +127,7 @@ impl NeonAuth {
         .fetch_optional(pool)
         .await
         .ok()??;
-        let role = match row.role.as_str() {
-            "owner" => "owner",
-            "admin" => "admin",
-            "member" => "broker",
-            _ => return None,
-        };
+        let role = Self::map_role(&row.role)?;
         let _ = row.organization_id;
         Some((row.organization_name, role.to_string()))
     }
