@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 
 export default function EnquiryForm({ propertyId }: { propertyId: string }) {
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error" | "disabled">("idle");
   const [consent, setConsent] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -26,7 +26,7 @@ export default function EnquiryForm({ propertyId }: { propertyId: string }) {
           consent_recorded: consent,
         }),
       });
-      setStatus(response.ok ? "sent" : "error");
+      setStatus(response.ok ? "sent" : response.status === 503 ? "disabled" : "error");
       if (response.ok) form.reset();
     } catch {
       setStatus("error");
@@ -41,7 +41,7 @@ export default function EnquiryForm({ propertyId }: { propertyId: string }) {
       <label className="consent-row"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)}/>I agree to be contacted about this enquiry and understand my details will be used to respond.</label>
       <button type="submit" disabled={!consent || status === "sending"}>{status === "sending" ? "Sending…" : "Send private enquiry"} <span>↗</span></button>
       {status === "sent" && <p className="form-status success">Your enquiry has been received.</p>}
-      {status === "error" && <p className="form-status">The enquiry could not be sent. Please try again later.</p>}
+      {status === "disabled" && <p className="form-status">Private enquiry intake is not enabled in this staging environment.</p>}{status === "error" && <p className="form-status">The enquiry could not be sent. Please try again later.</p>}
     </form>
   );
 }
