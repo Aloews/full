@@ -1,0 +1,14 @@
+name: AUREL Neon function path probe
+on:
+  push:
+    branches: [foundation/aurel-neon-function-rc1]
+permissions:
+  contents: read
+jobs:
+  path:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect Neon Function request path
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 2 --retry-all-errors \
+            https://br-muddy-art-b91lxogu-aureldebug.compute.c-7.eu-central-1.aws.neon.tech/health
