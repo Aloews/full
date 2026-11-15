@@ -7,7 +7,7 @@ use axum::{
     routing::{get, post},
 };
 use chrono::{DateTime, Utc};
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
+use crate::neon_auth::NeonAuth;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
@@ -15,18 +15,12 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
-    jwt_secret: Vec<u8>,
+    pub neon_auth: NeonAuth,
 }
 
 impl AppState {
-    pub fn new(pool: PgPool, jwt_secret: String) -> Result<Self, &'static str> {
-        if jwt_secret.len() < 32 {
-            return Err("AUREL_JWT_SECRET must contain at least 32 bytes");
-        }
-        Ok(Self {
-            pool,
-            jwt_secret: jwt_secret.into_bytes(),
-        })
+    pub fn new(pool: PgPool, neon_auth: NeonAuth) -> Self {
+        Self { pool, neon_auth }
     }
 }
 
@@ -35,17 +29,6 @@ pub struct AuthContext {
     pub actor_id: Uuid,
     pub organization_id: Uuid,
     pub role: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct Claims {
-    sub: Uuid,
-    org_id: Uuid,
-    role: String,
-    #[serde(rename = "exp")]
-    _exp: usize,
-    iss: String,
-    aud: String,
 }
 
 pub async fn authenticate(
@@ -61,25 +44,37 @@ pub async fn authenticate(
     let Some(token) = token else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-
-    let mut validation = Validation::new(Algorithm::HS256);
-    validation.set_issuer(&["aurel"]);
-    validation.set_audience(&["aurel-api"]);
-    let claims = match decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(&state.jwt_secret),
-        &validation,
-    ) {
-        Ok(data) => data.claims,
-        Err(_) => return StatusCode::UNAUTHORIZED.into_response(),
+    let Some(organization_id) = request
+        .headers()
+        .get("x-aurel-organization-id")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| Uuid::parse_str(value).ok())
+    else {
+        return error(StatusCode::BAD_REQUEST, "organization_required");
     };
-    if claims.iss != "aurel" || claims.aud != "aurel-api" || claims.role.is_empty() {
+    let Some(actor_id) = state.neon_auth.verify_user(token).await else {
         return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let Some((organization_name, role)) = state
+        .neon_auth
+        .membership(&state.pool, actor_id, organization_id)
+        .await
+    else {
+        return error(StatusCode::FORBIDDEN, "organization_membership_required");
+    };
+    if sqlx::query("INSERT INTO organizations (id,name) VALUES ($1,$2) ON CONFLICT (id) DO NOTHING")
+        .bind(organization_id)
+        .bind(organization_name)
+        .execute(&state.pool)
+        .await
+        .is_err()
+    {
+        return error(StatusCode::INTERNAL_SERVER_ERROR, "database_error");
     }
     request.extensions_mut().insert(AuthContext {
-        actor_id: claims.sub,
-        organization_id: claims.org_id,
-        role: claims.role,
+        actor_id,
+        organization_id,
+        role,
     });
     next.run(request).await
 }
@@ -224,7 +219,7 @@ fn can_edit(role: &str) -> bool {
     matches!(role, "owner" | "broker" | "admin")
 }
 fn can_review(role: &str) -> bool {
-    matches!(role, "reviewer" | "admin")
+    matches!(role, "owner" | "reviewer" | "admin")
 }
 
 async fn create_property(
