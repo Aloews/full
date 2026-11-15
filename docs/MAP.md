@@ -81,3 +81,16 @@ The API applies embedded SQL migrations at startup. Do not point it at Sherlock 
 
 - `codebase-memory-mcp`: documented but not installed/indexed. The current Product Factory runner is ephemeral; a durable MCP graph needs an explicit persistent host or a separately validated cache strategy and agent MCP configuration.
 - Spotify Portal / shunt: documented but not connected. Portal CLI authentication and AiKA readiness have not been established; do not treat the GitHub Actions Qwen fallback as Spotify delegation.
+
+
+## 2026-11-15 — isolated AUREL staging API
+
+- Created Neon branch `aurel-staging-rc1` (branch `br-muddy-art-b91lxogu`) from the existing AUREL database branch. Snapshot counts before test setup: 0 Neon Auth users, 0 organizations, 0 properties and 0 enquiries.
+- Enabled the existing Neon Auth configuration on the staging branch and added two synthetic test identities plus one staging-only organization/membership pair. No real user or property data was copied at snapshot time.
+- Deployed Node.js 24 Neon Function `aurelapi` to the staging branch: https://br-muddy-art-b91lxogu-aurelapi.compute.c-7.eu-central-1.aws.neon.tech
+- The deployed artifact is stored at `neon/functions/aurelapi/function.zip`; SHA-256 `15a7abd1e0262fe080557288612b6299a5c0ff3bcbe037cf8538a8967359dae8`.
+- Function API implements readiness, public verified-property reads, tenant-scoped agency property CRUD, append-only evidence, submit/review workflow, JWT verification against staging Neon Auth JWKS, DB-backed membership/role resolution, and a disabled-by-default public enquiry route.
+- Applied staging-only `0002_public_enquiry_rate_limits.sql` for hashed email/property counters. Enquiry intake remains disabled; no PII is accepted until an owner-approved retention policy and edge-level abuse protection are in place.
+- Local Node syntax checks and six auth/validation regression tests passed. HTTP endpoint smoke checks have not yet been observed; deployment metadata is confirmed, but runtime health is not yet claimed.
+- The parallel Rust JWKS integration branch `foundation/aurel-neon-auth-20261115` is not yet CI-verified or merged. The deployed staging runtime is the Neon Function artifact above.
+- No production deploy, production migration, production secret change, DNS change or billing change was performed.
