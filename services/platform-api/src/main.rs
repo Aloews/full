@@ -1,4 +1,4 @@
-use aurel_platform_api::{elite_estate_api::AppState, routes};
+use aurel_platform_api::{elite_estate_api::AppState, neon_auth::NeonAuth, routes};
 use axum::http::{HeaderValue, Method, header};
 use sqlx::postgres::PgPoolOptions;
 use std::{env, net::SocketAddr};
@@ -21,8 +21,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "DATABASE_URL is required; configure a dedicated AUREL PostgreSQL database",
         )
     })?;
-    let jwt_secret = env::var("AUREL_JWT_SECRET")
-        .map_err(|_| std::io::Error::other("AUREL_JWT_SECRET is required"))?;
+    let auth_base_url = env::var("NEON_AUTH_BASE_URL")
+        .map_err(|_| std::io::Error::other("NEON_AUTH_BASE_URL is required"))?;
+    let jwks_url = env::var("NEON_AUTH_JWKS_URL")
+        .unwrap_or_else(|_| format!("{}/.well-known/jwks.json", auth_base_url.trim_end_matches('/')));
     let web_origin = env::var("AUREL_WEB_ORIGIN")
         .map_err(|_| std::io::Error::other("AUREL_WEB_ORIGIN is required"))?;
     let allowed_origin: HeaderValue = web_origin.parse()?;
@@ -31,7 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(&database_url)
         .await?;
     sqlx::migrate!("./migrations").run(&pool).await?;
-    let state = AppState::new(pool, jwt_secret).map_err(std::io::Error::other)?;
+    let neon_auth = NeonAuth::new(jwks_url, auth_base_url).await?;
+    let state = AppState::new(pool, neon_auth);
 
     let address: SocketAddr = format!(
         "0.0.0.0:{}",
