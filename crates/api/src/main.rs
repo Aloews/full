@@ -658,8 +658,7 @@ mod tests {
             .unwrap();
         assert_eq!(spun.status(), StatusCode::OK);
         let saved: GameState =
-            serde_json::from_slice(&spun.into_body().collect().await.unwrap().to_bytes())
-                .unwrap();
+            serde_json::from_slice(&spun.into_body().collect().await.unwrap().to_bytes()).unwrap();
         assert_eq!(saved.spins_remaining, 5);
 
         // A new router instance has an empty in-memory cache. The saved run must
