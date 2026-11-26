@@ -28,6 +28,7 @@ These are broad design principles, not a request to imitate a particular game. C
 
 - Target internal canvas: **640×360**.
 - Target window: **1280×720**, with **2× nearest-neighbour integer scaling**.
+- Stretch mode: `viewport`; aspect: `keep`; scale mode: `integer`; minimum window size: 640×360.
 - Texture filtering: nearest. Pixel snapping: enabled for 2D transforms and vertices.
 - Character sprites: generally 24×24 to 32×32 source pixels; bosses may be 48×48 or larger.
 - Environment tiles: 16×16 source pixels, with 2×2 or 4×4 decorative clusters where appropriate.
