@@ -166,12 +166,12 @@ def repository_context(task: dict) -> str:
             continue
         content = path.read_text(encoding="utf-8")
         content = content[:limits.get(name, 1_000)]
-        chunk = f"\\n--- {name} ---\\n{content}\\n"
+        chunk = f"\n--- {name} ---\n{content}\n"
         if total + len(chunk) > MAX_REPO_CONTEXT_CHARS:
             continue
         chunks.append(chunk)
         total += len(chunk)
-    return "\\n".join(chunks)
+    return "\n".join(chunks)
 
 
 def run_checks() -> str:
