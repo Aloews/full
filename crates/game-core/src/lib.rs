@@ -2277,7 +2277,12 @@ mod tests {
             unit.health = 100;
             unit.current_health = None;
         }
-        for class in [UnitClass::Archer, UnitClass::Mage, UnitClass::Rogue, UnitClass::Cleric] {
+        for class in [
+            UnitClass::Archer,
+            UnitClass::Mage,
+            UnitClass::Rogue,
+            UnitClass::Cleric,
+        ] {
             let mut unit = game.spawn_unit(class);
             unit.attack = 1;
             unit.health = 100;
