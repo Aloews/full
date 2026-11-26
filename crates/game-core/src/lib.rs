@@ -445,8 +445,7 @@ impl GameState {
                 .any(|resolution| resolution.event_id == current_event_id);
 
             if current_event_was_resolved {
-                self.pending_route =
-                    Some(self.generate_route_options(self.wave.saturating_add(1)));
+                self.pending_route = Some(self.generate_route_options(self.wave.saturating_add(1)));
             } else {
                 self.pending_event = Some(self.generate_journey_event());
             }
@@ -1985,7 +1984,6 @@ mod tests {
         assert!(game.pending_event.is_some());
     }
 
-
     #[test]
     fn legacy_intermission_save_migrates_to_a_pending_event_once() {
         let mut game = run(701);
@@ -1995,7 +1993,12 @@ mod tests {
         let mut value = serde_json::to_value(game).unwrap();
         let object = value.as_object_mut().unwrap();
         object.insert("ruleset_version".to_string(), serde_json::json!(1));
-        for key in ["pending_event", "pending_route", "current_route", "route_history"] {
+        for key in [
+            "pending_event",
+            "pending_route",
+            "current_route",
+            "route_history",
+        ] {
             object.remove(key);
         }
         let mut restored: GameState = serde_json::from_value(value).unwrap();
@@ -2018,7 +2021,12 @@ mod tests {
         let mut value = serde_json::to_value(game).unwrap();
         let object = value.as_object_mut().unwrap();
         object.insert("ruleset_version".to_string(), serde_json::json!(1));
-        for key in ["pending_event", "pending_route", "current_route", "route_history"] {
+        for key in [
+            "pending_event",
+            "pending_route",
+            "current_route",
+            "route_history",
+        ] {
             object.remove(key);
         }
         let mut restored: GameState = serde_json::from_value(value).unwrap();
