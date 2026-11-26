@@ -73,11 +73,7 @@ impl AppState {
             .ok_or_else(|| ApiError::new(StatusCode::NOT_FOUND, "run_not_found"))
     }
 
-    async fn transition<T, F>(
-        &self,
-        id: Uuid,
-        operation: F,
-    ) -> Result<(RunState, T), ApiError>
+    async fn transition<T, F>(&self, id: Uuid, operation: F) -> Result<(RunState, T), ApiError>
     where
         F: FnOnce(&mut RunState) -> Result<T, GameError>,
     {
