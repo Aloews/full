@@ -13,7 +13,7 @@ cargo test --workspace --all-targets
 cargo run -p slotbound-api
 ```
 
-Open `http://localhost:3000`. Runs use PostgreSQL when `DATABASE_URL` is set. Schema changes are tracked under `migrations/` and are applied by the database owner/deployment migration step; the application role has no DDL permissions. Each run update is committed in a transaction with a row lock. Without `DATABASE_URL`, local development falls back to JSON snapshots in `.slotbound-data/runs`; that fallback is single-process only and must not be used for a multi-instance deployment.
+Open `http://localhost:3000`. Runs use PostgreSQL when `SLOTBOUND_DATABASE_URL` (or fallback `DATABASE_URL`) is set. Schema changes are tracked under `migrations/` and are applied by the database owner/deployment migration step; the application role has no DDL permissions. Each run update is committed in a transaction with a row lock. Without `DATABASE_URL`, local development falls back to JSON snapshots in `.slotbound-data/runs`; that fallback is single-process only and must not be used for a multi-instance deployment.
 
 ## Current playable loop
 
@@ -33,4 +33,4 @@ The current build is a first playable slice, not a feature-complete recreation. 
 
 ## Vercel deployment
 
-The project uses the Vercel Container runtime through `Dockerfile.vercel`. The HTTP server reads Vercel's `PORT` environment variable. Configure a pooled Neon PostgreSQL `DATABASE_URL` for preview and production; do not rely on the container filesystem for player saves. The Vercel runtime is a request-serving container and can scale or restart independently of an individual run.
+The project uses the Vercel Container runtime through `Dockerfile.vercel`. The HTTP server reads Vercel's `PORT` environment variable. Configure a pooled Neon PostgreSQL `SLOTBOUND_DATABASE_URL` for preview and production; `DATABASE_URL` is accepted as a fallback. do not rely on the container filesystem for player saves. The Vercel runtime is a request-serving container and can scale or restart independently of an individual run.
