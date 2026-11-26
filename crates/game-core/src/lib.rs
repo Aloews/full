@@ -2449,6 +2449,22 @@ mod tests {
     }
 
 
+
+    #[test]
+    fn stout_trait_adds_real_persistent_max_health_at_recruitment() {
+        let mut found = false;
+        for seed in 1..=64 {
+            let game = run(seed);
+            let unit = &game.units[0];
+            if unit.traits.contains(&UnitTrait::Stout) {
+                assert!(unit.health >= UnitClass::Guardian.base_stats().1 + 3);
+                found = true;
+                break;
+            }
+        }
+        assert!(found, "the deterministic seed sample must include a Stout recruit");
+    }
+
     #[test]
     fn new_units_receive_one_deterministic_random_trait() {
         let mut a = run(901);
