@@ -47,9 +47,12 @@ required_pixel_contract = (
     "draw_set_transform(Vector2.ZERO, 0.0, Vector2(0.5, 0.5))",
     "root.scale = Vector2(0.5, 0.5)",
     "get_window().min_size = Vector2i(640, 360)",
+    "texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST",
     "func _pixel_point(point: Vector2) -> Vector2:",
     "var pixel_step := 4.0 if label == \"Mosswood Guardian\" else 2.0",
-    "draw_rect(Rect2(pixel_position, Vector2(pixel_step, pixel_step)), color)",
+    "func _get_sprite_texture(label: String, coat: Color, blinking: bool) -> Texture2D:",
+    "ImageTexture.create_from_image(sprite_image)",
+    "draw_texture_rect(sprite_texture, Rect2(origin, Vector2(sprite_size, sprite_size)), false, tint)",
     "event.position * 2.0",
 )
 for token in required_pixel_contract:
