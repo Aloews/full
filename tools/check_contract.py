@@ -38,7 +38,7 @@ if "UnitImprint::Spellpower" not in domain or "UnitImprint::Mending" not in doma
     raise SystemExit("cross-class Spellpower or Mending imprint ability is missing")
 if "rolled_trait == UnitTrait::Stout" not in domain:
     raise SystemExit("Stout health bonus is missing from recruitment or save migration")
-if "legacy imprint migration is missing" not in domain:
+if "from_legacy_name" not in domain:
     raise SystemExit("legacy imprint migration is missing")
 if "imprint_slot_capacity" not in domain or "imprint_rank_bonus" not in domain:
     raise SystemExit("ranked imprint capacity or combat effects are missing")
@@ -49,7 +49,8 @@ if "unit.promotion_path" not in client or "promotion-path" not in client:
     raise SystemExit("promotion path is not displayed on unit cards")
 if "PromotionChoiceRequired" not in domain or "PromotionChoiceRequired" not in api:
     raise SystemExit("mandatory promotion progression gate is missing")
-\nif "pub struct FormationPosition" not in domain or "fn select_target_index" not in domain:
+
+if "pub struct FormationPosition" not in domain or "fn select_target_index" not in domain:
     raise SystemExit("typed tactical formation or lane-aware target selector is missing")
 if domain.count("position: Some(unit.position)") < 2:
     raise SystemExit("battle report must include ally and enemy formation snapshots")
