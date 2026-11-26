@@ -22,6 +22,8 @@ jobs:
         working-directory: casino-battle
     steps:
       - uses: actions/checkout@v4
+      - name: Enforce strict 2D client contract
+        run: python3 casino-battle/scripts/verify_2d_only.py
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
