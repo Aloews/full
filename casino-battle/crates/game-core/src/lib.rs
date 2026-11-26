@@ -438,7 +438,12 @@ impl RunState {
                     id: u64::MAX - index as u64,
                     name: format!("Gloomling {}", index + 1),
                     sigil,
-                    role: Role::Striker,
+                    role: match sigil {
+                        Sigil::Leaf | Sigil::Stone => Role::Guardian,
+                        Sigil::Ember | Sigil::Wing => Role::Striker,
+                        Sigil::Tide => Role::Support,
+                        Sigil::Moon => Role::Mystic,
+                    },
                     lane: (index % 3) as u8,
                     hp: base_hp,
                     max_hp: base_hp,
@@ -453,27 +458,132 @@ impl RunState {
             .collect()
     }
 
-    fn advance_side(attackers: &mut [Unit], defenders: &mut [Unit]) {
-        for attacker in attackers.iter_mut().filter(|unit| unit.hp > 0) {
-            if attacker.cooldown_left > 0 {
-                attacker.cooldown_left -= 1;
+    fn advance_side(
+        attackers: &mut [Unit],
+        defenders: &mut [Unit],
+        tick: u32,
+    ) -> Vec<BattleEvent> {
+        let mut events = Vec::new();
+
+        for attacker_index in 0..attackers.len() {
+            if attackers[attacker_index].hp <= 0 {
                 continue;
             }
+            if attackers[attacker_index].cooldown_left > 0 {
+                attackers[attacker_index].cooldown_left -= 1;
+                continue;
+            }
+
+            let source_id = attackers[attacker_index].id;
+            let role = attackers[attacker_index].role;
+            let lane = attackers[attacker_index].lane;
+
+            if role == Role::Support {
+                let heal_target = attackers
+                    .iter()
+                    .enumerate()
+                    .filter(|(index, unit)| {
+                        *index != attacker_index && unit.hp > 0 && unit.hp < unit.max_hp
+                    })
+                    .min_by_key(|(_, unit)| {
+                        (i64::from(unit.hp) * 100) / i64::from(unit.max_hp.max(1))
+                    })
+                    .map(|(index, _)| index);
+
+                if let Some(target_index) = heal_target {
+                    let heal_amount = 3 + u32::from(attackers[attacker_index].rank);
+                    let target = &mut attackers[target_index];
+                    let healed = (target.max_hp - target.hp).min(heal_amount as i32);
+                    target.hp += healed;
+                    let target_id = target.id;
+                    attackers[attacker_index].cooldown_left =
+                        attackers[attacker_index].attack_cooldown;
+                    events.push(BattleEvent {
+                        tick,
+                        kind: BattleEventKind::Heal,
+                        source_unit_id: source_id,
+                        target_unit_id: target_id,
+                        amount: healed as u32,
+                    });
+                    continue;
+                }
+            }
+
             let target_index = defenders
                 .iter()
                 .enumerate()
                 .filter(|(_, unit)| unit.hp > 0)
-                .min_by_key(|(_, unit)| attacker.lane.abs_diff(unit.lane))
+                .min_by_key(|(_, unit)| lane.abs_diff(unit.lane))
                 .map(|(index, _)| index);
+
             if let Some(target_index) = target_index {
+                let bonus = match role {
+                    Role::Striker => 2,
+                    Role::Mystic => 1,
+                    Role::Guardian | Role::Support => 0,
+                };
+                let attack = attackers[attacker_index].attack + bonus;
                 let target = &mut defenders[target_index];
-                let damage = (attacker.attack - target.armor).max(1);
+                let damage = (attack - target.armor).max(1);
                 target.hp = (target.hp - damage).max(0);
-                attacker.cooldown_left = attacker.attack_cooldown;
+                let target_id = target.id;
+                let defeated = target.hp == 0;
+                events.push(BattleEvent {
+                    tick,
+                    kind: BattleEventKind::Attack,
+                    source_unit_id: source_id,
+                    target_unit_id: target_id,
+                    amount: damage as u32,
+                });
+                if defeated {
+                    events.push(BattleEvent {
+                        tick,
+                        kind: BattleEventKind::Defeat,
+                        source_unit_id: source_id,
+                        target_unit_id: target_id,
+                        amount: 0,
+                    });
+                }
+
+                if role == Role::Mystic {
+                    let splash_index = defenders
+                        .iter()
+                        .enumerate()
+                        .filter(|(index, unit)| *index != target_index && unit.hp > 0)
+                        .min_by_key(|(_, unit)| lane.abs_diff(unit.lane))
+                        .map(|(index, _)| index);
+                    if let Some(splash_index) = splash_index {
+                        let splash = &mut defenders[splash_index];
+                        let splash_damage = (damage / 2).max(1);
+                        splash.hp = (splash.hp - splash_damage).max(0);
+                        let splash_id = splash.id;
+                        let splash_defeated = splash.hp == 0;
+                        events.push(BattleEvent {
+                            tick,
+                            kind: BattleEventKind::Attack,
+                            source_unit_id: source_id,
+                            target_unit_id: splash_id,
+                            amount: splash_damage as u32,
+                        });
+                        if splash_defeated {
+                            events.push(BattleEvent {
+                                tick,
+                                kind: BattleEventKind::Defeat,
+                                source_unit_id: source_id,
+                                target_unit_id: splash_id,
+                                amount: 0,
+                            });
+                        }
+                    }
+                }
+
+                attackers[attacker_index].cooldown_left =
+                    attackers[attacker_index].attack_cooldown;
             }
         }
-    }
 
+        events
+    }
     fn random_u64(&mut self) -> u64 {
         self.rng_state ^= self.rng_state >> 12;
         self.rng_state ^= self.rng_state << 25;
