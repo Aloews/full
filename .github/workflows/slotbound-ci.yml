@@ -68,6 +68,9 @@ jobs:
       - name: Build release API
         run: cargo build --release --workspace
 
+      - name: Build the Vercel container image
+        run: docker build --file Dockerfile.vercel --tag slotbound-api-ci:${GITHUB_SHA} .
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
