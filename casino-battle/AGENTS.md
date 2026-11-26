@@ -7,7 +7,7 @@
 3. Art direction is mandatory. Read `docs/ART_DIRECTION.md` before changing visual code or adding assets.
 4. Casino logic is an abstract fate/sigil draw and probability system. The game must not look like a real-world casino.
 5. The player makes meaningful decisions between and around automated battles: party composition, placement, draw manipulation, upgrades, relics and risk management.
-6. Do not copy Slotbound source code, assets, audio, sprites, data tables or exact UI. Use it only as a high-level reference for readable hand-crafted 2D presentation and the preparation-to-auto-battle loop.
+6. Do not copy Slotbound source code, assets, audio, sprites, data tables or exact UI. Use it only as a high-level reference for readable battlefield composition and the preparation-to-auto-battle loop. The locked Casino Battle visual style is original 16-bit pixel art; read `docs/ART_DIRECTION.md`.
 
 ## Engineering contract
 
@@ -21,6 +21,8 @@
 - Do not add real-money wagering, real-money cash-out or paid random rewards.
 - Do not store credentials in the repository. Never log connection strings or secrets.
 - Keep the client in Godot's 2D node family (`Node2D`, `Control`, `Sprite2D`, `CanvasItem`). Reject `Node3D`, `SubViewport` 3D scenes, meshes and perspective cameras.
+- Preserve the 640×360 logical viewport, nearest filtering, integer scaling and pixel snapping. Sprite edges must come from authored pixel clusters, not smoothed vector outlines or post-process blur.
+- Add tests when introducing a sprite family: dimensions, palette constraints and non-transparent silhouette checks.
 - The in-memory server store is development-only and must never be treated as safe for multiple replicas.
 
 ## Verification
@@ -31,6 +33,7 @@ Run from this directory:
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace --all-targets
+python3 scripts/verify_2d_only.py
 ```
 
 Do not claim a test, CI run, deployment or database connection succeeded without its actual result. A green local test is not a production release approval.
