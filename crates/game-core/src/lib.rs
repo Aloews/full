@@ -119,6 +119,16 @@ pub struct SpinReport {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CombatantSnapshot {
+    pub id: u64,
+    pub name: String,
+    pub class: Option<UnitClass>,
+    pub max_health: u32,
+    pub current_health: u32,
+    pub boss: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BattleReport {
     pub wave: u32,
     pub boss: bool,
@@ -133,6 +143,10 @@ pub struct BattleReport {
     pub events: Vec<BattleEvent>,
     #[serde(default)]
     pub route: Option<RouteNodeKind>,
+    #[serde(default)]
+    pub allies: Vec<CombatantSnapshot>,
+    #[serde(default)]
+    pub enemies: Vec<CombatantSnapshot>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -650,6 +664,22 @@ impl GameState {
         let route = self.current_route;
         let elite = route == Some(RouteNodeKind::Elite) && !boss;
         let mut enemies = build_enemy_party(self.wave, boss, elite);
+        let ally_snapshots = allies.iter().map(|unit| CombatantSnapshot {
+            id: unit.id,
+            name: unit.name.clone(),
+            class: unit.class,
+            max_health: unit.max_health,
+            current_health: unit.current_health,
+            boss: unit.boss,
+        }).collect::<Vec<_>>();
+        let enemy_snapshots = enemies.iter().map(|unit| CombatantSnapshot {
+            id: unit.id,
+            name: unit.name.clone(),
+            class: unit.class,
+            max_health: unit.max_health,
+            current_health: unit.current_health,
+            boss: unit.boss,
+        }).collect::<Vec<_>>();
         let enemy_power = enemies.iter().fold(0u32, |total, enemy| {
             total
                 .saturating_add(enemy.attack)
@@ -963,6 +993,8 @@ impl GameState {
             rounds,
             events,
             route,
+            allies: ally_snapshots,
+            enemies: enemy_snapshots,
         };
         self.last_battle = Some(report.clone());
         self.current_route = None;
