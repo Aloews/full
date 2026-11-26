@@ -3035,6 +3035,45 @@ mod tests {
     }
 
 
+
+    #[test]
+    fn legacy_level_twelve_save_without_first_promotion_can_complete_both_tiers() {
+        let mut game = run(1005);
+        let unit = game.units.first_mut().unwrap();
+        unit.absorb_level = 12;
+        unit.pending_promotion = true;
+        unit.promotion = None;
+        unit.promotion_path.clear();
+        unit.promotion_options = ["Warden".to_string(), "Bulwark".to_string()];
+        game.ruleset_version = 3;
+
+        assert!(game.migrate_legacy_state());
+        let id = game.units[0].id;
+        assert_eq!(game.units[0].promotion_options, ["Warden".to_string(), "Bulwark".to_string()]);
+        game.choose_promotion(id, "Warden").unwrap();
+        assert!(game.units[0].pending_promotion);
+        assert_eq!(game.units[0].promotion_options, ["Vanguard".to_string(), "Sentinel".to_string()]);
+        game.choose_promotion(id, "Vanguard").unwrap();
+        assert!(!game.units[0].pending_promotion);
+        assert_eq!(game.units[0].promotion_path, vec![PromotionNode::Warden, PromotionNode::Vanguard]);
+    }
+
+    #[test]
+    fn pending_promotion_cannot_be_consumed_as_a_donor() {
+        let mut game = run(1006);
+        let target_id = game.units[0].id;
+        let mut donor = game.spawn_unit(UnitClass::Mage);
+        donor.pending_promotion = true;
+        donor.absorb_level = 5;
+        let donor_id = donor.id;
+        game.units.push(donor);
+
+        let count_before = game.units.len();
+        assert_eq!(game.absorb(target_id, donor_id), Err(GameError::PromotionChoiceRequired));
+        assert_eq!(game.units.len(), count_before);
+        assert!(game.units.iter().any(|unit| unit.id == donor_id));
+    }
+
     #[test]
     fn promotion_path_second_tier_depends_on_first_tier_choice() {
         let mut game = run(1001);
