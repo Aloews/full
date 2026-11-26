@@ -80,6 +80,8 @@ jobs:
             -d '{}' http://127.0.0.1:3917/api/v1/runs)"
           run_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])' <<< "$run_json")"
           curl --fail --silent --show-error "http://127.0.0.1:3917/api/v1/runs/$run_id" > /dev/null
+          relic_status="$(curl --silent --output /tmp/casino-battle-no-relic.json --write-out '%{http_code}' -X POST -H 'content-type: application/json' -d '{"relic":"honey_bell"}' "http://127.0.0.1:3917/api/v1/runs/$run_id/relic")"
+          test "$relic_status" = "409"
           curl --fail --silent --show-error -X POST -H 'content-type: application/json' -d '{"unit_id":1,"lane":2}' "http://127.0.0.1:3917/api/v1/runs/$run_id/formation" > /tmp/casino-battle-formation.json
           python3 -c 'import json,sys; assert json.load(sys.stdin)["party"][0]["lane"] == 2' < /tmp/casino-battle-formation.json
           curl --fail --silent --show-error -X POST "http://127.0.0.1:3917/api/v1/runs/$run_id/draw" > /dev/null
@@ -133,6 +135,8 @@ jobs:
           assert "seed" not in data and "rng_state" not in data and "next_unit_id" not in data
           ' <<< "$run_json"
 
+          relic_status="$(curl --silent --output /tmp/casino-battle-no-relic-db.json --write-out '%{http_code}' -X POST -H 'content-type: application/json' -d '{"relic":"honey_bell"}' "http://127.0.0.1:3918/api/v1/runs/$run_id/relic")"
+          test "$relic_status" = "409"
           formation_status="$(curl --silent --output /tmp/casino-battle-invalid-lane.json --write-out '%{http_code}' -X POST -H 'content-type: application/json' -d '{"unit_id":1,"lane":3}' "http://127.0.0.1:3918/api/v1/runs/$run_id/formation")"
           test "$formation_status" = "422"
           curl --fail --silent --show-error -X POST -H 'content-type: application/json' -d '{"unit_id":1,"lane":1}' "http://127.0.0.1:3918/api/v1/runs/$run_id/formation" > /dev/null
