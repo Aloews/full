@@ -17,7 +17,8 @@ MODEL_TIMEOUT = 600
 MAX_PATCH_BYTES = 16_000
 MAX_PATCH_FILES = 8
 MAX_REPAIRS = 2
-BRANCH = "agents/slotbound-autonomy"
+BASE_BRANCH = "feat/slotbound-release-candidate"
+BRANCH = "agents/slotbound-release-candidate"
 BACKLOG = Path(".github/agent-backlog.json")
 STATE = Path(".github/agent-state.json")
 WRITE_ROOTS = ("crates/game-core/", "crates/api/", "web/", "docs/", "tests/", "tools/")
@@ -113,6 +114,10 @@ def repository_context(task: dict) -> str:
         ".github/agents/simulation-qa.agent.md",
         ".github/agents/product-integrator.agent.md",
         ".github/agents/pixel-art-director.agent.md",
+        "docs/GAME_DESIGN.md",
+        "docs/VISUAL_STYLE_GUIDE.md",
+        "docs/BATTLE_SIMULATION_RULES.md",
+        "docs/AI_AGENT_EXECUTION_PLAN.md",
         "docs/PRODUCT_CONCEPT.md",
         "docs/MECHANICS_RESEARCH.md",
         "docs/MAP.md",
@@ -158,7 +163,7 @@ def run_checks() -> str:
 
 
 def get_merged_task_ids() -> set[str]:
-    raw = command(["gh", "pr", "list", "--state", "merged", "--base", "main", "--limit", "100", "--json", "title"])
+    raw = command(["gh", "pr", "list", "--state", "merged", "--base", BASE_BRANCH, "--limit", "100", "--json", "title"])
     items = json.loads(raw)
     return {match.group(1) for item in items if (match := re.search(r"\[(GAME-[0-9]+)\]", item.get("title", "")))}
 
@@ -458,7 +463,7 @@ def main() -> int:
         command(["gh", "pr", "comment", BRANCH, "--body", f"Autonomous repair attempt {repairs}/{MAX_REPAIRS} pushed after checks. Review the updated exact-head CI.\n\n{checks[-4000:]}"])
         command(["gh", "workflow", "run", "slotbound-ci.yml", "--repo", repo, "--ref", BRANCH])
     else:
-        command(["gh", "pr", "create", "--base", "main", "--head", BRANCH, "--title", title, "--body", body])
+        command(["gh", "pr", "create", "--base", BASE_BRANCH, "--head", BRANCH, "--title", title, "--body", body])
         # GITHUB_TOKEN pushes do not start a new workflow run; dispatch CI explicitly.
         command(["gh", "workflow", "run", "slotbound-ci.yml", "--repo", repo, "--ref", BRANCH])
     print(f"Created/updated {task['id']} candidate with verified local checks. Paths: {paths}")

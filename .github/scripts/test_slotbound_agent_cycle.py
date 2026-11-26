@@ -77,6 +77,10 @@ class AgentPatchPolicyTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertFalse(MODULE.allowed_path(path))
 
+    def test_agent_cycle_targets_isolated_release_candidate(self):
+        self.assertEqual(MODULE.BASE_BRANCH, "feat/slotbound-release-candidate")
+        self.assertEqual(MODULE.BRANCH, "agents/slotbound-release-candidate")
+
 
 if __name__ == "__main__":
     unittest.main()

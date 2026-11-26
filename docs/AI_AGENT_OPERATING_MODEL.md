@@ -92,3 +92,10 @@ python3 -m unittest discover -s .github/scripts -p 'test_slotbound_agent_cycle.p
 ```
 
 A PR is acceptable only when all required checks are green on its current head and the independent reviewer records no unresolved critical or high-severity issue.
+
+
+## Release-candidate branch wiring
+
+The current delivery branch pair is `feat/slotbound-release-candidate` (integration) and `agents/slotbound-release-candidate` (autonomous task PR). Agent PRs must never target `main`. The workflow launches from a base-branch push or manual dispatch, waits for exact-SHA Slotbound CI, and only repairs a PR after that PR's exact-head CI fails. The auto-merge gate requires a non-draft open PR, matching branch/base, exact successful CI SHA and a clean merge state. After merge it verifies CI on the updated integration head before dispatching the next task. See `docs/AI_AGENT_EXECUTION_PLAN.md`.
+
+Every agent task must consult `docs/GAME_DESIGN.md`, `docs/VISUAL_STYLE_GUIDE.md`, `docs/BATTLE_SIMULATION_RULES.md` and `docs/MAP.md`. The current code already has per-wave route forks; only the full multi-stage route graph remains future work.

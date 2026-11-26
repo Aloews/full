@@ -99,11 +99,11 @@
       "id": "GAME-009",
       "title": "Animate automatic combat from authoritative event streams",
       "agent_role": "frontend-integrator",
-      "objective": "Create a legible 2D battle playback that consumes the authoritative Rust event stream, animates attacks, hit reactions, healing, defeats and boss telegraphs, and supports skip/reduced-motion controls without altering combat outcomes.",
+      "objective": "Polish and complete 2D pixel-art playback on top of the existing authoritative battle snapshots and typed Rust event sequence. Add authored sprite/animation states for attack, healing, defeat and boss telegraph where assets exist; do not reimplement combat rules in browser.",
       "acceptance": [
-        "Playback ordering and event counts exactly match the returned server event sequence.",
-        "Skip and reduced-motion render the same final state and event summary.",
-        "No client-side combat calculations or random outcomes are introduced.",
+        "Playback uses server-authored stable IDs, snapshots and ordered typed events; it does not calculate combat.",
+        "Skip and reduced-motion render the same final state and event summary as timed playback.",
+        "Animations never show a defeated unit as active after its authoritative defeat event.",
         "Keyboard controls, focus management and mobile layout remain usable."
       ]
     },
@@ -122,27 +122,28 @@
     },
     {
       "id": "GAME-011",
-      "title": "Add branching route map and biome progression",
+      "title": "Extend route forks into a connected biome expedition map",
       "agent_role": "rust-gameplay-engineer",
-      "objective": "Implement a deterministic authored route map with battle, rest, shop, event and boss nodes, then connect it to original biome/stage content. Keep route generation in the domain and visualisation in the browser.",
+      "objective": "Build on the existing persisted three-choice per-wave route forks (Battle, Rest, Merchant, Elite and BossGate). Add a connected multi-stage graph and biome transitions without rebuilding or breaking current route selection and consequences.",
       "acceptance": [
-        "A fixed seed and ruleset version produce an identical route graph.",
-        "Every route has at least one reachable boss path and no unreachable mandatory node.",
-        "Node choices persist atomically and invalid moves leave route state unchanged.",
-        "Biome/stage transitions change encounters and visual tile set without changing past battle reports."
+        "The current three-choice route fork and its persisted effects remain backward-compatible.",
+        "A seeded run creates a connected route graph with at least two forward choices on eligible map layers and a guaranteed reachable boss path.",
+        "Route generation, node eligibility and consequences are deterministic for the same seed and Ruleset version.",
+        "Selected nodes, visited path and biome are persisted and cannot be replayed or skipped.",
+        "Tests cover graph reachability, boss reachability, duplicate selection, reload persistence and route consequences."
       ]
     },
     {
       "id": "GAME-012",
-      "title": "Expand and balance the seeded journey event director",
-      "agent_role": "game-systems-designer",
-      "objective": "Build on the five implemented event families. Add biome and wave eligibility, event rarity weights in a versioned ruleset, repeat policies, delayed consequences, elite/hazard encounters and event-specific telemetry. Preserve deterministic generation and atomic choice resolution.",
+      "title": "Expand event director with biome-aware content and consequences",
+      "agent_role": "rust-gameplay-engineer",
+      "objective": "Extend the existing five seeded event families with biome eligibility, repeat rules, delayed consequences and explicit telemetry. Keep event choice validation and state changes in the Rust domain. The Game Systems Designer supplies and reviews event tables, but the Rust implementer owns executable rules.",
       "acceptance": [
-        "Event weights and eligibility are versioned ruleset data rather than hard-coded UI values.",
-        "A fixed seed, ruleset version and command sequence reproduce the same event offers and outcomes.",
-        "Every event choice declares its costs, preconditions, state mutations, rewards and failure behavior.",
-        "Event history prevents duplicate rewards and supports save migration.",
-        "Monte Carlo reports event frequencies and choice outcomes across a documented seed range."
+        "Existing cache, shrine, merchant, ranger and ambush events remain available and their persisted choices remain compatible.",
+        "Event definitions declare eligibility, weight, costs, effects, failure outcomes, repeat policy and telemetry keys.",
+        "Biome and run-history filters are deterministic for a fixed seed and Ruleset version.",
+        "Delayed consequences are persisted and applied exactly once.",
+        "Tests cover eligibility, repeat prevention, event replay, resource underflow and delayed outcomes."
       ]
     }
   ]

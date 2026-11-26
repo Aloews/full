@@ -1,9 +1,11 @@
 name: Slotbound AI Agent Cycle
 
 on:
-  workflow_run:
-    workflows: ["Slotbound CI"]
-    types: [completed]
+  push:
+    branches: [feat/slotbound-release-candidate]
+  pull_request:
+    branches: [feat/slotbound-release-candidate]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -12,27 +14,24 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: slotbound-agent-cycle
+  group: slotbound-agent-cycle-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   agents:
     if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' &&
-        ((github.event.workflow_run.head_branch == 'main' &&
-          contains(fromJSON('["push","workflow_dispatch"]'), github.event.workflow_run.event) &&
-          github.event.workflow_run.conclusion == 'success') ||
-         (github.event.workflow_run.head_branch == 'agents/slotbound-autonomy' &&
-          contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event.workflow_run.event) &&
-          github.event.workflow_run.conclusion == 'failure')))
+      (github.event_name == 'push' && github.ref == 'refs/heads/feat/slotbound-release-candidate') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/slotbound-release-candidate') ||
+      (github.event_name == 'pull_request' &&
+        github.event.pull_request.base.ref == 'feat/slotbound-release-candidate' &&
+        github.event.pull_request.head.ref == 'agents/slotbound-release-candidate')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Check out exact triggering commit
+      - name: Check out the exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -40,7 +39,63 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Resolve mode and wait for exact-head Slotbound CI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_BASE: feat/slotbound-release-candidate
+          EXPECTED_AGENT: agents/slotbound-release-candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          event_name="$GITHUB_EVENT_NAME"
+          if [[ "$event_name" == "pull_request" ]]; then
+            expected_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+            expected_branch="$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")"
+            if [[ "$expected_branch" != "$EXPECTED_AGENT" ]]; then
+              echo "AGENT_SKIP=true" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            mode="repair"
+          elif [[ "$event_name" == "push" ]]; then
+            expected_sha="$GITHUB_SHA"
+            expected_branch="$EXPECTED_BASE"
+            mode="advance"
+          else
+            expected_sha="$GITHUB_SHA"
+            expected_branch="$EXPECTED_BASE"
+            mode="advance"
+          fi
+          found=""
+          for attempt in $(seq 1 120); do
+            runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow slotbound-ci.yml --branch "$expected_branch" --commit "$expected_sha" --json databaseId,status,conclusion,headSha --limit 20)"
+            found="$(jq -c --arg sha "$expected_sha" '[.[] | select(.headSha == $sha)] | sort_by(.databaseId) | last // empty' <<<"$runs")"
+            status="$(jq -r '.status // empty' <<<"$found")"
+            if [[ "$status" == "completed" ]]; then
+              conclusion="$(jq -r '.conclusion // empty' <<<"$found")"
+              if [[ "$conclusion" == "success" ]]; then
+                if [[ "$mode" == "repair" ]]; then
+                  echo "AGENT_SKIP=true" >> "$GITHUB_ENV"
+                  echo "PR CI is green; no repair is needed."
+                  exit 0
+                fi
+                echo "AGENT_MODE=advance" >> "$GITHUB_ENV"
+                exit 0
+              fi
+              if [[ "$mode" == "repair" && "$conclusion" == "failure" ]]; then
+                echo "AGENT_MODE=repair" >> "$GITHUB_ENV"
+                echo "AGENT_FAILED_RUN_ID=$(jq -r '.databaseId' <<<"$found")" >> "$GITHUB_ENV"
+                exit 0
+              fi
+              echo "Exact-head CI failed on $expected_sha ($conclusion); stopping for human triage."
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for exact-head CI on $expected_sha."
+          exit 1
+
       - name: Restore pinned Ollama runtime and model cache
+        if: env.AGENT_SKIP != 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -50,6 +105,7 @@ jobs:
           key: slotbound-ollama-v0.40.17-qwen2.5-coder-3b-${{ runner.os }}
 
       - name: Install pinned Ollama runtime
+        if: env.AGENT_SKIP != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -68,6 +124,7 @@ jobs:
           mkdir -p "$HOME/.ollama/models"
 
       - name: Start Qwen coder and verify model availability
+        if: env.AGENT_SKIP != 'true'
         env:
           OLLAMA_HOST: 127.0.0.1:11434
           AGENT_MODEL: qwen2.5-coder:3b
@@ -87,22 +144,23 @@ jobs:
           ollama pull "$AGENT_MODEL"
           ollama show "$AGENT_MODEL" >/dev/null
 
-      - name: Collect failed exact-head CI logs
-        if: github.event.workflow_run.conclusion == 'failure'
+      - name: Collect exact-head failure logs
+        if: env.AGENT_MODE == 'repair'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ID: ${{ env.AGENT_FAILED_RUN_ID }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed > "$RUNNER_TEMP/slotbound-failure.log" || true
 
-      - name: Run bounded architect, implementer and independent QA roles
+      - name: Run bounded architect, implementer, independent QA and product review
+        if: env.AGENT_SKIP != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           AGENT_MODEL: qwen2.5-coder:3b
           AGENT_FAILURE_LOG: ${{ runner.temp }}/slotbound-failure.log
-          AGENT_MODE: ${{ github.event.workflow_run.head_branch == 'agents/slotbound-autonomy' && github.event.workflow_run.conclusion == 'failure' && 'repair' || 'advance' }}
+          AGENT_MODE: ${{ env.AGENT_MODE || 'advance' }}
         run: python .github/scripts/slotbound_agent_cycle.py
