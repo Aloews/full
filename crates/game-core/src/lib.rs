@@ -1507,7 +1507,7 @@ mod tests {
         game.battle().unwrap();
         assert_eq!(game.next_wave(), Err(GameError::CoreChoiceRequired));
         game.choose_core(0).unwrap();
-        game.resolve_journey_event(0).unwrap();
+        game.resolve_journey_event(1).unwrap();
         assert!(game.next_wave().is_ok());
     }
     #[test]
