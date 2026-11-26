@@ -13,7 +13,7 @@ cargo test --workspace --all-targets
 cargo run -p slotbound-api
 ```
 
-Open `http://localhost:3000`. Runs are saved as atomic JSON snapshots in `.slotbound-data/runs` by default. Set `SLOTBOUND_DATA_DIR` to a writable persistent directory when deploying the API. The current storage adapter is single-process file storage; it is not a substitute for shared PostgreSQL storage in a multi-instance deployment.
+Open `http://localhost:3000`. Runs use PostgreSQL when `DATABASE_URL` is set. The API applies versioned SQL migrations at startup and updates each run inside a transaction with a row lock. Without `DATABASE_URL`, local development falls back to JSON snapshots in `.slotbound-data/runs`; that fallback is single-process only and must not be used for a multi-instance deployment.
 
 ## Current playable loop
 
@@ -29,3 +29,8 @@ The current build is a first playable slice, not a feature-complete recreation. 
 ## Engineering contract
 
 `AGENTS.md` is mandatory for contributors and coding agents. Gameplay rules belong in `slotbound-core`, not UI handlers. Material state transitions must be deterministic for a fixed seed and input sequence, validated before mutation, persisted atomically, and covered by tests. CI on the exact candidate commit is a release gate. Never state that a build or runtime is verified without evidence from the relevant job or test.
+
+
+## Vercel deployment
+
+The project uses the Vercel Container runtime through `Dockerfile.vercel`. The HTTP server reads Vercel's `PORT` environment variable. Configure a pooled Neon PostgreSQL `DATABASE_URL` for preview and production; do not rely on the container filesystem for player saves. The Vercel runtime is a request-serving container and can scale or restart independently of an individual run.
