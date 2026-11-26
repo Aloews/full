@@ -848,12 +848,8 @@ impl GameState {
         self.last_spin = None;
         self.last_battle = None;
         for unit in &mut self.units {
-            if let Some(current) = unit.current_health.as_mut() {
-                *current = current.saturating_add(2).min(unit.health);
-                if *current >= unit.health {
-                    unit.current_health = None;
-                }
-            }
+            let restored = unit.current_health.map(|current| current.saturating_add(2).min(unit.health));
+            unit.current_health = restored.filter(|current| *current < unit.health);
         }
         self.phase = RunPhase::Preparation;
         Ok(())
@@ -1211,7 +1207,9 @@ mod tests {
     fn guardian_is_targeted_before_backline_units() {
         let mut game = run(303);
         let guardian_id = game.units[0].id;
-        let archer = game.spawn_unit(UnitClass::Archer);
+        game.units[0].attack = 1;
+        let mut archer = game.spawn_unit(UnitClass::Archer);
+        archer.attack = 1;
         let archer_id = archer.id;
         game.units.push(archer);
         game.battle().unwrap();
