@@ -1,14 +1,14 @@
 extends Node2D
 
-const PAPER := Color("#F3EBDD")
-const PAPER_SHADE := Color("#E7D9C2")
-const INK := Color("#4A4540")
-const SAGE := Color("#91A68A")
-const CLAY := Color("#C77F62")
-const HONEY := Color("#DDBB72")
-const BLUE := Color("#8FAEBC")
-const BERRY := Color("#9C7180")
-const CREAM := Color("#F8F2E7")
+const PAPER := Color("#F5E9BD")
+const PAPER_SHADE := Color("#D9B47A")
+const INK := Color("#2B2638")
+const SAGE := Color("#5E9B58")
+const CLAY := Color("#E87958")
+const HONEY := Color("#F3C969")
+const BLUE := Color("#72B9D2")
+const BERRY := Color("#A66DA6")
+const CREAM := Color("#F5E9BD")
 
 var elapsed := 0.0
 var run_id := ""
@@ -117,7 +117,7 @@ func _style_button(button: Button, fill: Color) -> void:
     normal.bg_color = fill
     normal.border_color = INK
     normal.set_border_width_all(1)
-    normal.set_corner_radius_all(7)
+    normal.set_corner_radius_all(0)
     normal.content_margin_left = 10
     normal.content_margin_right = 10
     normal.content_margin_top = 5
@@ -494,19 +494,26 @@ func _draw_header() -> void:
 
 func _draw_battlefield(size: Vector2) -> void:
     var arena := Rect2(Vector2(70, 120), Vector2(size.x - 140, 400))
-    draw_rect(arena, Color("#E9E0CF"))
-    draw_rect(arena, Color(INK, 0.22), false, 2.0)
+    draw_rect(arena, Color("#5E9B58"))
+    draw_rect(arena, Color(INK, 0.8), false, 4.0)
 
-    for i in range(11):
-        var x := arena.position.x + 24 + i * ((arena.size.x - 48) / 10.0)
-        draw_line(Vector2(x, arena.position.y + 22), Vector2(x, arena.end.y - 22), Color(INK, 0.045), 1.0)
-
-    for i in range(5):
-        var y := arena.position.y + 24 + i * ((arena.size.y - 48) / 4.0)
-        draw_line(Vector2(arena.position.x + 22, y), Vector2(arena.end.x - 22, y), Color(INK, 0.045), 1.0)
+    # Tile-like grass variation: all edges and coordinates land on the pixel grid.
+    for row in range(12):
+        for col in range(34):
+            var tile_position := arena.position + Vector2(col * 32.0, row * 32.0)
+            if tile_position.x + 32.0 > arena.end.x or tile_position.y + 32.0 > arena.end.y:
+                continue
+            var pattern := (row * 13 + col * 7) % 9
+            if pattern == 0:
+                draw_rect(Rect2(tile_position + Vector2(8, 8), Vector2(8, 4)), Color("#78B861", 0.65))
+            elif pattern == 1:
+                draw_rect(Rect2(tile_position + Vector2(20, 20), Vector2(4, 4)), Color("#467F4D", 0.55))
+            elif pattern == 2:
+                draw_rect(Rect2(tile_position + Vector2(4, 24), Vector2(4, 4)), Color("#9BCB69", 0.48))
 
     for lane in range(3):
         var lane_y := 258.0 + lane * 88.0
+        draw_rect(Rect2(Vector2(112, lane_y - 27), Vector2(size.x - 224, 54)), Color("#467F4D", 0.16))
         draw_string(
             ThemeDB.fallback_font,
             Vector2(88, lane_y + 4),
@@ -514,20 +521,18 @@ func _draw_battlefield(size: Vector2) -> void:
             HORIZONTAL_ALIGNMENT_LEFT,
             24,
             9,
-            Color(INK, 0.35)
+            Color("#F5E9BD", 0.78)
         )
+        if lane < 2:
+            draw_rect(Rect2(Vector2(108, lane_y + 42), Vector2(size.x - 216, 2)), Color("#2B2638", 0.24))
 
-    _draw_plant(Vector2(145, 450), 1.0)
-    _draw_plant(Vector2(1100, 185), 0.8)
-    _draw_plant(Vector2(720, 470), 0.55)
+    _draw_pixel_plant(Vector2(145, 450), 1)
+    _draw_pixel_plant(Vector2(1100, 185), 1)
+    _draw_pixel_plant(Vector2(720, 470), 0)
 
     var party: Array = run_snapshot.get("party", [])
-    var lane_counts := [0, 0, 0]
     for unit in party:
         var unit_id := int(unit.get("id", 0))
-        var lane := clampi(int(unit.get("lane", 0)), 0, 2)
-        var stack := int(lane_counts[lane])
-        lane_counts[lane] = stack + 1
         var position := _unit_position(unit_id)
         var name := str(unit.get("name", "Mossguard"))
         var max_hp := maxi(1, int(unit.get("max_hp", 1)))
@@ -538,7 +543,7 @@ func _draw_battlefield(size: Vector2) -> void:
             _sigil_color(str(unit.get("sigil", "leaf"))),
             name,
             true,
-            0.92 if stack > 0 else 1.0,
+            1.0,
             health_ratio
         )
 
@@ -549,7 +554,7 @@ func _draw_battlefield(size: Vector2) -> void:
         var enemy_position := _unit_position(enemy_id)
         var is_boss := wave % 3 == 0 and enemy_index == 0
         var enemy_name := "Mosswood Guardian" if is_boss else ("Gloomling" if enemy_index % 2 == 0 else "Murkling")
-        var enemy_color := HONEY if is_boss else (BERRY if enemy_index % 2 == 0 else Color("#8D8578"))
+        var enemy_color := HONEY if is_boss else (BERRY if enemy_index % 2 == 0 else Color("#8C8B9C"))
         var enemy_base_hp := 16 + wave * 4 + enemy_index * 3
         var enemy_fallback_hp := enemy_base_hp * 3 if is_boss else enemy_base_hp
         var enemy_max_hp := maxi(1, int(visual_max_hp.get(enemy_id, enemy_fallback_hp)))
@@ -559,280 +564,265 @@ func _draw_battlefield(size: Vector2) -> void:
             enemy_color,
             enemy_name,
             false,
-            0.88,
+            1.5 if is_boss else 1.0,
             clampf(float(enemy_hp) / float(enemy_max_hp), 0.0, 1.0)
         )
 
-    var bob := sin(elapsed * 2.1) * 3.0
-    draw_arc(Vector2(310, 288 + bob), 34.0, 0.0, TAU, 48, Color(HONEY, 0.48), 2.0)
-    draw_circle(Vector2(850, 345), 34.0, Color(CLAY, 0.07))
-    _draw_leaf_sprinkle(Vector2(250, 210), 0.7)
-    _draw_leaf_sprinkle(Vector2(1060, 465), 0.55)
+    var bob := roundf(sin(elapsed * 2.1) * 2.0)
+    draw_rect(Rect2(Vector2(310, 287 + bob), Vector2(36, 2)), Color("#F3C969", 0.7))
+    _draw_leaf_sprinkle(Vector2(250, 210), 1)
+    _draw_leaf_sprinkle(Vector2(1060, 465), 0)
     if battle_replay_active:
         _draw_battle_effects()
 
-func _draw_creature(center: Vector2, coat: Color, label: String, friendly: bool, scale_factor: float, health_ratio: float = 1.0) -> void:
-    var bob := sin(elapsed * 2.5 + center.x * 0.01) * 2.5
+func _draw_creature(
+    center: Vector2,
+    coat: Color,
+    label: String,
+    friendly: bool,
+    scale_factor: float,
+    health_ratio: float = 1.0
+) -> void:
+    var bob := roundf(sin(elapsed * 2.5 + center.x * 0.01) * 2.0) * 2.0
     var c := center + Vector2(0, bob)
-    var s := scale_factor
+    var pixel_step := 4.0 if label == "Mosswood Guardian" else 2.0
+    var rows := _creature_pixels(label)
+    var sprite_size := 16.0 * pixel_step
+    var origin := Vector2(
+        roundf(c.x / pixel_step) * pixel_step - sprite_size / 2.0,
+        roundf(c.y / pixel_step) * pixel_step - sprite_size / 2.0
+    )
+    var palette := _creature_palette(coat, label)
 
-    draw_ellipse_placeholder(c + Vector2(0, 24) * s, Vector2(27, 7) * s, Color(INK, 0.12))
-    draw_line(c + Vector2(-9, 17) * s, c + Vector2(-12, 27) * s, INK, 3.0 * s)
-    draw_line(c + Vector2(9, 17) * s, c + Vector2(12, 27) * s, INK, 3.0 * s)
+    draw_rect(
+        Rect2(Vector2(c.x - 14.0, c.y + sprite_size / 2.0 - 1.0), Vector2(28.0 * (pixel_step / 2.0), 3.0)),
+        Color(INK, 0.28)
+    )
 
+    for row_index in range(rows.size()):
+        var row: String = rows[row_index]
+        for column_index in range(row.length()):
+            var pixel := row.substr(column_index, 1)
+            if pixel == ".":
+                continue
+            var color: Color = palette.get(pixel, coat)
+            var pixel_position := origin + Vector2(column_index * pixel_step, row_index * pixel_step)
+            draw_rect(Rect2(pixel_position, Vector2(pixel_step, pixel_step)), color)
+
+    _draw_nameplate(c, label, friendly, scale_factor, health_ratio)
+
+func _creature_pixels(label: String) -> PackedStringArray:
     match label:
         "Mossguard":
-            _draw_mossguard(c, s, coat)
+            return PackedStringArray([
+                ".......a........",
+                "......aaa.......",
+                ".....aabaa......",
+                "...kkkkkkkkkk...",
+                "..kssssssssssk..",
+                ".kssbbbbbbbbssk.",
+                ".kssbbhbbhbbssk.",
+                "kssbbbbbbbbbbssk",
+                "kssbbeebbeebbssk",
+                "kssbbppbbppbbssk",
+                "kssbbbbbbbbbbssk",
+                ".kssbbbbbbbbssk.",
+                "..kkk....kkk....",
+                "..ksk....ksk....",
+                "................",
+                "................"
+            ])
         "Cinderkit":
-            _draw_cinderkit(c, s, coat)
+            return PackedStringArray([
+                "....k......k....",
+                "...ksk....ksk...",
+                "...kssk..kssk...",
+                "...kkkkkkkkkk...",
+                "..kssssssssssk..",
+                ".kssbbbbbbbbssk.",
+                ".kssbbhbbhbbssk.",
+                "kssbbbbbbbbbbssk",
+                "kssbbeebbeebbssk",
+                "kssbbppbbppbbssk",
+                "kssbbbbbbbbbbssk",
+                ".kssbbbbbbbbssk.",
+                "..kkk......kkk..",
+                "..ksk......ksk..",
+                "................",
+                "................"
+            ])
         "Puddlekin":
-            _draw_puddlekin(c, s, coat)
+            return PackedStringArray([
+                ".......k........",
+                "......ksk.......",
+                ".....ksbsk......",
+                "....ksbbbsk.....",
+                "...ksbbbbbsk....",
+                "..ksbbhbbbhsk...",
+                "..ksbbeebbesk...",
+                ".ksbbbbbbbbbsk..",
+                ".ksbbppbbbppsk..",
+                ".ksbbbbbbbbbsk..",
+                ".ksbbbbbbbbbsk..",
+                "..ksssssssssk...",
+                "...kkkkkkkkk....",
+                ".....aa.........",
+                "....aaha........",
+                "................"
+            ])
         "Pebbleback":
-            _draw_pebbleback(c, s, coat)
+            return PackedStringArray([
+                "......kkkk......",
+                "....kksssskk....",
+                "...kssssssssk...",
+                "..kssssssssssk..",
+                ".kssssssssssssk.",
+                ".kssbbbbbbbbssk.",
+                "kssbbbbbbbbbbssk",
+                "kssbbhbbbbhbbssk",
+                "kssbbbbbbbbbbssk",
+                "kssbbeebbeebbssk",
+                "kssbbbbbbbbbbssk",
+                ".kssbbbbbbbbssk.",
+                "..kksssssssskk..",
+                "...kkk....kkk...",
+                "...ksk....ksk...",
+                "................"
+            ])
         "Moonmote":
-            _draw_moonmote(c, s, coat)
+            return PackedStringArray([
+                ".......a........",
+                "......aaa.......",
+                ".....aaaaa......",
+                "....akkkka......",
+                "...aksssska.....",
+                "..akssbbsska....",
+                ".akssbbbbsska...",
+                "kssbbeebbeebbssk",
+                "kssbbbbbbbbbbssk",
+                "kssbbppbbppbbssk",
+                ".kssbbbbbbbbssk.",
+                "..kksssssssskk..",
+                "...kkk....kkk...",
+                "...ksk....ksk...",
+                "................",
+                "................"
+            ])
         "Breezeling":
-            _draw_breezeling(c, s, coat)
+            return PackedStringArray([
+                "...a............",
+                "..aaa...........",
+                ".aabaa..........",
+                "...kkkkkkkkkk...",
+                "..kssssssssssk..",
+                ".kssbbbbbbbbssk.",
+                ".kssbbhbbhbbssk.",
+                "kssbbbbbbbbbbssk",
+                "kssbbeebbeebbssk",
+                "kssbbppbbppbbssk",
+                ".kssbbbbbbbbssk.",
+                "..kssbbbbbbssk..",
+                "...kkk....kkk...",
+                "...ksk....ksk...",
+                "................",
+                "................"
+            ])
         "Gloomling":
-            _draw_gloomling(c, s, coat)
+            return PackedStringArray([
+                "................",
+                "....aaaa........",
+                "...akkkka.......",
+                "..aksssska......",
+                ".aksssssska.....",
+                ".kkkkkkkkkk.....",
+                "..ksssssssskk...",
+                ".kssbbbbbbbbssk.",
+                "kssbbeebbeebbssk",
+                "kssbbbbbbbbbbssk",
+                "kssbbppbbppbbssk",
+                ".kssbbbbbbbbssk.",
+                "..kkk....kkk....",
+                "..ksk....ksk....",
+                "................",
+                "................"
+            ])
+        "Murkling":
+            return PackedStringArray([
+                "................",
+                ".....kkkk.......",
+                "...kksssskk.....",
+                "..ksssssssskk...",
+                ".ksssssssssssk..",
+                ".kssbbbbbbbbssk.",
+                "kssbbbbbbbbbbssk",
+                "kssbbhbbbbhbbssk",
+                "kssbbbbbbbbbbssk",
+                "kssbbeebbeebbssk",
+                "kssbbbbbbbbbbssk",
+                ".kssbbbbbbbbssk.",
+                "..kksssssssskk..",
+                "...kkk....kkk...",
+                "...ksk....ksk...",
+                "................"
+            ])
         "Mosswood Guardian":
-            _draw_boss(c, s, coat)
+            return PackedStringArray([
+                "......a..a......",
+                ".....aaa.aaa....",
+                "....akkkka......",
+                "...aksssska.....",
+                "..aksssssska....",
+                ".kkkkkkkkkkkkkk.",
+                ".ksssssssssssssk",
+                "kssbbbbbbbbbbssk",
+                "kssbbhbbbbhbbssk",
+                "kssbbeebbeebbssk",
+                "kssbbbbbbbbbbssk",
+                "kssbbppbbppbbssk",
+                ".kssbbbbbbbbssk.",
+                "..kksssssssskk..",
+                "...kkk....kkk...",
+                "...ksk....ksk..."
+            ])
         _:
-            _draw_murkling(c, s, coat)
+            return PackedStringArray([
+                "................",
+                "................",
+                "......kkkk......",
+                "....kksssskk....",
+                "...ksssssssk....",
+                "..ksssssssssk...",
+                ".kssbbbbbbbbssk.",
+                "kssbbbbbbbbbbssk",
+                "kssbbhbbbbhbbssk",
+                "kssbbeebbeebbssk",
+                "kssbbbbbbbbbbssk",
+                ".kssbbbbbbbbssk.",
+                "..kksssssssskk..",
+                "...kkk....kkk...",
+                "...ksk....ksk...",
+                "................"
+            ])
 
-    _draw_nameplate(c, label, friendly, s, health_ratio)
-
-func _draw_mossguard(c: Vector2, s: float, coat: Color) -> void:
-    var shell := PackedVector2Array([
-        c + Vector2(-25, 4) * s, c + Vector2(-21, -13) * s,
-        c + Vector2(-8, -23) * s, c + Vector2(10, -23) * s,
-        c + Vector2(24, -10) * s, c + Vector2(25, 8) * s,
-        c + Vector2(12, 20) * s, c + Vector2(-13, 20) * s
-    ])
-    _outline(shell, Color("#718B70"), 2.4 * s)
-    draw_arc(c + Vector2(0, -2) * s, 14.0 * s, PI, TAU, 24, Color("#D2C69D"), 1.4 * s)
-    draw_circle(c + Vector2(-8, -5) * s, 2.2 * s, Color("#D2C69D"))
-    draw_circle(c + Vector2(8, -5) * s, 2.2 * s, Color("#D2C69D"))
-
-    var face := PackedVector2Array([
-        c + Vector2(-18, 8) * s, c + Vector2(-18, -6) * s,
-        c + Vector2(-8, -16) * s, c + Vector2(8, -16) * s,
-        c + Vector2(18, -5) * s, c + Vector2(18, 9) * s,
-        c + Vector2(9, 19) * s, c + Vector2(-9, 19) * s
-    ])
-    _outline(face, coat.lightened(0.12), 2.0 * s)
-    _draw_eyes(c + Vector2(0, -2) * s, s, 8.0)
-    draw_arc(c + Vector2(0, 5) * s, 4.5 * s, 0.25, PI - 0.25, 14, INK, 1.4 * s)
-    draw_ellipse_placeholder(c + Vector2(-13, 5) * s, Vector2(4, 2) * s, Color("#D99583", 0.65))
-    draw_ellipse_placeholder(c + Vector2(13, 5) * s, Vector2(4, 2) * s, Color("#D99583", 0.65))
-
-    var leaf := PackedVector2Array([
-        c + Vector2(-9, -18) * s, c + Vector2(-16, -39) * s,
-        c + Vector2(1, -30) * s, c + Vector2(8, -16) * s
-    ])
-    _outline(leaf, SAGE.lightened(0.18), 1.8 * s)
-    draw_line(c + Vector2(-11, -21) * s, c + Vector2(0, -29) * s, Color("#5D785F"), 1.1 * s)
-
-func _draw_cinderkit(c: Vector2, s: float, coat: Color) -> void:
-    var tail := PackedVector2Array([
-        c + Vector2(18, 10) * s, c + Vector2(35, 4) * s,
-        c + Vector2(38, -12) * s, c + Vector2(28, -19) * s,
-        c + Vector2(23, -10) * s, c + Vector2(29, -5) * s,
-        c + Vector2(17, 1) * s
-    ])
-    _outline(tail, coat.darkened(0.04), 2.2 * s)
-    _outline(PackedVector2Array([
-        c + Vector2(-22, 5) * s, c + Vector2(-22, -13) * s,
-        c + Vector2(-12, -22) * s, c + Vector2(12, -22) * s,
-        c + Vector2(23, -9) * s, c + Vector2(22, 10) * s,
-        c + Vector2(12, 22) * s, c + Vector2(-12, 22) * s
-    ]), coat, 2.5 * s)
-
-    var left_ear := PackedVector2Array([
-        c + Vector2(-17, -15) * s, c + Vector2(-19, -36) * s,
-        c + Vector2(-3, -23) * s
-    ])
-    var right_ear := PackedVector2Array([
-        c + Vector2(3, -23) * s, c + Vector2(19, -37) * s,
-        c + Vector2(17, -13) * s
-    ])
-    _outline(left_ear, coat.darkened(0.06), 2.0 * s)
-    _outline(right_ear, coat.darkened(0.06), 2.0 * s)
-    _draw_eyes(c + Vector2(0, -3) * s, s, 8.0)
-    draw_arc(c + Vector2(0, 5) * s, 5.0 * s, 0.15, PI - 0.15, 14, INK, 1.5 * s)
-    draw_ellipse_placeholder(c + Vector2(-13, 5) * s, Vector2(4, 2.5) * s, Color("#E7A08A"))
-    draw_ellipse_placeholder(c + Vector2(13, 5) * s, Vector2(4, 2.5) * s, Color("#E7A08A"))
-    _outline(PackedVector2Array([
-        c + Vector2(-5, -20) * s, c + Vector2(-9, -33) * s,
-        c + Vector2(-2, -29) * s, c + Vector2(2, -41) * s,
-        c + Vector2(8, -27) * s, c + Vector2(5, -18) * s
-    ]), HONEY, 1.6 * s)
-
-func _draw_puddlekin(c: Vector2, s: float, coat: Color) -> void:
-    var body := PackedVector2Array([
-        c + Vector2(-24, 12) * s, c + Vector2(-25, -2) * s,
-        c + Vector2(-16, -17) * s, c + Vector2(0, -31) * s,
-        c + Vector2(16, -17) * s, c + Vector2(25, -2) * s,
-        c + Vector2(24, 12) * s, c + Vector2(13, 23) * s,
-        c + Vector2(-13, 23) * s
-    ])
-    _outline(body, coat.lightened(0.13), 2.4 * s)
-    _draw_eyes(c + Vector2(0, -4) * s, s, 8.0)
-    draw_arc(c + Vector2(0, 4) * s, 4.5 * s, 0.2, PI - 0.2, 14, INK, 1.4 * s)
-    draw_circle(c + Vector2(-15, -12) * s, 3.0 * s, Color("#F8F2E7", 0.75))
-    draw_circle(c + Vector2(15, -2) * s, 2.0 * s, Color("#F8F2E7", 0.8))
-    draw_ellipse_placeholder(c + Vector2(0, -26) * s, Vector2(18, 5) * s, SAGE)
-    draw_line(c + Vector2(0, -27) * s, c + Vector2(10, -33) * s, Color("#5D785F"), 1.2 * s)
-    draw_circle(c + Vector2(0, -29) * s, 3.5 * s, HONEY)
-
-func _draw_pebbleback(c: Vector2, s: float, coat: Color) -> void:
-    # A tiny mossy armadillo: low shell silhouette, pebble plates and a curious face.
-    var shell := PackedVector2Array([
-        c + Vector2(-29, 10) * s, c + Vector2(-27, -7) * s,
-        c + Vector2(-17, -23) * s, c + Vector2(0, -28) * s,
-        c + Vector2(19, -20) * s, c + Vector2(29, -3) * s,
-        c + Vector2(26, 13) * s, c + Vector2(12, 21) * s,
-        c + Vector2(-13, 21) * s
-    ])
-    _outline(shell, coat.darkened(0.06), 2.7 * s)
-    for plate in range(3):
-        var offset := Vector2(-12.0 + plate * 12.0, -12.0 + absf(plate - 1) * 2.0) * s
-        draw_arc(c + offset, 8.0 * s, PI, TAU, 18, Color("#E0D2B9"), 1.5 * s)
-    var head := PackedVector2Array([
-        c + Vector2(-14, 8) * s, c + Vector2(-13, -5) * s,
-        c + Vector2(-5, -14) * s, c + Vector2(8, -14) * s,
-        c + Vector2(17, -5) * s, c + Vector2(17, 9) * s,
-        c + Vector2(7, 17) * s, c + Vector2(-7, 16) * s
-    ])
-    _outline(head, coat.lightened(0.2), 1.8 * s)
-    _draw_eyes(c + Vector2(2, -2) * s, s, 5.5)
-    draw_circle(c + Vector2(12, 5) * s, 2.2 * s, INK)
-    draw_arc(c + Vector2(-2, 5) * s, 3.5 * s, 0.15, PI - 0.15, 12, INK, 1.1 * s)
-
-func _draw_moonmote(c: Vector2, s: float, coat: Color) -> void:
-    # A sleepy moon-spirit with two soft winglets and a little star marking.
-    var left_wing := PackedVector2Array([
-        c + Vector2(-8, -3) * s, c + Vector2(-34, -22) * s,
-        c + Vector2(-31, 2) * s, c + Vector2(-17, 17) * s
-    ])
-    var right_wing := PackedVector2Array([
-        c + Vector2(8, -3) * s, c + Vector2(34, -22) * s,
-        c + Vector2(31, 2) * s, c + Vector2(17, 17) * s
-    ])
-    _outline(left_wing, coat.lightened(0.1), 2.0 * s)
-    _outline(right_wing, coat.lightened(0.1), 2.0 * s)
-    var body := PackedVector2Array([
-        c + Vector2(0, -29) * s, c + Vector2(18, -15) * s,
-        c + Vector2(23, 3) * s, c + Vector2(15, 21) * s,
-        c + Vector2(0, 27) * s, c + Vector2(-15, 21) * s,
-        c + Vector2(-23, 3) * s, c + Vector2(-18, -15) * s
-    ])
-    _outline(body, coat.lightened(0.16), 2.5 * s)
-    draw_arc(c + Vector2(0, -24) * s, 10.0 * s, PI + 0.2, TAU - 0.2, 20, HONEY, 2.0 * s)
-    _draw_eyes(c + Vector2(0, -2) * s, s, 7.0)
-    draw_arc(c + Vector2(0, 6) * s, 4.0 * s, 0.2, PI - 0.2, 12, INK, 1.2 * s)
-    draw_circle(c + Vector2(-13, 8) * s, 3.0 * s, Color("#D99583", 0.55))
-    draw_circle(c + Vector2(13, 8) * s, 3.0 * s, Color("#D99583", 0.55))
-    draw_circle(c + Vector2(0, -14) * s, 2.2 * s, HONEY)
-
-func _draw_breezeling(c: Vector2, s: float, coat: Color) -> void:
-    # A puffin-like breeze bird with a distinct beak, feather crest and wing marks.
-    var body := PackedVector2Array([
-        c + Vector2(-22, 14) * s, c + Vector2(-24, -2) * s,
-        c + Vector2(-15, -19) * s, c + Vector2(0, -25) * s,
-        c + Vector2(17, -17) * s, c + Vector2(24, 0) * s,
-        c + Vector2(19, 17) * s, c + Vector2(0, 23) * s,
-        c + Vector2(-15, 20) * s
-    ])
-    _outline(body, coat.lightened(0.12), 2.5 * s)
-    var left_wing := PackedVector2Array([
-        c + Vector2(-14, -2) * s, c + Vector2(-34, -10) * s,
-        c + Vector2(-27, 11) * s, c + Vector2(-12, 12) * s
-    ])
-    _outline(left_wing, coat.darkened(0.08), 1.8 * s)
-    var beak := PackedVector2Array([
-        c + Vector2(7, -1) * s, c + Vector2(23, 4) * s,
-        c + Vector2(7, 9) * s
-    ])
-    _outline(beak, HONEY, 1.2 * s)
-    _draw_eyes(c + Vector2(-3, -4) * s, s, 6.0)
-    draw_arc(c + Vector2(-2, 5) * s, 3.7 * s, 0.15, PI - 0.15, 12, INK, 1.2 * s)
-    var crest := PackedVector2Array([
-        c + Vector2(-7, -22) * s, c + Vector2(-13, -36) * s,
-        c + Vector2(-1, -30) * s, c + Vector2(8, -37) * s,
-        c + Vector2(10, -20) * s
-    ])
-    _outline(crest, HONEY.lightened(0.05), 1.6 * s)
-    draw_line(c + Vector2(-4, 12) * s, c + Vector2(6, 12) * s, Color(INK, 0.45), 1.2 * s)
-
-func _draw_gloomling(c: Vector2, s: float, coat: Color) -> void:
-    var body := PackedVector2Array([
-        c + Vector2(-24, 17) * s, c + Vector2(-27, 1) * s,
-        c + Vector2(-19, -15) * s, c + Vector2(-6, -23) * s,
-        c + Vector2(10, -22) * s, c + Vector2(24, -11) * s,
-        c + Vector2(26, 6) * s, c + Vector2(15, 21) * s,
-        c + Vector2(-9, 23) * s
-    ])
-    _outline(body, coat, 2.4 * s)
-    _outline(PackedVector2Array([
-        c + Vector2(-25, -12) * s, c + Vector2(-19, -28) * s,
-        c + Vector2(-5, -30) * s, c + Vector2(11, -29) * s,
-        c + Vector2(25, -17) * s, c + Vector2(23, -10) * s
-    ]), Color("#B88A91"), 2.0 * s)
-    draw_line(c + Vector2(-17, -22) * s, c + Vector2(-20, -34) * s, INK, 2.0 * s)
-    draw_line(c + Vector2(17, -22) * s, c + Vector2(20, -34) * s, INK, 2.0 * s)
-    _draw_eyes(c + Vector2(0, -3) * s, s, 8.0)
-    draw_arc(c + Vector2(0, 6) * s, 4.0 * s, 0.2, PI - 0.2, 14, INK, 1.3 * s)
-    draw_circle(c + Vector2(-15, 9) * s, 2.5 * s, HONEY)
-    draw_circle(c + Vector2(15, 9) * s, 2.5 * s, HONEY)
-
-func _draw_boss(c: Vector2, s: float, coat: Color) -> void:
-    var body := PackedVector2Array([
-        c + Vector2(-34, 18) * s, c + Vector2(-31, -8) * s,
-        c + Vector2(-18, -28) * s, c + Vector2(0, -34) * s,
-        c + Vector2(20, -27) * s, c + Vector2(34, -6) * s,
-        c + Vector2(30, 18) * s, c + Vector2(14, 30) * s,
-        c + Vector2(-15, 30) * s
-    ])
-    _outline(body, coat.lightened(0.06), 3.2 * s)
-    _outline(PackedVector2Array([
-        c + Vector2(-20, -24) * s, c + Vector2(-36, -42) * s,
-        c + Vector2(-14, -36) * s, c + Vector2(-5, -23) * s
-    ]), SAGE.darkened(0.1), 2.4 * s)
-    _outline(PackedVector2Array([
-        c + Vector2(5, -23) * s, c + Vector2(15, -37) * s,
-        c + Vector2(36, -43) * s, c + Vector2(20, -23) * s
-    ]), SAGE.darkened(0.1), 2.4 * s)
-    draw_ellipse_placeholder(c + Vector2(-10, -5) * s, Vector2(4, 5) * s, INK)
-    draw_ellipse_placeholder(c + Vector2(10, -5) * s, Vector2(4, 5) * s, INK)
-    draw_arc(c + Vector2(0, 9) * s, 6.0 * s, 0.1, PI - 0.1, 16, INK, 2.0 * s)
-    draw_circle(c + Vector2(-20, 10) * s, 4.0 * s, Color("#D99583"))
-    draw_circle(c + Vector2(20, 10) * s, 4.0 * s, Color("#D99583"))
-    draw_circle(c + Vector2(0, -31) * s, 5.0 * s, HONEY)
-
-func _draw_murkling(c: Vector2, s: float, coat: Color) -> void:
-    var body := PackedVector2Array([
-        c + Vector2(-25, 14) * s, c + Vector2(-22, -7) * s,
-        c + Vector2(-10, -22) * s, c + Vector2(6, -25) * s,
-        c + Vector2(22, -12) * s, c + Vector2(26, 7) * s,
-        c + Vector2(13, 22) * s, c + Vector2(-12, 22) * s
-    ])
-    _outline(body, coat, 2.5 * s)
-    var pebble := PackedVector2Array([
-        c + Vector2(-11, -17) * s, c + Vector2(-5, -29) * s,
-        c + Vector2(8, -30) * s, c + Vector2(16, -16) * s
-    ])
-    _outline(pebble, Color("#A79E8D"), 1.8 * s)
-    _draw_eyes(c + Vector2(0, -2) * s, s, 8.0)
-    draw_arc(c + Vector2(0, 6) * s, 4.0 * s, 0.15, PI - 0.15, 12, INK, 1.3 * s)
-    draw_ellipse_placeholder(c + Vector2(-14, 8) * s, Vector2(4, 2) * s, Color("#C98E7C", 0.6))
-    draw_ellipse_placeholder(c + Vector2(14, 8) * s, Vector2(4, 2) * s, Color("#C98E7C", 0.6))
-
-func _draw_eyes(center: Vector2, s: float, gap: float) -> void:
-    for side in [-1.0, 1.0]:
-        var eye := center + Vector2(gap * side, 0) * s
-        draw_ellipse_placeholder(eye, Vector2(3.2, 4.3) * s, INK)
-        draw_circle(eye + Vector2(-0.9, -1.6) * s, 1.0 * s, CREAM)
+func _creature_palette(coat: Color, label: String) -> Dictionary:
+    var accent := HONEY
+    if label == "Puddlekin":
+        accent = Color("#B7E3D0")
+    elif label == "Moonmote":
+        accent = Color("#F3C969")
+    elif label == "Gloomling":
+        accent = Color("#D4A1BE")
+    elif label == "Murkling" or label == "Pebbleback":
+        accent = Color("#B9B8C7")
+    return {
+        "k": INK,
+        "s": coat.darkened(0.48),
+        "b": coat,
+        "h": coat.lightened(0.32),
+        "a": accent,
+        "e": Color("#241F2E"),
+        "p": Color("#F2A18E")
+    }
 
 func _draw_nameplate(center: Vector2, label: String, friendly: bool, s: float, health_ratio: float) -> void:
     var baseline := center.y + 48.0 * s
@@ -841,37 +831,35 @@ func _draw_nameplate(center: Vector2, label: String, friendly: bool, s: float, h
     draw_rect(bar, Color(INK, 0.18))
     draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(health_ratio, 0.0, 1.0), bar.size.y)), SAGE if friendly else CLAY)
 
-func _draw_plant(position: Vector2, scale_factor: float) -> void:
-    var s := scale_factor
-    draw_line(position, position + Vector2(0, -28) * s, SAGE.darkened(0.3), 3.0)
-    draw_ellipse_placeholder(position + Vector2(-9, -22) * s, Vector2(10, 5) * s, SAGE)
-    draw_ellipse_placeholder(position + Vector2(10, -29) * s, Vector2(10, 5) * s, SAGE.lightened(0.08))
-    draw_circle(position + Vector2(0, -34) * s, 4.0 * s, HONEY)
+func _draw_pixel_plant(position: Vector2, variation: int) -> void:
+    var trunk_color := Color("#694653")
+    draw_rect(Rect2(position + Vector2(-4, -26), Vector2(8, 28)), trunk_color)
+    draw_rect(Rect2(position + Vector2(-12, -38), Vector2(24, 12)), SAGE.darkened(0.08))
+    draw_rect(Rect2(position + Vector2(-18, -32), Vector2(12, 12)), SAGE)
+    draw_rect(Rect2(position + Vector2(6, -44), Vector2(12, 14)), Color("#78B861"))
+    draw_rect(Rect2(position + Vector2(-8, -50), Vector2(16, 10)), Color("#9BCB69"))
+    draw_rect(Rect2(position + Vector2(-12, -26), Vector2(6, 4)), Color("#9BCB69"))
+    if variation == 1:
+        draw_rect(Rect2(position + Vector2(12, -30), Vector2(6, 4)), HONEY)
 
-func _draw_leaf_sprinkle(position: Vector2, scale_factor: float) -> void:
-    var s := scale_factor
-    var leaf := PackedVector2Array([
-        position + Vector2(-6, 0) * s,
-        position + Vector2(0, -9) * s,
-        position + Vector2(8, -5) * s,
-        position + Vector2(7, 4) * s,
-        position + Vector2(-2, 6) * s
-    ])
-    _outline(leaf, Color(SAGE, 0.35), 1.1 * s)
+func _draw_leaf_sprinkle(position: Vector2, variation: int) -> void:
+    var color := Color("#9BCB69", 0.8) if variation == 1 else Color("#F3C969", 0.8)
+    draw_rect(Rect2(position, Vector2(4, 2)), color)
+    draw_rect(Rect2(position + Vector2(2, -2), Vector2(2, 6)), color)
+    draw_rect(Rect2(position + Vector2(6, 2), Vector2(4, 2)), color)
 
 func _draw_party_strip(size: Vector2) -> void:
     var panel := Rect2(Vector2(70, 555), Vector2(size.x - 140, 112))
     draw_rect(panel, CREAM)
-    draw_rect(panel, Color(INK, 0.18), false, 1.5)
+    draw_rect(Rect2(panel.position, panel.size), INK, false, 2.0)
     draw_string(ThemeDB.fallback_font, Vector2(92, 580), "YOUR LITTLE PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, INK)
 
     var party: Array = run_snapshot.get("party", [])
     for i in range(mini(6, party.size())):
         var unit: Dictionary = party[i]
         var x := 96.0 + i * 116.0
-        var unit_color := _sigil_color(str(unit.get("sigil", "leaf")))
-        draw_circle(Vector2(x, 620), 11.0, unit_color)
-        draw_circle(Vector2(x, 620), 11.0, INK, false, 1.2)
+        var sigil := str(unit.get("sigil", "leaf"))
+        _draw_sigil_icon(Vector2(x, 620), sigil, _sigil_color(sigil))
         draw_string(
             ThemeDB.fallback_font,
             Vector2(x + 17, 617),
@@ -888,11 +876,11 @@ func _draw_party_strip(size: Vector2) -> void:
             HORIZONTAL_ALIGNMENT_LEFT,
             94,
             9,
-            Color(INK, 0.6)
+            Color(INK, 0.72)
         )
 
     _draw_fate_preview(Vector2(size.x - 185, 574))
-    draw_string(ThemeDB.fallback_font, Vector2(size.x - 95, 671), "PREPARE  →  AUTO-BATTLE", HORIZONTAL_ALIGNMENT_RIGHT, 300, 11, INK)
+    draw_string(ThemeDB.fallback_font, Vector2(size.x - 95, 671), "PREPARE  >  AUTO-BATTLE", HORIZONTAL_ALIGNMENT_RIGHT, 300, 11, INK)
 
 func _sigil_color(sigil: String) -> Color:
     match sigil:
@@ -912,46 +900,46 @@ func _sigil_color(sigil: String) -> Color:
             return PAPER_SHADE
 
 func _draw_fate_preview(origin: Vector2) -> void:
-    draw_string(ThemeDB.fallback_font, origin + Vector2(-3, 0), "FATE BOARD", HORIZONTAL_ALIGNMENT_LEFT, 110, 10, Color(INK, 0.72))
-    var tile_size := 15.0
-    var gap := 5.0
+    draw_string(ThemeDB.fallback_font, origin + Vector2(-3, 0), "FATE BOARD", HORIZONTAL_ALIGNMENT_LEFT, 110, 10, INK)
+    var tile_size := 16.0
+    var gap := 6.0
+    var sigils := ["leaf", "ember", "tide", "stone", "moon", "wing"]
     for row in range(4):
         for col in range(4):
             var tile_origin := origin + Vector2(col * (tile_size + gap), 10 + row * (tile_size + gap))
             var color := fate_colors[fate_pattern[row][col]]
-            draw_rect(Rect2(tile_origin, Vector2(tile_size, tile_size)), Color("#E8DECE"))
-            draw_circle(tile_origin + Vector2(tile_size / 2.0, tile_size / 2.0), 4.4, color)
-            draw_circle(tile_origin + Vector2(tile_size / 2.0, tile_size / 2.0), 4.4, Color(INK, 0.5), false, 1.0)
+            draw_rect(Rect2(tile_origin, Vector2(tile_size, tile_size)), Color("#D9B47A"))
+            draw_rect(Rect2(tile_origin, Vector2(tile_size, tile_size)), INK, false, 2.0)
+            var sigil := sigils[fate_pattern[row][col]]
+            _draw_sigil_icon(tile_origin + Vector2(3, 3), sigil, color)
 
-func _pixel_snap(value: float) -> float:
-    return round(value / 2.0) * 2.0
+func _draw_sigil_icon(origin: Vector2, sigil: String, color: Color) -> void:
+    var rows: PackedStringArray
+    match sigil:
+        "leaf":
+            rows = PackedStringArray(["..a..", ".aaa.", "aabab", ".aaa.", "..a.."])
+        "ember":
+            rows = PackedStringArray(["..a..", ".aaa.", ".aba.", "aabaa", ".aaa."])
+        "tide":
+            rows = PackedStringArray(["..a..", ".aaa.", "aaaaa", ".aaa.", "..a.."])
+        "stone":
+            rows = PackedStringArray([".aaa.", "aaaaa", "ababa", "aaaaa", ".aaa."])
+        "moon":
+            rows = PackedStringArray([".aaa.", "aa...", "aa...", "aa...", ".aaa."])
+        "wing":
+            rows = PackedStringArray(["....a", "...aa", "..aba", ".abba", "a..a."])
+        _:
+            rows = PackedStringArray([".....", ".aaa.", ".aba.", ".aaa.", "....."])
 
-func _pixel_point(point: Vector2) -> Vector2:
-    return Vector2(_pixel_snap(point.x), _pixel_snap(point.y))
-
-func _outline(points: PackedVector2Array, fill: Color, width: float = 2.2) -> void:
-    var pixel_points := PackedVector2Array()
-    for point in points:
-        pixel_points.append(_pixel_point(point))
-    draw_colored_polygon(pixel_points, fill)
-    var pixel_width := maxf(2.0, round(width / 2.0) * 2.0)
-    draw_polyline(_closed(pixel_points), INK, pixel_width, false)
-
-func _closed(points: PackedVector2Array) -> PackedVector2Array:
-    var result := points.duplicate()
-    if points.size() > 0:
-        result.append(points[0])
-    return result
-
-func draw_ellipse_placeholder(center: Vector2, radius: Vector2, color: Color) -> void:
-    # Rasterise ellipses as 2-design-pixel blocks so they stay crisp after 2x upscaling.
-    var rx := maxi(1, roundi(absf(radius.x) / 2.0))
-    var ry := maxi(1, roundi(absf(radius.y) / 2.0))
-    var snapped_center := _pixel_point(center)
-    for py in range(-ry, ry + 1):
-        for px in range(-rx, rx + 1):
-            var nx := float(px * px) / float(rx * rx)
-            var ny := float(py * py) / float(ry * ry)
-            if nx + ny <= 1.0:
-                var pixel_origin := snapped_center + Vector2(px * 2.0, py * 2.0)
-                draw_rect(Rect2(pixel_origin, Vector2(2, 2)), color)
+    var palette := {"a": color, "b": color.lightened(0.35)}
+    var pixel_size := 2.0
+    for row_index in range(rows.size()):
+        var row: String = rows[row_index]
+        for column_index in range(row.length()):
+            var pixel := row.substr(column_index, 1)
+            if pixel == ".":
+                continue
+            draw_rect(
+                Rect2(origin + Vector2(column_index * pixel_size, row_index * pixel_size), Vector2(pixel_size, pixel_size)),
+                palette.get(pixel, color)
+            )
