@@ -291,7 +291,8 @@ function paintBattlefield(report) {
   const actors = new Map();
   const add = (name, team, health, amount) => {
     if (!name || name === 'Squad') return;
-    const current = actors.get(name) || { name, team, hp: Math.max(1, health + amount), max: Math.max(1, health + amount) };
+    const initial = Number.isFinite(health) ? Math.max(1, health + amount) : 20;
+    const current = actors.get(name) || { name, team, hp: initial, max: initial };
     current.team = team;
     if (health !== undefined) current.hp = Math.max(0, health);
     current.max = Math.max(current.max, current.hp + amount);
