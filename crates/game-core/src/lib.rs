@@ -1450,6 +1450,18 @@ mod tests {
         GameState::new(seed, "test-run")
     }
 
+
+    fn set_route(game: &mut GameState, kind: RouteNodeKind) {
+        game.phase = RunPhase::Intermission;
+        game.pending_event = None;
+        game.pending_route = Some(vec![RouteOption {
+            id: format!("test-route-{}", game.wave),
+            kind,
+            title: "Test route".to_string(),
+            description: "A test path option.".to_string(),
+        }]);
+    }
+
     fn set_journey_event(game: &mut GameState, kind: JourneyEventKind) {
         game.phase = RunPhase::Intermission;
         game.pending_event = Some(JourneyEvent {
@@ -1841,6 +1853,98 @@ mod tests {
         assert_eq!(game.gold, gold_before);
         assert_eq!(game.units.len(), game.unit_limit);
         assert!(game.pending_event.is_some());
+    }
+
+
+    #[test]
+    fn route_fork_is_seeded_and_has_three_distinct_options() {
+        let mut a = run(601);
+        let mut b = run(601);
+        a.battle().unwrap();
+        b.battle().unwrap();
+        a.resolve_journey_event(0).unwrap();
+        b.resolve_journey_event(0).unwrap();
+        assert_eq!(a.pending_route, b.pending_route);
+        let options = a.pending_route.as_ref().unwrap();
+        assert_eq!(options.len(), 3);
+        let mut kinds: Vec<RouteNodeKind> = options.iter().map(|option| option.kind).collect();
+        kinds.sort_by_key(|kind| match kind {
+            RouteNodeKind::Battle => 0,
+            RouteNodeKind::Rest => 1,
+            RouteNodeKind::Merchant => 2,
+            RouteNodeKind::Elite => 3,
+            RouteNodeKind::BossGate => 4,
+        });
+        kinds.dedup();
+        assert_eq!(kinds.len(), 3);
+    }
+
+    #[test]
+    fn rest_route_heals_the_party_and_restores_a_heart() {
+        let mut game = run(602);
+        game.hearts = 3;
+        game.units[0].health = 20;
+        game.units[0].current_health = Some(4);
+        set_route(&mut game, RouteNodeKind::Rest);
+        game.choose_route(0).unwrap();
+        assert_eq!(game.hearts, 4);
+        assert_eq!(game.units[0].current_health, Some(9));
+        assert_eq!(game.current_route, Some(RouteNodeKind::Rest));
+        assert!(game.pending_route.is_none());
+        assert_eq!(game.route_history.len(), 1);
+    }
+
+    #[test]
+    fn merchant_route_grants_gold_and_is_recorded() {
+        let mut game = run(603);
+        let before = game.gold;
+        set_route(&mut game, RouteNodeKind::Merchant);
+        game.choose_route(0).unwrap();
+        assert_eq!(game.gold, before + 75);
+        assert_eq!(game.route_history[0].kind, RouteNodeKind::Merchant);
+    }
+
+    #[test]
+    fn elite_route_changes_battle_difficulty_and_report() {
+        let mut elite = run(604);
+        let mut standard = run(604);
+        elite.units[0].attack = 100;
+        standard.units[0].attack = 100;
+        set_route(&mut elite, RouteNodeKind::Elite);
+        set_route(&mut standard, RouteNodeKind::Battle);
+        elite.choose_route(0).unwrap();
+        standard.choose_route(0).unwrap();
+        elite.next_wave().unwrap();
+        standard.next_wave().unwrap();
+        let elite_report = elite.battle().unwrap();
+        let standard_report = standard.battle().unwrap();
+        assert_eq!(elite_report.route, Some(RouteNodeKind::Elite));
+        assert_eq!(standard_report.route, Some(RouteNodeKind::Battle));
+        assert!(elite_report.enemy_power > standard_report.enemy_power);
+        assert!(elite_report.gold_awarded >= standard_report.gold_awarded);
+    }
+
+    #[test]
+    fn route_selection_rejects_replay_and_invalid_indices() {
+        let mut game = run(605);
+        set_route(&mut game, RouteNodeKind::Battle);
+        assert_eq!(game.choose_route(9), Err(GameError::InvalidRouteChoice));
+        game.choose_route(0).unwrap();
+        assert_eq!(game.choose_route(0), Err(GameError::NoJourneyRoute));
+    }
+
+    #[test]
+    fn boss_gate_is_only_offered_for_a_boss_wave() {
+        let mut game = run(606);
+        set_route(&mut game, RouteNodeKind::BossGate);
+        assert_eq!(game.choose_route(0), Err(GameError::InvalidRouteChoice));
+        game.wave = 4;
+        game.pending_route.as_mut().unwrap()[0].id = "test-route-5".to_string();
+        game.choose_route(0).unwrap();
+        game.next_wave().unwrap();
+        let report = game.battle().unwrap();
+        assert!(report.boss);
+        assert_eq!(report.route, Some(RouteNodeKind::BossGate));
     }
 
     #[test]
