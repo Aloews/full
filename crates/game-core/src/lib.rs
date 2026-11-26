@@ -2905,7 +2905,15 @@ mod tests {
         );
         assert!(target.pending_promotion);
         game.choose_promotion(target_id, "Vanguard").unwrap();
-        assert_eq!(game.units.iter().find(|unit| unit.id == target_id).unwrap().promotion_path.len(), 2);
+        assert_eq!(
+            game.units
+                .iter()
+                .find(|unit| unit.id == target_id)
+                .unwrap()
+                .promotion_path
+                .len(),
+            2
+        );
     }
 
     #[test]
