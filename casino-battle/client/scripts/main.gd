@@ -59,7 +59,10 @@ func _setup_controls() -> void:
     add_child(layer)
 
     var root := Control.new()
-    root.set_anchors_preset(Control.PRESET_FULL_RECT)
+    root.set_anchors_preset(Control.PRESET_TOP_LEFT)
+    root.position = Vector2.ZERO
+    root.size = Vector2(1280, 720)
+    root.scale = Vector2(0.5, 0.5)
     layer.add_child(root)
 
     status_label = Label.new()
@@ -348,11 +351,11 @@ func _draw_battle_effects() -> void:
         var kind := str(event.get("kind", "attack"))
         var amount := int(event.get("amount", 0))
         if kind == "attack":
-            draw_line(source + Vector2(24, 0), target - Vector2(22, 0), CLAY, 3.0, true)
+            draw_line(_pixel_point(source + Vector2(24, 0)), _pixel_point(target - Vector2(22, 0)), CLAY, 4.0, false)
             draw_circle(target, 18.0, Color(CLAY, 0.22))
             draw_string(ThemeDB.fallback_font, target + Vector2(-14, -25), "-%d" % amount, HORIZONTAL_ALIGNMENT_CENTER, 32, 16, CLAY)
         elif kind == "heal":
-            draw_line(source + Vector2(18, 0), target - Vector2(18, 0), SAGE.lightened(0.18), 3.0, true)
+            draw_line(_pixel_point(source + Vector2(18, 0)), _pixel_point(target - Vector2(18, 0)), SAGE.lightened(0.18), 4.0, false)
             draw_circle(target, 19.0, Color(SAGE, 0.24))
             draw_string(ThemeDB.fallback_font, target + Vector2(-14, -25), "+%d" % amount, HORIZONTAL_ALIGNMENT_CENTER, 32, 16, SAGE.darkened(0.2))
         elif kind == "defeat":
@@ -432,7 +435,7 @@ func _unhandled_input(event: InputEvent) -> void:
     for unit in run_snapshot.get("party", []):
         var unit_id := int(unit.get("id", 0))
         var center := _unit_position(unit_id)
-        if event.position.distance_to(center) <= 43.0:
+        if (event.position * 2.0).distance_to(center) <= 43.0:
             var next_lane := (int(unit.get("lane", 0)) + 1) % 3
             var request_body := JSON.stringify({
                 "unit_id": unit_id,
@@ -464,12 +467,14 @@ func _process(delta: float) -> void:
     queue_redraw()
 
 func _draw() -> void:
-    var size := get_viewport_rect().size
-    draw_rect(Rect2(Vector2.ZERO, size), PAPER)
-    _draw_paper_grain(size)
+    # Render a 1280x720 design canvas into the 640x360 viewport at exact 2x pixels.
+    draw_set_transform(Vector2.ZERO, 0.0, Vector2(0.5, 0.5))
+    var design_size := Vector2(1280, 720)
+    draw_rect(Rect2(Vector2.ZERO, design_size), PAPER)
+    _draw_paper_grain(design_size)
     _draw_header()
-    _draw_battlefield(size)
-    _draw_party_strip(size)
+    _draw_battlefield(design_size)
+    _draw_party_strip(design_size)
 
 func _draw_paper_grain(size: Vector2) -> void:
     for i in range(90):
@@ -917,13 +922,19 @@ func _draw_fate_preview(origin: Vector2) -> void:
             draw_circle(tile_origin + Vector2(tile_size / 2.0, tile_size / 2.0), 4.4, color)
             draw_circle(tile_origin + Vector2(tile_size / 2.0, tile_size / 2.0), 4.4, Color(INK, 0.5), false, 1.0)
 
+func _pixel_snap(value: float) -> float:
+    return round(value / 2.0) * 2.0
+
+func _pixel_point(point: Vector2) -> Vector2:
+    return Vector2(_pixel_snap(point.x), _pixel_snap(point.y))
+
 func _outline(points: PackedVector2Array, fill: Color, width: float = 2.2) -> void:
-    draw_colored_polygon(points, fill)
-    draw_polyline(_closed(points), INK, width, true)
-    var pencil_points := PackedVector2Array()
+    var pixel_points := PackedVector2Array()
     for point in points:
-        pencil_points.append(point + Vector2(1.0, 0.7))
-    draw_polyline(_closed(pencil_points), Color(INK, 0.2), maxf(0.7, width * 0.35), true)
+        pixel_points.append(_pixel_point(point))
+    draw_colored_polygon(pixel_points, fill)
+    var pixel_width := maxf(2.0, round(width / 2.0) * 2.0)
+    draw_polyline(_closed(pixel_points), INK, pixel_width, false)
 
 func _closed(points: PackedVector2Array) -> PackedVector2Array:
     var result := points.duplicate()
@@ -932,6 +943,14 @@ func _closed(points: PackedVector2Array) -> PackedVector2Array:
     return result
 
 func draw_ellipse_placeholder(center: Vector2, radius: Vector2, color: Color) -> void:
-    draw_set_transform(center, 0.0, radius)
-    draw_circle(Vector2.ZERO, 1.0, color)
-    draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+    # Rasterise ellipses as 2-design-pixel blocks so they stay crisp after 2x upscaling.
+    var rx := maxi(1, roundi(absf(radius.x) / 2.0))
+    var ry := maxi(1, roundi(absf(radius.y) / 2.0))
+    var snapped_center := _pixel_point(center)
+    for py in range(-ry, ry + 1):
+        for px in range(-rx, rx + 1):
+            var nx := float(px * px) / float(rx * rx)
+            var ny := float(py * py) / float(ry * ry)
+            if nx + ny <= 1.0:
+                var pixel_origin := snapped_center + Vector2(px * 2.0, py * 2.0)
+                draw_rect(Rect2(pixel_origin, Vector2(2, 2)), color)
