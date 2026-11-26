@@ -592,6 +592,9 @@ impl GameState {
     pub fn battle(&mut self) -> Result<BattleReport, GameError> {
         self.ensure_preparation()?;
         let boss = self.wave % 5 == 0;
+        let route = self.current_route;
+        let elite = route == Some(RouteNodeKind::Elite) && !boss;
+        let boss_gate = boss && route == Some(RouteNodeKind::BossGate);
         let army_base = self.units.iter().fold(0u32, |total, unit| {
             let unit_power = unit
                 .attack
@@ -630,11 +633,14 @@ impl GameState {
             .iter()
             .any(|count| *count >= 3);
         let synergy_percent = if class_synergy { 110 } else { 100 };
-        let army_power = army_base
-            .saturating_add(item_bonus)
-            .saturating_mul(core_percent)
-            .saturating_mul(synergy_percent)
-            / 10_000;
+        let army_power = apply_boss_gate_bonus(
+            army_base
+                .saturating_add(item_bonus)
+                .saturating_mul(core_percent)
+                .saturating_mul(synergy_percent)
+                / 10_000,
+            boss_gate,
+        );
 
         let mut allies: Vec<Combatant> = self
             .units
@@ -661,8 +667,6 @@ impl GameState {
                 boss: false,
             })
             .collect();
-        let route = self.current_route;
-        let elite = route == Some(RouteNodeKind::Elite) && !boss;
         let mut enemies = build_enemy_party(self.wave, boss, elite);
         let ally_snapshots = allies
             .iter()
@@ -732,10 +736,11 @@ impl GameState {
                     .attack
                     .saturating_add(class_bonus)
                     .saturating_add(item_bonus / 3);
-                let damage = attack
+                let base_damage = attack
                     .saturating_mul(core_percent)
                     .saturating_mul(synergy_percent)
                     / 10_000u32;
+                let damage = apply_boss_gate_bonus(base_damage, boss_gate);
                 let target_health = &mut enemies[target_index].current_health;
                 *target_health = target_health.saturating_sub(damage);
                 let remaining = *target_health;
@@ -776,10 +781,12 @@ impl GameState {
                         .map(|(index, _)| index)
                         .expect("enemy list is checked as non-empty");
                     let splash_target = enemies[splash_index].clone();
-                    let splash_damage = 2u32.saturating_mul(core_percent) / 100;
+                    let splash_base_damage = 2u32.saturating_mul(core_percent) / 100;
+                    let splash_damage =
+                        apply_boss_gate_bonus(splash_base_damage, boss_gate).max(1);
                     enemies[splash_index].current_health = enemies[splash_index]
                         .current_health
-                        .saturating_sub(splash_damage.max(1));
+                        .saturating_sub(splash_damage);
                     let splash_remaining = enemies[splash_index].current_health;
                     events.push(BattleEvent {
                         tick,
@@ -1240,7 +1247,7 @@ impl GameState {
                 ),
                 RouteNodeKind::BossGate => (
                     "Ancient boss gate",
-                    "The next wave is a boss encounter. Choose your approach before entering.",
+                    "The next boss waits beyond these gates. Allied attacks gain 15% damage in the boss battle.",
                 ),
             };
             selected.push(RouteOption {
@@ -1303,7 +1310,10 @@ impl GameState {
             RouteNodeKind::Elite => {
                 "Entered Thornwarden lair: elite enemies ahead, +35 gold on victory.".to_string()
             }
-            RouteNodeKind::BossGate => "Entered the ancient boss gate.".to_string(),
+            RouteNodeKind::BossGate => {
+                "Entered the ancient boss gate: allied attacks gain 15% damage in this boss battle."
+                    .to_string()
+            },
         };
         self.route_history.push(RouteResolution {
             wave: target_wave,
@@ -1473,6 +1483,14 @@ impl GameState {
         self.rng_state = x;
         (x >> 16) as u32
     }
+}
+
+fn apply_boss_gate_bonus(base_damage: u32, enabled: bool) -> u32 {
+    if !enabled || base_damage == 0 {
+        return base_damage;
+    }
+    let bonus = base_damage.saturating_mul(15).saturating_add(99) / 100;
+    base_damage.saturating_add(bonus.max(1))
 }
 
 fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> {
@@ -2084,6 +2102,48 @@ mod tests {
         let report = game.battle().unwrap();
         assert!(report.boss);
         assert_eq!(report.route, Some(RouteNodeKind::BossGate));
+    }
+
+
+    #[test]
+    fn boss_gate_increases_ally_attack_damage_by_at_least_fifteen_percent() {
+        let mut gate = run(609);
+        let mut standard = run(609);
+        gate.wave = 4;
+        standard.wave = 4;
+
+        set_route(&mut gate, RouteNodeKind::BossGate);
+        gate.choose_route(0).unwrap();
+        set_route(&mut standard, RouteNodeKind::Battle);
+        standard.choose_route(0).unwrap();
+
+        gate.next_wave().unwrap();
+        standard.next_wave().unwrap();
+        assert_eq!(gate.wave, 5);
+        assert_eq!(standard.wave, 5);
+
+        let gate_report = gate.battle().unwrap();
+        let standard_report = standard.battle().unwrap();
+        assert!(gate_report.boss);
+        assert!(standard_report.boss);
+        assert_eq!(gate_report.route, Some(RouteNodeKind::BossGate));
+        assert_eq!(standard_report.route, Some(RouteNodeKind::Battle));
+
+        let gate_hit = gate_report
+            .events
+            .iter()
+            .find(|event| event.kind == BattleEventKind::AllyAttack)
+            .unwrap()
+            .amount;
+        let standard_hit = standard_report
+            .events
+            .iter()
+            .find(|event| event.kind == BattleEventKind::AllyAttack)
+            .unwrap()
+            .amount;
+        assert_eq!(gate_hit, apply_boss_gate_bonus(standard_hit, true));
+        assert!(gate_hit > standard_hit);
+        assert_eq!(apply_boss_gate_bonus(standard_hit, false), standard_hit);
     }
 
     #[test]
