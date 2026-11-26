@@ -458,11 +458,7 @@ impl RunState {
             .collect()
     }
 
-    fn advance_side(
-        attackers: &mut [Unit],
-        defenders: &mut [Unit],
-        tick: u32,
-    ) -> Vec<BattleEvent> {
+    fn advance_side(attackers: &mut [Unit], defenders: &mut [Unit], tick: u32) -> Vec<BattleEvent> {
         let mut events = Vec::new();
 
         for attacker_index in 0..attackers.len() {
@@ -577,8 +573,7 @@ impl RunState {
                     }
                 }
 
-                attackers[attacker_index].cooldown_left =
-                    attackers[attacker_index].attack_cooldown;
+                attackers[attacker_index].cooldown_left = attackers[attacker_index].attack_cooldown;
             }
         }
 
@@ -805,7 +800,9 @@ mod tests {
         assert_eq!(defenders[0].hp, 13);
         assert_eq!(defenders[1].hp, 17);
         assert_eq!(events.len(), 2);
-        assert!(events.iter().all(|event| event.kind == BattleEventKind::Attack));
+        assert!(events
+            .iter()
+            .all(|event| event.kind == BattleEventKind::Attack));
     }
 
     #[test]
