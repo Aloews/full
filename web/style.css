@@ -556,3 +556,69 @@ button:focus-visible, a:focus-visible {
   .world-scene { margin-bottom: 12px; }
   .scene-caption { font-size: 7px; }
 }
+
+.battlefield {
+  display:block;
+  width:100%;
+  height:auto;
+  margin:12px 0;
+  border:3px solid #2b2638;
+  background:#243d38;
+  image-rendering:pixelated;
+  box-shadow:3px 3px 0 #172823,inset 0 0 0 2px #f5e9bd;
+}
+.journey-event {
+  margin:14px 0;
+  padding:14px;
+  border:3px solid #c49a4d;
+  background:linear-gradient(180deg,#394a39,#263b35);
+  box-shadow:4px 4px 0 #172823,inset 0 0 0 2px #f5e9bd16;
+}
+.journey-event h3 {
+  margin:8px 0 5px;
+  color:#f3c969;
+  font-family:"Courier New",monospace;
+  font-size:17px;
+  text-transform:uppercase;
+}
+.journey-event p {
+  margin:0 0 12px;
+  color:#e4dfc3;
+  font-size:12px;
+  line-height:1.6;
+}
+.journey-choices { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px; }
+.journey-choice {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-height:72px;
+  padding:10px;
+  border:2px solid #8da36b;
+  border-radius:0;
+  background:#192d2e;
+  color:#f5e9bd;
+  text-align:left;
+  font:inherit;
+  cursor:pointer;
+  box-shadow:2px 2px 0 #172823;
+}
+.journey-choice:hover:not(:disabled) { background:#344c3b;border-color:#f3c969;transform:translate(-1px,-1px); }
+.journey-choice strong { font-size:11px;text-transform:uppercase; }
+.journey-choice small { color:#bfc7a0;font-size:10px;line-height:1.5; }
+.journey-outcome {
+  display:flex;flex-direction:column;gap:6px;
+  margin:12px 0;padding:10px;
+  border:2px dashed #8da36b;background:#192d2e;
+  color:#f5e9bd;font-size:12px;
+}
+.combat-log { max-height:260px;overflow:auto; }
+.combat-event { border-bottom:1px dashed #ffffff20; }
+@media(max-width:580px) {
+  .journey-choices { grid-template-columns:1fr; }
+  .journey-event { padding:10px; }
+  .journey-choice { min-height:58px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .journey-choice:hover:not(:disabled) { transform:none; }
+}
