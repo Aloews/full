@@ -1398,7 +1398,7 @@ impl GameState {
 
 fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> {
     let extra = ((wave.saturating_sub(1) / 3).min(3)) as usize;
-    let count = 2 + extra + usize::from(elite);
+    let count = 2 + extra + if elite { 1 } else { 0 };
     let names = [
         "Thicket Slime",
         "Bramble Bat",
@@ -1418,7 +1418,7 @@ fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> 
             let attack = if boss {
                 4u32.saturating_add(wave / 3)
             } else {
-                2u32.saturating_add(wave / 5).saturating_add(u32::from(elite))
+                2u32.saturating_add(wave / 5).saturating_add(if elite { 1 } else { 0 })
             };
             Combatant {
                 id: u64::MAX.saturating_sub(index as u64),
@@ -1582,6 +1582,7 @@ mod tests {
         assert_eq!(game.phase, RunPhase::Intermission);
         assert!(game.pending_event.is_some());
         game.resolve_journey_event(0).unwrap();
+        game.choose_route(0).unwrap();
         game.next_wave().unwrap();
         assert_eq!(game.wave, 2);
         assert_eq!(game.spins_remaining, 6);
@@ -1608,6 +1609,7 @@ mod tests {
         game.choose_core(2).unwrap();
         assert_eq!(game.unit_limit, 6);
         game.resolve_journey_event(1).unwrap();
+        game.choose_route(0).unwrap();
         assert!(game.next_wave().is_ok());
     }
 
@@ -1667,6 +1669,7 @@ mod tests {
         assert_eq!(game.next_wave(), Err(GameError::CoreChoiceRequired));
         game.choose_core(0).unwrap();
         game.resolve_journey_event(1).unwrap();
+        game.choose_route(0).unwrap();
         assert!(game.next_wave().is_ok());
     }
     #[test]
@@ -1858,6 +1861,8 @@ mod tests {
             assert_eq!(game.next_wave(), Err(GameError::JourneyEventRequired));
             game.resolve_journey_event(0).unwrap();
             assert!(game.pending_event.is_none());
+            assert_eq!(game.next_wave(), Err(GameError::JourneyRouteRequired));
+            game.choose_route(0).unwrap();
             assert!(game.next_wave().is_ok());
         }
     }
