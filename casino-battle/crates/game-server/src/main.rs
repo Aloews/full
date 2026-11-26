@@ -1,4 +1,10 @@
-use std::{collections::HashMap, env, net::SocketAddr, sync::Arc, time::{SystemTime, UNIX_EPOCH}};
+use std::{
+    collections::HashMap,
+    env,
+    net::SocketAddr,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use axum::{
     extract::{Path, State},
@@ -123,7 +129,10 @@ async fn health(State(state): State<AppState>) -> Result<Json<HealthResponse>, A
     } else {
         "development_memory_only"
     };
-    Ok(Json(HealthResponse { status: "ok", persistence }))
+    Ok(Json(HealthResponse {
+        status: "ok",
+        persistence,
+    }))
 }
 
 async fn create_run(
@@ -134,7 +143,10 @@ async fn create_run(
     let run = RunState::new(seed);
     let run_id = Uuid::new_v4();
     state.save(run_id, &run).await?;
-    Ok((StatusCode::CREATED, Json(CreateRunResponse { run_id, state: run })))
+    Ok((
+        StatusCode::CREATED,
+        Json(CreateRunResponse { run_id, state: run }),
+    ))
 }
 
 async fn get_run(
@@ -190,7 +202,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
-    let state = AppState { runs: Arc::new(RwLock::new(HashMap::new())), database };
+    let state = AppState {
+        runs: Arc::new(RwLock::new(HashMap::new())),
+        database,
+    };
     let app = Router::new()
         .route("/healthz", get(health))
         .route("/api/v1/runs", post(create_run))
