@@ -118,7 +118,6 @@ pub struct SpinReport {
     pub gold_awarded: u32,
 }
 
-
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FormationPosition {
     pub row: u8,
@@ -1508,7 +1507,6 @@ fn apply_boss_gate_bonus(base_damage: u32, enabled: bool) -> u32 {
     base_damage.saturating_add(bonus.max(1))
 }
 
-
 fn assign_formation_positions(party: &mut [Combatant], allied: bool) {
     let mut occupied = [[false; 3]; 3];
     for (index, unit) in party.iter_mut().enumerate() {
@@ -2134,7 +2132,6 @@ mod tests {
         assert!(!game.migrate_legacy_state());
     }
 
-
     #[test]
     fn formation_places_roles_in_distinct_front_middle_and_back_slots() {
         let mut game = run(801);
@@ -2158,12 +2155,30 @@ mod tests {
                 .position
                 .unwrap()
         };
-        assert_eq!(position_for(UnitClass::Guardian), FormationPosition { row: 0, lane: 1 });
-        assert_eq!(position_for(UnitClass::Beast), FormationPosition { row: 0, lane: 0 });
-        assert_eq!(position_for(UnitClass::Rogue), FormationPosition { row: 1, lane: 2 });
-        assert_eq!(position_for(UnitClass::Archer), FormationPosition { row: 2, lane: 0 });
-        assert_eq!(position_for(UnitClass::Mage), FormationPosition { row: 2, lane: 1 });
-        assert_eq!(position_for(UnitClass::Cleric), FormationPosition { row: 2, lane: 2 });
+        assert_eq!(
+            position_for(UnitClass::Guardian),
+            FormationPosition { row: 0, lane: 1 }
+        );
+        assert_eq!(
+            position_for(UnitClass::Beast),
+            FormationPosition { row: 0, lane: 0 }
+        );
+        assert_eq!(
+            position_for(UnitClass::Rogue),
+            FormationPosition { row: 1, lane: 2 }
+        );
+        assert_eq!(
+            position_for(UnitClass::Archer),
+            FormationPosition { row: 2, lane: 0 }
+        );
+        assert_eq!(
+            position_for(UnitClass::Mage),
+            FormationPosition { row: 2, lane: 1 }
+        );
+        assert_eq!(
+            position_for(UnitClass::Cleric),
+            FormationPosition { row: 2, lane: 2 }
+        );
         let unique: std::collections::HashSet<(u8, u8)> = report
             .allies
             .iter()
@@ -2250,8 +2265,6 @@ mod tests {
         assert!(report.enemies.is_empty());
     }
 
-
-
     #[test]
     fn boss_telegraph_identifies_the_actual_target_and_lane() {
         let mut game = run(803);
@@ -2269,7 +2282,11 @@ mod tests {
             .find(|unit| unit.id == telegraph.target_id)
             .unwrap();
         let position = target.position.unwrap();
-        assert!(telegraph.target.contains(&format!("lane {}", position.lane + 1)));
+        assert!(
+            telegraph
+                .target
+                .contains(&format!("lane {}", position.lane + 1))
+        );
         assert_eq!(telegraph.remaining_health, target.current_health);
     }
 
@@ -2279,7 +2296,10 @@ mod tests {
         let mut value = serde_json::to_value(game.battle().unwrap()).unwrap();
         let battle = value.as_object_mut().unwrap();
         for team in ["allies", "enemies"] {
-            if let Some(units) = battle.get_mut(team).and_then(serde_json::Value::as_array_mut) {
+            if let Some(units) = battle
+                .get_mut(team)
+                .and_then(serde_json::Value::as_array_mut)
+            {
                 for unit in units {
                     unit.as_object_mut().unwrap().remove("position");
                 }
