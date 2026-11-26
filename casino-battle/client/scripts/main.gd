@@ -235,10 +235,12 @@ func _draw_paper_grain(size: Vector2) -> void:
         draw_line(Vector2(x, y), Vector2(x + 2.0, y + 1.0), Color(0.35, 0.29, 0.22, 0.045), 1.0)
 
 func _draw_header() -> void:
+    var wave := int(run_snapshot.get("wave", 1))
+    var hearts := int(run_snapshot.get("hearts", 3))
     draw_string(ThemeDB.fallback_font, Vector2(48, 52), "THE MOSS MEADOW", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, INK)
     draw_string(ThemeDB.fallback_font, Vector2(48, 80), "A little party, a very big adventure", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(INK, 0.65))
-    draw_string(ThemeDB.fallback_font, Vector2(1120, 52), "WAVE 01", HORIZONTAL_ALIGNMENT_RIGHT, 180, 17, INK)
-    draw_string(ThemeDB.fallback_font, Vector2(1120, 78), "♥  ♥  ♥", HORIZONTAL_ALIGNMENT_RIGHT, 180, 15, CLAY)
+    draw_string(ThemeDB.fallback_font, Vector2(1120, 52), "WAVE %02d" % wave, HORIZONTAL_ALIGNMENT_RIGHT, 180, 17, INK)
+    draw_string(ThemeDB.fallback_font, Vector2(1120, 78), "♥  %d" % hearts, HORIZONTAL_ALIGNMENT_RIGHT, 180, 15, CLAY)
 
 func _draw_battlefield(size: Vector2) -> void:
     var arena := Rect2(Vector2(70, 120), Vector2(size.x - 140, 400))
@@ -256,9 +258,19 @@ func _draw_battlefield(size: Vector2) -> void:
     _draw_plant(Vector2(145, 450), 1.0)
     _draw_plant(Vector2(1100, 185), 0.8)
     _draw_plant(Vector2(720, 470), 0.55)
-    _draw_creature(Vector2(330, 330), SAGE, "Mossguard", true, 1.0)
-    _draw_creature(Vector2(470, 285), CLAY, "Cinderkit", true, 0.88)
-    _draw_creature(Vector2(560, 380), BLUE, "Puddlekin", true, 0.95)
+
+    var party: Array = run_snapshot.get("party", [])
+    var ally_positions := [Vector2(330, 330), Vector2(470, 285), Vector2(560, 380)]
+    for i in range(mini(3, party.size())):
+        var unit: Dictionary = party[i]
+        _draw_creature(
+            ally_positions[i],
+            _sigil_color(str(unit.get("sigil", "leaf"))),
+            str(unit.get("name", "Mossguard")),
+            true,
+            1.0 if i == 0 else 0.9
+        )
+
     _draw_creature(Vector2(860, 310), BERRY, "Gloomling", false, 1.0)
     _draw_creature(Vector2(990, 390), Color("#8D8578"), "Murkling", false, 0.88)
 
@@ -450,16 +462,51 @@ func _draw_party_strip(size: Vector2) -> void:
     draw_rect(panel, Color(INK, 0.18), false, 1.5)
     draw_string(ThemeDB.fallback_font, Vector2(92, 580), "YOUR LITTLE PARTY", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, INK)
 
-    var labels := ["Mossguard  ·  Guardian", "Cinderkit  ·  Striker", "Puddlekin  ·  Support"]
-    var colors := [SAGE, CLAY, BLUE]
-    for i in range(labels.size()):
-        var x := 100.0 + i * 275.0
-        draw_circle(Vector2(x, 620), 13.0, colors[i])
-        draw_circle(Vector2(x, 620), 13.0, INK)
-        draw_string(ThemeDB.fallback_font, Vector2(x + 25, 625), labels[i], HORIZONTAL_ALIGNMENT_LEFT, 230, 13, INK)
+    var party: Array = run_snapshot.get("party", [])
+    for i in range(mini(6, party.size())):
+        var unit: Dictionary = party[i]
+        var x := 96.0 + i * 116.0
+        var unit_color := _sigil_color(str(unit.get("sigil", "leaf")))
+        draw_circle(Vector2(x, 620), 11.0, unit_color)
+        draw_circle(Vector2(x, 620), 11.0, INK, false, 1.2)
+        draw_string(
+            ThemeDB.fallback_font,
+            Vector2(x + 17, 617),
+            str(unit.get("name", "Friend")),
+            HORIZONTAL_ALIGNMENT_LEFT,
+            94,
+            10,
+            INK
+        )
+        draw_string(
+            ThemeDB.fallback_font,
+            Vector2(x + 17, 632),
+            "RANK %d" % int(unit.get("rank", 1)),
+            HORIZONTAL_ALIGNMENT_LEFT,
+            94,
+            9,
+            Color(INK, 0.6)
+        )
 
     _draw_fate_preview(Vector2(size.x - 185, 574))
     draw_string(ThemeDB.fallback_font, Vector2(size.x - 95, 671), "PREPARE  →  AUTO-BATTLE", HORIZONTAL_ALIGNMENT_RIGHT, 300, 11, INK)
+
+func _sigil_color(sigil: String) -> Color:
+    match sigil:
+        "leaf":
+            return SAGE
+        "ember":
+            return CLAY
+        "tide":
+            return BLUE
+        "stone":
+            return Color("#A99B82")
+        "moon":
+            return BERRY
+        "wing":
+            return HONEY
+        _:
+            return PAPER_SHADE
 
 func _draw_fate_preview(origin: Vector2) -> void:
     draw_string(ThemeDB.fallback_font, origin + Vector2(-3, 0), "FATE BOARD", HORIZONTAL_ALIGNMENT_LEFT, 110, 10, Color(INK, 0.72))
