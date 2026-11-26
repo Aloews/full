@@ -42,6 +42,7 @@ var fate_pattern := [
 var fate_colors := [SAGE, CLAY, BLUE, Color("#A99B82"), BERRY, HONEY]
 
 func _ready() -> void:
+    get_window().min_size = Vector2i(640, 360)
     server_url = OS.get_environment("CASINO_BATTLE_API")
     if server_url.is_empty():
         server_url = "http://127.0.0.1:3000"
