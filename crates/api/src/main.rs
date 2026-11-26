@@ -616,6 +616,78 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn postgres_storage_persists_run_across_router_instances() {
+        let Ok(database_url) = std::env::var("TEST_DATABASE_URL") else {
+            return;
+        };
+
+        let pool = PgPoolOptions::new()
+            .max_connections(2)
+            .connect(&database_url)
+            .await
+            .unwrap();
+        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+
+        let router = app_with_storage(default_data_dir(), Some(pool.clone()));
+        let created = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/runs")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"seed":4242}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(created.status(), StatusCode::OK);
+        let created: GameState =
+            serde_json::from_slice(&created.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+
+        let spun = router
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/runs/{}/spin", created.run_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(spun.status(), StatusCode::OK);
+        let saved: GameState =
+            serde_json::from_slice(&spun.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        assert_eq!(saved.spins_remaining, 5);
+
+        // A new router instance has an empty in-memory cache. The saved run must
+        // still be available through PostgreSQL rather than process-local memory.
+        let restarted = app_with_storage(default_data_dir(), Some(pool.clone()));
+        let loaded = restarted
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/runs/{}", created.run_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(loaded.status(), StatusCode::OK);
+        let loaded: GameState =
+            serde_json::from_slice(&loaded.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        assert_eq!(loaded, saved);
+
+        sqlx::query("DELETE FROM slotbound_runs WHERE run_id = $1")
+            .bind(&created.run_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
     async fn invalid_phase_returns_conflict_without_mutation() {
         let dir = std::env::temp_dir().join(format!("slotbound-api-test-{}-2", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
