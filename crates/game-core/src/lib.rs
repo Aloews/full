@@ -383,7 +383,7 @@ impl GameState {
             spins_used: 0,
             next_spin_cost: 100,
             shop_prices: item_prices(),
-            ruleset_version: 1,
+            ruleset_version: 2,
             nudge_available: true,
             board: [[UnitClass::Guardian; 3]; 3],
             units: Vec::new(),
@@ -1805,10 +1805,11 @@ mod tests {
     #[test]
     fn next_wave_restores_a_small_amount_of_survivor_health() {
         let mut game = run(305);
-        game.phase = RunPhase::Intermission;
         let unit = game.units.first_mut().unwrap();
         unit.health = 20;
         unit.current_health = Some(5);
+        set_route(&mut game, RouteNodeKind::Battle);
+        game.choose_route(0).unwrap();
         game.next_wave().unwrap();
         assert_eq!(game.units[0].current_health, Some(7));
     }
