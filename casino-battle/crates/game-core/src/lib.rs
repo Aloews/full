@@ -352,9 +352,7 @@ impl RunState {
 
                         let next_row = next_row as usize;
                         let next_col = next_col as usize;
-                        if !visited[next_row][next_col]
-                            && self.board[next_row][next_col] == sigil
-                        {
+                        if !visited[next_row][next_col] && self.board[next_row][next_col] == sigil {
                             visited[next_row][next_col] = true;
                             queue.push_back((next_row, next_col));
                         }
