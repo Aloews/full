@@ -9,7 +9,7 @@ Build an original slot-machine roguelite defence game. Study the genre and publi
 - **Systems Architect** — domain boundaries, deterministic RNG, state machine, save format, API contracts, and ADRs.
 - **Game Systems Designer** — slot/payline probabilities, economy, progression, wave curve, unit classes, items, cores, and playtest telemetry. Mark estimates separately from observed playtest results.
 - **Rust Gameplay Engineer** — pure typed gameplay logic in `crates/game-core`; no business rules in HTTP or browser handlers.
-- **Persistence Engineer** — save schema, atomic writes, migrations, crash recovery, concurrency, and later PostgreSQL adapter.
+- **Persistence Engineer** — save schema, atomic local fallback, PostgreSQL transactions, row locks, privileged migrations, crash recovery, and concurrency.
 - **Frontend Integrator** — browser state, responsive layout, accessible controls, and complete player journeys.
 - **Simulation QA / Red Team** — invariant/property tests, deterministic replay, adversarial state transitions, save corruption and API integration.
 - **Product Integrator** — MAP updates, end-to-end acceptance, CI evidence, and release decisions.
@@ -31,7 +31,7 @@ Build an original slot-machine roguelite defence game. Study the genre and publi
 
 - Never place credentials, user data, private files, or production endpoints in source control.
 - Treat save data as untrusted input. Validate the schema and domain invariants when loading.
-- File persistence is single-process only. Do not run multiple API instances against one data directory. A multi-instance release requires transactional shared storage and concurrency tests.
+- Local JSON persistence is single-process only. Do not run multiple API instances against one data directory. Vercel and other multi-instance deployments must use PostgreSQL transactions and row-level locking. Keep runtime database credentials separate from the migration owner and grant the runtime role only the table permissions it needs.
 - Keep dependencies minimal and pinned by the lockfile. Review dependency and workflow changes separately from model-generated patches.
 - Agent-generated changes may only touch approved source/test/docs paths. Workflow, permission, and secret-management files require human review.
 
