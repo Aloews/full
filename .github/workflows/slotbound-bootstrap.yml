@@ -1,0 +1,40 @@
+name: Slotbound source bootstrap
+
+on:
+  push:
+    branches:
+      - feat/slotbound-clean-implementation
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slotbound-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Expand the clean Slotbound source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .slotbound-bootstrap/00.b64
+          cat .slotbound-bootstrap/*.b64 | base64 --decode | tar -xzf - --no-same-owner
+          test -s Cargo.toml
+          test -s crates/game-core/src/lib.rs
+          test -s crates/api/src/main.rs
+          test -s web/app.js
+          rm -rf .slotbound-bootstrap
+          rm -f .github/workflows/slotbound-bootstrap.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "build: expand clean Slotbound workspace"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
