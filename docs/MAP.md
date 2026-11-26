@@ -35,7 +35,9 @@ Deliver a replayable 2D cozy-fantasy roguelite auto-battler. A 3×3 rune board r
 - Six spins per wave; first spin 100 gold, each later paid spin costs 50 gold more.
 - One vertical column nudge per wave; nudge awards only newly completed matches.
 - Roster capacity pressure, unit lock/unlock, keeper selection, donor absorption, stat growth, one current imprint field and promotion choices at absorption thresholds 5 and 12.
-- Simplified deterministic battle power comparison, hearts and rewards.
+- Deterministic tick-based automatic combat (maximum 40 ticks), stable initiative, Guardian-priority targeting, class-specific combat bonuses, Mage splash, Cleric healing, Guardian mitigation, enemy attacks and boss telegraph events.
+- Typed combat event history for attacks, healing, unit/enemy defeats and battle completion; surviving unit health persists across waves with a small camp recovery, while defeated units leave the roster.
+- Wave-derived enemy groups, boss unit on every fifth wave, hearts and rewards.
 - Boss marker every fifth wave; boss victory grants three Core choices.
 - Between-wave supply cache with attack, mitigation and healing items.
 - Axum endpoints for create/read run, spin, nudge, absorb, promotion, lock, battle, next wave, Core selection and item purchase.
@@ -44,11 +46,11 @@ Deliver a replayable 2D cozy-fantasy roguelite auto-battler. A 3×3 rune board r
 
 ## Exact-head verification evidence
 
-The source candidate commit `680ec889595b4defaa590f1721f000630d3c7ab4` passed Slotbound CI in GitHub Actions:
+The baseline source candidate commit `680ec889595b4defaa590f1721f000630d3c7ab4` passed Slotbound CI in GitHub Actions:
 - push run [45849594472](https://github.com/Aloews/full/actions/runs/45849594472);
 - pull-request run [45849612291](https://github.com/Aloews/full/actions/runs/45849612291).
 
-The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Vercel container image build, JavaScript syntax, API/browser contract checks and agent patch-policy tests. This evidence applies to that exact source commit only; later changes require a new green run.
+The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Vercel container image build, JavaScript syntax, API/browser contract checks and agent patch-policy tests. This evidence applies to that exact source commit only. The later GDD, pixel renderer and combat timeline changes require a new green run on the latest candidate SHA before they can be called verified.
 
 ## Product and art direction
 
@@ -71,10 +73,11 @@ The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Ver
 - [ ] Real-browser Playwright first-wave journey and reload/restore verification.
 
 ### S1 — Make battles real and readable
-- [ ] Deterministic tick-based combat timeline with stable initiative and target selection.
-- [ ] Lanes/positions, armour, guard, shields, healing, cooldowns, abilities, statuses and deaths.
-- [ ] Boss-specific telegraphs and patterns; full enemy definitions and wave compositions.
-- [ ] Causal combat event log rendered by the browser.
+- [x] Deterministic tick-based combat timeline with stable initiative and target selection.
+- [x] Basic Guardian mitigation, Archer/Rogue/Beast/Mage attack modifiers, Cleric healing and unit deaths/health persistence.
+- [x] Boss telegraph events and causal combat event log rendered by the browser.
+- [ ] Full lane/position model, armour/shields/status system, cooldown-based abilities and richer boss patterns.
+- [ ] Authored enemy definitions and wave compositions (current groups are generated from wave number).
 - [ ] Battle outcome properties: empty army, simultaneous defeat, stalemate/turn cap, tie-break order and terminal state.
 
 ### S2 — Make runs strategic
