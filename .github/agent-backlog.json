@@ -131,6 +131,19 @@
         "Node choices persist atomically and invalid moves leave route state unchanged.",
         "Biome/stage transitions change encounters and visual tile set without changing past battle reports."
       ]
+    },
+    {
+      "id": "GAME-012",
+      "title": "Expand and balance the seeded journey event director",
+      "agent_role": "game-systems-designer",
+      "objective": "Build on the five implemented event families. Add biome and wave eligibility, event rarity weights in a versioned ruleset, repeat policies, delayed consequences, elite/hazard encounters and event-specific telemetry. Preserve deterministic generation and atomic choice resolution.",
+      "acceptance": [
+        "Event weights and eligibility are versioned ruleset data rather than hard-coded UI values.",
+        "A fixed seed, ruleset version and command sequence reproduce the same event offers and outcomes.",
+        "Every event choice declares its costs, preconditions, state mutations, rewards and failure behavior.",
+        "Event history prevents duplicate rewards and supports save migration.",
+        "Monte Carlo reports event frequencies and choice outcomes across a documented seed range."
+      ]
     }
   ]
 }
