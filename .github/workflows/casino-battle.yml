@@ -45,3 +45,29 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace --all-targets
+      - name: Build and smoke-test the HTTP server
+        run: |
+          cargo build -p casino-battle-server
+          BIND_ADDR=127.0.0.1:3917 ./target/debug/casino-battle-server > /tmp/casino-battle-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3917/healthz > /tmp/casino-battle-health.json; then
+              break
+            fi
+            sleep 1
+          done
+          grep -q '"status":"ok"' /tmp/casino-battle-health.json
+          grep -q '"persistence":"development_memory_only"' /tmp/casino-battle-health.json
+          run_json="$(curl --fail --silent --show-error -X POST \
+            -H 'content-type: application/json' \
+            -d '{"seed":42}' http://127.0.0.1:3917/api/v1/runs)"
+          run_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])' <<< "$run_json")"
+          curl --fail --silent --show-error "http://127.0.0.1:3917/api/v1/runs/$run_id" > /dev/null
+          curl --fail --silent --show-error -X POST "http://127.0.0.1:3917/api/v1/runs/$run_id/draw" > /dev/null
+          curl --fail --silent --show-error -X POST "http://127.0.0.1:3917/api/v1/runs/$run_id/battle" > /dev/null
+          merge_status="$(curl --silent --output /tmp/casino-battle-merge-error.json --write-out '%{http_code}' \
+            -X POST -H 'content-type: application/json' \
+            -d '{"keeper_id":1,"donor_id":1}' \
+            "http://127.0.0.1:3917/api/v1/runs/$run_id/merge")"
+          test "$merge_status" = "409"
