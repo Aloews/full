@@ -175,6 +175,9 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
             var next_wave := int(payload.get("wave", 1))
             next_status_text = ("VICTORY · WAVE %02d" % next_wave) if won else "THE PARTY NEEDS REST"
             _start_battle_replay(payload.get("events", []))
+        "formation":
+            _apply_run_snapshot(payload)
+            status_text = "FORMATION UPDATED"
         "refresh":
             _apply_run_snapshot(payload)
             status_text = next_status_text if not next_status_text.is_empty() else "CONNECTED · PREPARATION"
@@ -337,6 +340,33 @@ func _on_battle_pressed() -> void:
         return
     _send_request("battle", HTTPClient.METHOD_POST, "/api/v1/runs/%s/battle" % run_id, "{}")
 
+func _unhandled_input(event: InputEvent) -> void:
+    if not (event is InputEventMouseButton):
+        return
+    if not event.pressed or event.button_index != MOUSE_BUTTON_LEFT:
+        return
+    if api_busy or battle_replay_active or run_id.is_empty():
+        return
+    if str(run_snapshot.get("phase", "preparation")) != "preparation":
+        return
+
+    for unit in run_snapshot.get("party", []):
+        var unit_id := int(unit.get("id", 0))
+        var center := _unit_position(unit_id)
+        if event.position.distance_to(center) <= 43.0:
+            var next_lane := (int(unit.get("lane", 0)) + 1) % 3
+            var request_body := JSON.stringify({
+                "unit_id": unit_id,
+                "lane": next_lane
+            })
+            _send_request(
+                "formation",
+                HTTPClient.METHOD_POST,
+                "/api/v1/runs/%s/formation" % run_id,
+                request_body
+            )
+            return
+
 func _update_controls() -> void:
     if not is_instance_valid(draw_button):
         return
@@ -373,6 +403,7 @@ func _draw_header() -> void:
     var hearts := int(run_snapshot.get("hearts", 3))
     draw_string(ThemeDB.fallback_font, Vector2(48, 52), "THE MOSS MEADOW", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, INK)
     draw_string(ThemeDB.fallback_font, Vector2(48, 80), "A little party, a very big adventure", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(INK, 0.65))
+    draw_string(ThemeDB.fallback_font, Vector2(48, 101), "TAP A FRIEND TO CHANGE ITS LANE", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(INK, 0.52))
     draw_string(ThemeDB.fallback_font, Vector2(1120, 52), "WAVE %02d" % wave, HORIZONTAL_ALIGNMENT_RIGHT, 180, 17, INK)
     draw_string(ThemeDB.fallback_font, Vector2(1120, 78), "♥  %d" % hearts, HORIZONTAL_ALIGNMENT_RIGHT, 180, 15, CLAY)
 
@@ -388,6 +419,18 @@ func _draw_battlefield(size: Vector2) -> void:
     for i in range(5):
         var y := arena.position.y + 24 + i * ((arena.size.y - 48) / 4.0)
         draw_line(Vector2(arena.position.x + 22, y), Vector2(arena.end.x - 22, y), Color(INK, 0.045), 1.0)
+
+    for lane in range(3):
+        var lane_y := 258.0 + lane * 88.0
+        draw_string(
+            ThemeDB.fallback_font,
+            Vector2(88, lane_y + 4),
+            "I" if lane == 0 else ("II" if lane == 1 else "III"),
+            HORIZONTAL_ALIGNMENT_LEFT,
+            24,
+            9,
+            Color(INK, 0.35)
+        )
 
     _draw_plant(Vector2(145, 450), 1.0)
     _draw_plant(Vector2(1100, 185), 0.8)
