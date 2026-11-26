@@ -2,78 +2,125 @@
 
 ## North-star outcome
 
-Deliver a replayable, persistent roguelite defence game where the 3×3 recruitment machine, unit development, items, Cores, and auto-battler combat form one coherent decision system. Build an original implementation with independently authored assets and clear provenance for all balance data.
+Deliver a replayable 2D cozy-fantasy roguelite auto-battler. A 3×3 rune board recruits creatures; the player develops a compact army and prepares it for deterministic automatic battles across authored stages, escalating enemy waves and boss encounters. Production quality means a complete, understandable, persistent and balanced player journey—not only a web page that compiles.
 
-## Current repository shape
+## Repository and branch
 
-- `crates/game-core` — pure deterministic gameplay state, rules, commands, progression and combat summary.
-- `crates/api` — Axum HTTP boundary; owns no gameplay rules. Serves browser assets and run API, with file and PostgreSQL storage adapters.
-- `crates/api/migrations` — versioned database migrations applied by the privileged deployment/migration step; the runtime role does not have DDL rights.
-- `Dockerfile.vercel` / `vercel.json` — Vercel Container runtime for the Axum server.
-- `web` — responsive browser client; no game-rule calculations beyond presentation previews.
-- `.github/agents` — role contracts for architecture, game design, Rust, persistence, frontend, QA and product integration.
-- `.github/workflows` — exact-SHA CI and bounded AI-agent cycle.
-- `docs` — concept, mechanic research, architecture decisions, testing and execution map.
+- Repository: `Aloews/full`.
+- Active Slotbound source branch: `feat/slotbound-rust-rebuild`.
+- This branch contains an isolated Slotbound project tree at repository root; the default `main` branch is not modified by this work.
+- A separate GitHub repository could not be created through the available GitHub actions in this session. Keep the game isolated on this branch until repository creation/transfer is available.
+- Vercel project `slotbound` was created in team `aloews-projects`. A preview deployment request was rejected by Vercel's daily deployment API quota (402); no deployment URL is available yet. Do not describe the project as deployed.
+- Existing Vercel project `aurel-private-property` is linked to `Aloews/full`; it was not reconfigured or used for Slotbound.
 
-## Verified implementation scope in this candidate
+## Current source layout
 
-The source candidate contains:
-- Deterministic RNG state stored in a run; fixed seeds reproduce the same first spin board.
-- Eight 3-cell paylines over a 3×3 board.
-- Six class symbols and one unit summoned per matching line; all-nine-equal jackpot resolves eight winning lines.
-- Six spins per wave, first spin 100 gold and subsequent paid spins +50 gold.
-- One vertical column nudge per wave, awarding only newly completed class/line matches.
-- Roster capacity check before a new spin; a completed spin may temporarily push the roster over capacity, after which absorption is needed.
-- Lock/unlock, donor absorption, stat growth, one imprint, promotion choices at absorb levels 5 and 12.
-- Deterministic wave/boss power resolution, hearts, gold rewards, three Core choices after a boss win, and a between-wave item cache.
+- `crates/game-core` — pure deterministic gameplay state, rules, commands, progression and battle result.
+- `crates/api` — Axum HTTP boundary; serves browser assets and run API; supports PostgreSQL and local JSON storage.
+- `crates/api/migrations` — database migrations applied separately by the privileged deployment/migration role.
+- `Dockerfile.vercel` / `vercel.json` — Vercel Container runtime definition.
+- `web` — responsive browser client; no authoritative game-rule calculations.
+- `.github/agents` — specialist role contracts.
+- `.github/agent-backlog.json` and `.github/agent-state.json` — scoped tasks and controller state.
+- `.github/scripts` — bounded agent controller and policy tests.
+- `.github/workflows` — exact-head CI, agent cycle and exact-SHA merge gate.
+- `docs` — game concept, style guide, mechanics research, architecture, agent operating model and delivery map.
+
+## Verified implementation in source
+
+- Deterministic run seed/RNG state; repeated seed and initial command reproduce the same starting board.
+- 3×3 recruitment board with eight straight three-cell paylines.
+- Six unit classes: Guardian, Archer, Mage, Cleric, Rogue and Beast.
+- Three matching class symbols on a line summon one unit per winning line; all-nine-equal can complete all eight lines.
+- Six spins per wave; first spin 100 gold, each later paid spin costs 50 gold more.
+- One vertical column nudge per wave; nudge awards only newly completed matches.
+- Roster capacity pressure, unit lock/unlock, keeper selection, donor absorption, stat growth, one current imprint field and promotion choices at absorption thresholds 5 and 12.
+- Simplified deterministic battle power comparison, hearts and rewards.
+- Boss marker every fifth wave; boss victory grants three Core choices.
+- Between-wave supply cache with attack, mitigation and healing items.
 - Axum endpoints for create/read run, spin, nudge, absorb, promotion, lock, battle, next wave, Core selection and item purchase.
-- Transactional PostgreSQL save/load via `SLOTBOUND_DATABASE_URL` or fallback `DATABASE_URL`, including row-level locking for each game command. Production schema migrations are applied separately by a privileged deployment role; the application role has only table CRUD permissions. Local JSON snapshots remain the development fallback.
-- Browser client with local run-ID recovery, responsive panels, machine, roster, shop, cores, battle results, and action feedback.
+- Browser client with current run-ID recovery, recruitment board, roster, shop, Core selection, battle result and status panels.
+- PostgreSQL adapter uses transactions and row-level locking for run updates; local JSON snapshot fallback is single-process only.
 
-These are code-level statements. Runtime/CI status must be added only after GitHub Actions completes on the exact commit.
+## Exact-head verification evidence
 
-## Known limitations — do not describe as release-ready
+The source candidate commit `680ec889595b4defaa590f1721f000630d3c7ab4` passed Slotbound CI in GitHub Actions:
+- push run [45849594472](https://github.com/Aloews/full/actions/runs/45849594472);
+- pull-request run [45849612291](https://github.com/Aloews/full/actions/runs/45849612291).
 
-- The battle is a deterministic power comparison, not a unit-by-unit combat simulation.
-- Reels currently use uniform class selection; no published probability table has been calibrated.
-- Nudge is a simplified vertical column rotation; Blast and other reel tools are not implemented.
-- Imprints are represented by one string; inheritance and multiple skill slots are incomplete.
-- Factions, traits, rarity tiers, awakening, stage selection, campaign map, enemy abilities, equipment slots, and endless mode are not implemented.
-- Local JSON fallback is single-process only. Vercel deployment must use `SLOTBOUND_DATABASE_URL` (or fallback `DATABASE_URL`); PostgreSQL transactions and row-level locks are required for shared serverless instances.
-- Authentication, online multiplayer, analytics, crash telemetry and production backup/restore are not implemented.
-- Browser UI has static contract checks; automated real-browser end-to-end coverage remains a release gate.
+The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Vercel container image build, JavaScript syntax, API/browser contract checks and agent patch-policy tests. This evidence applies to that exact source commit only; later changes require a new green run.
 
-## Execution order
+## Product and art direction
 
-### S0 — First playable slice (current candidate)
-- [x] Domain/API/client split.
-- [x] Basic slot → recruit → absorb → battle → next wave loop.
-- [x] Deterministic seed and state machine.
-- [x] First save/load implementation.
-- [x] Exact-head CI green on the deployed candidate; independent QA review remains a separate release gate.
-- [ ] Real-browser smoke/E2E test; deployed HTTP/API smoke and database persistence have been verified separately.
+- [x] Product direction defined: 2D roguelite auto-battler with symbolic recruitment, army development and wave defence.
+- [x] Cozy 16-bit Fantasy Pixel Art direction documented in `docs/VISUAL_STYLE_GUIDE.md`.
+- [x] Originality, rendering grid, palette, silhouette, animation, biome, interface and asset QA rules documented.
+- [ ] Replace emoji glyphs and prototype interface styling with original production sprite sheets and pixel UI assets.
+- [ ] Add bitmap font and asset provenance/atlas manifest.
+- [ ] Create first full biome tile set and parallax/ambient layers.
+- [ ] Author animation strips for all common units, enemies and bosses.
 
-### S1 — Combat and progression correctness
-- [ ] Unit-by-unit combat ticks, targeting, blocking, abilities, cooldowns and statuses.
-- [ ] Enemy roster, wave composition, boss patterns and casualties.
-- [ ] Multiple imprint slots, donor inheritance rules and promotion tree.
-- [ ] Formation/positioning and role synergies.
-- [ ] Blast and other machine tools with explicit cost/cooldown semantics.
+## Gameplay roadmap
 
-### S2 — Balance and replayability
-- [ ] Versioned `Ruleset` config; no hard-coded balance constants in handlers.
-- [ ] Weighted symbol distributions, Monte Carlo run simulator and economy reports.
-- [ ] Deterministic command log/replay and property-based invariants.
-- [ ] Stage progression, faction rules, traits, rarity and endless mode.
+### S0 — First playable loop
+- [x] Rust domain, Axum API and browser client separation.
+- [x] 3×3 board, eight paylines and six recruit classes.
+- [x] Spin economy, one column nudge and basic roster/absorption.
+- [x] Basic promotions, boss/Core reward and item cache.
+- [x] Run persistence adapter and exact-head CI on commit above.
+- [ ] Real-browser Playwright first-wave journey and reload/restore verification.
 
-### S3 — Persistence and product hardening
-- [ ] Versioned save migrations, backup/restore, checksums and corrupted-save recovery.
-- [x] PostgreSQL adapter with transactions and row-level locking for multi-instance safety.
-- [ ] Idempotency keys and schema migration rehearsals on a disposable branch.
-- [ ] Auth, player ownership, rate limits and abuse protection.
-- [ ] Playwright end-to-end journeys and accessibility audit.
-- [ ] Build artifacts, signed desktop packaging, crash reporting and release checklist.
+### S1 — Make battles real and readable
+- [ ] Deterministic tick-based combat timeline with stable initiative and target selection.
+- [ ] Lanes/positions, armour, guard, shields, healing, cooldowns, abilities, statuses and deaths.
+- [ ] Boss-specific telegraphs and patterns; full enemy definitions and wave compositions.
+- [ ] Causal combat event log rendered by the browser.
+- [ ] Battle outcome properties: empty army, simultaneous defeat, stalemate/turn cap, tie-break order and terminal state.
 
-## Acceptance gates
+### S2 — Make runs strategic
+- [ ] Versioned Ruleset containing symbol weights, costs, unit data, enemy scaling, rewards and stage rules.
+- [ ] Deterministic command history and replay with canonical state hashes.
+- [ ] Monte Carlo simulator with seed ranges, sample sizes and uncertainty intervals.
+- [ ] Typed imprint slots, donor inheritance and promotion tree.
+- [ ] More reel tools (including Blast) with explicit charges, targets, costs and phase rules.
+- [ ] Formation positions, role synergies, stage map and route choices.
+- [ ] Distinct biomes, enemy families, bosses and environmental effects.
 
-A milestone is accepted only when its domain invariants pass, fixed-seed replays match, API tests exercise the real router, save/load round-trips preserve state, browser journeys use the real API, CI is green on the exact candidate SHA, and an independent QA role records no unresolved critical/high defects. A successful compile alone is not acceptance.
+### S3 — Production-quality player experience
+- [ ] Original pixel sprite/tile production pipeline, complete character strips, effects and bitmap typography.
+- [ ] Responsive and accessible UI; keyboard navigation, focus states, reduced motion and readable combat log.
+- [ ] Playwright end-to-end real-browser journeys against the real API.
+- [ ] Versioned saves, migration rehearsal, backup/restore, idempotency and ownership/authentication.
+- [ ] Rate limits, structured logs, metrics, tracing, crash visibility and security review.
+- [ ] Hosted PostgreSQL provisioned and live-checked for the intended environment.
+- [ ] Preview deployment, deployed API/player journey smoke and rollback plan.
+- [ ] Desktop packaging, build artifacts, release checklist and controlled playtest report.
+
+## AI agent delivery system
+
+- [x] Specialist role contracts exist for architect, game designer, Rust engineer, persistence engineer, frontend integrator, simulation QA and product integrator.
+- [x] Scoped backlog, agent task state and patch-policy tests exist.
+- [x] Local Qwen/Ollama agent runner and GitHub Actions workflow are defined in source.
+- [ ] Verify a real successful agent cycle run before claiming autonomous delivery is active.
+- [ ] Adapt workflow branch/base conditions and merge policy to this isolated feature branch before enabling the agent cycle. Current agent workflow targets `main` and the `agents/slotbound-autonomy` branch; do not allow it to open or merge Slotbound work against the unrelated default branch.
+- [ ] Human review of workflow permissions and exact merge target.
+
+## Infrastructure and release blockers
+
+- [x] Separate Vercel project `slotbound` created.
+- [ ] Preview deployment pending: Vercel returned `402 payment_required` due to `api-deployments-free-per-day` quota (>100 deployments/day); retry only after the provider's 24-hour reset or plan/quota resolution.
+- [ ] Production/preview PostgreSQL connection not configured or verified for Slotbound.
+- [ ] No production deployment, public playable build or release has been verified.
+
+## Acceptance and stop criteria
+
+A milestone is accepted only when:
+1. domain invariants and regression tests pass;
+2. fixed-seed tests prove deterministic state and combat output;
+3. API tests exercise the real router and actual persistence adapter;
+4. browser tests exercise the complete real user journey;
+5. the exact candidate SHA has all required CI checks green;
+6. an independent QA reviewer records no unresolved critical/high defects;
+7. MAP, release notes and deployment claims match observed evidence.
+
+Stop autonomous work and request human triage on unsafe migrations, unexpected branch drift, missing required secrets/permissions, repeated test failures after the repair limit, unexplained balance regressions, or a proposed change to production data/hosting configuration.
