@@ -2872,6 +2872,7 @@ mod tests {
         assert_eq!(target.imprints[0].rank, 2);
         assert_eq!(imprint_slot_capacity(target.absorb_level), 2);
 
+        game.choose_promotion(target_id, "Warden").unwrap();
         let new_donor = game.spawn_unit(UnitClass::Cleric);
         let new_donor_id = new_donor.id;
         game.units.push(new_donor);
@@ -2902,6 +2903,9 @@ mod tests {
                 .iter()
                 .any(|slot| slot.kind == UnitImprint::Critical)
         );
+        assert!(target.pending_promotion);
+        game.choose_promotion(target_id, "Vanguard").unwrap();
+        assert_eq!(game.units.iter().find(|unit| unit.id == target_id).unwrap().promotion_path.len(), 2);
     }
 
     #[test]
@@ -3130,13 +3134,14 @@ mod tests {
             ["Vanguard".to_string(), "Sentinel".to_string()]
         );
         let attack_before = target.attack;
+        let health_before_second_tier = target.health;
         game.choose_promotion(target_id, "Sentinel").unwrap();
         let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
         assert_eq!(
             target.promotion_path,
             vec![PromotionNode::Warden, PromotionNode::Sentinel]
         );
-        assert_eq!(target.health, health_before + 8 + 10);
+        assert_eq!(target.health, health_before_second_tier + 10);
         assert_eq!(target.attack, attack_before);
         assert!(!target.pending_promotion);
     }
