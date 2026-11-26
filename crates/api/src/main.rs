@@ -304,12 +304,28 @@ async fn stylesheet() -> Response {
     )
         .into_response()
 }
-async fn health(State(state): State<AppState>) -> Json<serde_json::Value> {
-    Json(json!({
+async fn health(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let storage = if let Some(pool) = &state.pool {
+        let table: Option<String> =
+            sqlx::query_scalar("SELECT to_regclass('public.slotbound_runs')::text")
+                .fetch_one(pool)
+                .await
+                .map_err(|_| ApiError::database())?;
+        if table.is_none() {
+            return Err(ApiError::database());
+        }
+        "postgresql"
+    } else {
+        "local_file"
+    };
+
+    Ok(Json(json!({
         "status": "ok",
         "service": "slotbound-api",
-        "storage": if state.pool.is_some() { "postgresql" } else { "local_file" }
-    }))
+        "storage": storage
+    })))
 }
 
 async fn create_run(
