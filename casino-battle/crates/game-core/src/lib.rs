@@ -806,9 +806,10 @@ mod tests {
         let mut enemies = vec![];
         let events = RunState::advance_side(&mut allies, &mut enemies, 1);
 
-        assert_eq!(allies[1].hp, 9);
+        assert_eq!(allies[1].hp, 10);
         assert_eq!(allies[2].hp, 20);
         assert_eq!(events[0].kind, BattleEventKind::Heal);
+        assert_eq!(events[0].amount, 5);
         assert_eq!(events[0].target_unit_id, 2);
     }
 
