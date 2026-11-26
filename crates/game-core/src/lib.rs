@@ -131,6 +131,8 @@ pub struct BattleReport {
     pub rounds: u32,
     #[serde(default)]
     pub events: Vec<BattleEvent>,
+    #[serde(default)]
+    pub route: Option<RouteNodeKind>,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -260,6 +262,32 @@ pub struct JourneyEventResolution {
     pub outcome: String,
 }
 
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum RouteNodeKind {
+    Battle,
+    Rest,
+    Merchant,
+    Elite,
+    BossGate,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RouteOption {
+    pub id: String,
+    pub kind: RouteNodeKind,
+    pub title: String,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RouteResolution {
+    pub wave: u32,
+    pub kind: RouteNodeKind,
+    pub outcome: String,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GameState {
     pub run_id: String,
@@ -285,6 +313,12 @@ pub struct GameState {
     pub pending_event: Option<JourneyEvent>,
     #[serde(default)]
     pub event_history: Vec<JourneyEventResolution>,
+    #[serde(default)]
+    pub pending_route: Option<Vec<RouteOption>>,
+    #[serde(default)]
+    pub current_route: Option<RouteNodeKind>,
+    #[serde(default)]
+    pub route_history: Vec<RouteResolution>,
     pub core_offer: Option<[CoreKind; 3]>,
     next_unit_id: u64,
     rng_state: u64,
@@ -326,6 +360,12 @@ pub enum GameError {
     NoJourneyEvent,
     #[error("journey event choice is invalid")]
     InvalidJourneyChoice,
+    #[error("choose a route before starting the next wave")]
+    JourneyRouteRequired,
+    #[error("there is no pending route choice")]
+    NoJourneyRoute,
+    #[error("route choice is invalid for this expedition stage")]
+    InvalidRouteChoice,
     #[error("item is not available or the selected item is invalid")]
     InvalidItem,
 }
@@ -354,6 +394,9 @@ impl GameState {
             last_battle: None,
             pending_event: None,
             event_history: Vec::new(),
+            pending_route: None,
+            current_route: None,
+            route_history: Vec::new(),
             core_offer: None,
             next_unit_id: 1,
             rng_state: if seed == 0 {
@@ -605,7 +648,9 @@ impl GameState {
                 boss: false,
             })
             .collect();
-        let mut enemies = build_enemy_party(self.wave, boss);
+        let route = self.current_route;
+        let elite = route == Some(RouteNodeKind::Elite) && !boss;
+        let mut enemies = build_enemy_party(self.wave, boss, elite);
         let enemy_power = enemies.iter().fold(0u32, |total, enemy| {
             total
                 .saturating_add(enemy.attack)
@@ -876,6 +921,7 @@ impl GameState {
             35u32
                 .saturating_add(self.wave.saturating_mul(9))
                 .saturating_add(if boss { 50 } else { 0 })
+                .saturating_add(if elite { 35 } else { 0 })
         } else {
             10
         };
@@ -917,8 +963,10 @@ impl GameState {
             gold_awarded,
             rounds,
             events,
+            route,
         };
         self.last_battle = Some(report.clone());
+        self.current_route = None;
         Ok(report)
     }
 
@@ -1095,12 +1143,96 @@ impl GameState {
                 }
             }
         };
+
         self.event_history.push(JourneyEventResolution {
             event_id: event.id,
             choice_index,
             outcome,
         });
         self.pending_event = None;
+        if self.phase == RunPhase::Intermission {
+            self.pending_route = Some(self.generate_route_options(self.wave.saturating_add(1)));
+        } else {
+            self.pending_route = None;
+        }
+        Ok(())
+    }
+
+    fn generate_route_options(&mut self, target_wave: u32) -> Vec<RouteOption> {
+        let kinds = if target_wave % 5 == 0 {
+            [RouteNodeKind::Rest, RouteNodeKind::Merchant, RouteNodeKind::BossGate, RouteNodeKind::BossGate]
+        } else {
+            [RouteNodeKind::Battle, RouteNodeKind::Rest, RouteNodeKind::Merchant, RouteNodeKind::Elite]
+        };
+        let start = (self.random_u32() % 4) as usize;
+        let mut selected = Vec::with_capacity(3);
+        for offset in 0..4 {
+            let kind = kinds[(start + offset) % 4];
+            if selected.iter().any(|option: &RouteOption| option.kind == kind) {
+                continue;
+            }
+            let (title, description) = match kind {
+                RouteNodeKind::Battle => ("Old forest road", "A standard encounter. No detours, no extra danger."),
+                RouteNodeKind::Rest => ("Mosslight sanctuary", "Recover one heart and restore 5 health to each surviving companion."),
+                RouteNodeKind::Merchant => ("Caravan crossing", "Find a travelling supply cart and gain 75 gold for the expedition."),
+                RouteNodeKind::Elite => ("Thornwarden lair", "Face an elite enemy group. The route pays an extra 35 gold if you win."),
+                RouteNodeKind::BossGate => ("Ancient boss gate", "The next wave is a boss encounter. Choose your approach before entering."),
+            };
+            selected.push(RouteOption {
+                id: format!("route-{target_wave}-{}", match kind {
+                    RouteNodeKind::Battle => "battle",
+                    RouteNodeKind::Rest => "rest",
+                    RouteNodeKind::Merchant => "merchant",
+                    RouteNodeKind::Elite => "elite",
+                    RouteNodeKind::BossGate => "boss",
+                }),
+                kind,
+                title: title.to_string(),
+                description: description.to_string(),
+            });
+            if selected.len() == 3 { break; }
+        }
+        selected
+    }
+
+    pub fn choose_route(&mut self, index: usize) -> Result<(), GameError> {
+        if self.phase != RunPhase::Intermission {
+            return Err(GameError::WrongPhase);
+        }
+        if self.pending_event.is_some() {
+            return Err(GameError::JourneyEventRequired);
+        }
+        let options = self.pending_route.clone().ok_or(GameError::NoJourneyRoute)?;
+        let option = options.get(index).cloned().ok_or(GameError::InvalidRouteChoice)?;
+        let target_wave = self.wave.saturating_add(1);
+        if option.kind == RouteNodeKind::BossGate && target_wave % 5 != 0 {
+            return Err(GameError::InvalidRouteChoice);
+        }
+        let outcome = match option.kind {
+            RouteNodeKind::Battle => "Entered the standard forest route.".to_string(),
+            RouteNodeKind::Rest => {
+                self.hearts = self.hearts.saturating_add(1).min(5);
+                for unit in &mut self.units {
+                    let health = unit.current_health.unwrap_or(unit.health);
+                    let restored = health.saturating_add(5).min(unit.health);
+                    unit.current_health = (restored < unit.health).then_some(restored);
+                }
+                "Rested at Mosslight sanctuary: +1 heart and up to 5 health per survivor.".to_string()
+            }
+            RouteNodeKind::Merchant => {
+                self.gold = self.gold.saturating_add(75);
+                "Traded at the caravan crossing: +75 gold.".to_string()
+            }
+            RouteNodeKind::Elite => "Entered Thornwarden lair: elite enemies ahead, +35 gold on victory.".to_string(),
+            RouteNodeKind::BossGate => "Entered the ancient boss gate.".to_string(),
+        };
+        self.route_history.push(RouteResolution {
+            wave: target_wave,
+            kind: option.kind,
+            outcome,
+        });
+        self.current_route = Some(option.kind);
+        self.pending_route = None;
         Ok(())
     }
 
@@ -1151,6 +1283,9 @@ impl GameState {
         }
         if self.pending_event.is_some() {
             return Err(GameError::JourneyEventRequired);
+        }
+        if self.pending_route.is_some() || self.current_route.is_none() {
+            return Err(GameError::JourneyRouteRequired);
         }
         self.wave = self.wave.saturating_add(1);
         self.spins_remaining = 6;
@@ -1261,9 +1396,9 @@ impl GameState {
     }
 }
 
-fn build_enemy_party(wave: u32, boss_wave: bool) -> Vec<Combatant> {
+fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> {
     let extra = ((wave.saturating_sub(1) / 3).min(3)) as usize;
-    let count = 2 + extra;
+    let count = 2 + extra + usize::from(elite);
     let names = [
         "Thicket Slime",
         "Bramble Bat",
@@ -1279,10 +1414,11 @@ fn build_enemy_party(wave: u32, boss_wave: bool) -> Vec<Combatant> {
             } else {
                 8u32.saturating_add(wave.saturating_mul(2))
             };
+            let base_health = if elite && !boss { base_health.saturating_mul(5) / 4 } else { base_health };
             let attack = if boss {
                 4u32.saturating_add(wave / 3)
             } else {
-                2u32.saturating_add(wave / 5)
+                2u32.saturating_add(wave / 5).saturating_add(u32::from(elite))
             };
             Combatant {
                 id: u64::MAX.saturating_sub(index as u64),
