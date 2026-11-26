@@ -721,3 +721,38 @@ button:focus-visible, a:focus-visible {
   .route-option { transition:none; }
   .route-option:hover:not(:disabled) { transform:none; }
 }
+
+.unit-build {
+  display:grid;
+  grid-template-columns:58px minmax(0,1fr);
+  align-items:start;
+  gap:6px;
+  margin-top:7px;
+  padding-top:6px;
+  border-top:1px dashed #c7b98e;
+}
+.build-label {
+  padding-top:3px;
+  color:#7b745e;
+  font:700 8px "Courier New",monospace;
+  letter-spacing:.06em;
+}
+.build-chips { display:flex;flex-wrap:wrap;gap:4px;min-width:0; }
+.unit-trait,.unit-imprint-chip,.build-empty {
+  display:inline-flex;
+  align-items:center;
+  min-height:18px;
+  padding:2px 5px;
+  border:1px solid #8e7653;
+  background:#e9dcae;
+  color:#3e4935;
+  font:700 8px "Courier New",monospace;
+  text-transform:uppercase;
+}
+.unit-trait { border-color:#6d7955;background:#dce4bc;color:#3e5739; }
+.trait-brutal { border-color:#b36f4a;background:#efd0a9;color:#75452f; }
+.trait-swift { border-color:#628da0;background:#cbe1df;color:#365b70; }
+.trait-stout { border-color:#8b8051;background:#e8dfaa;color:#625b30; }
+.trait-guarded { border-color:#7e769a;background:#dbd4e9;color:#50476f; }
+.unit-imprint-chip { border-color:#9b7850;background:#ead4a6;color:#60472e; }
+.build-empty { border-style:dashed;background:transparent;color:#887f68; }
