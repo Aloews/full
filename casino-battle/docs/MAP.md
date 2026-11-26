@@ -10,7 +10,7 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [x] Auto-battle is the only battle mode.
 - [x] Art direction locked to warm, hand-crafted, character-led fantasy.
 - [x] Casino logic represented as sigils / probability / combinations, not a casino setting.
-- [ ] Final camera/layout decision: flat top-down vs side-on battlefield.
+- [x] Flat side-on 2D battlefield layout selected for the first prototype.
 - [ ] Original character bible and visual asset library.
 - [ ] Final UI style guide, typography and icon set.
 
@@ -25,9 +25,9 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [x] Axum API endpoints for start, state, draw and battle.
 - [x] Optional PostgreSQL JSONB persistence and migration.
 - [x] Health endpoint that distinguishes Postgres from memory-only mode.
-- [x] Godot 2D visual sandbox.
+- [x] Godot 2D visual sandbox with original code-drawn character prototypes.\n- [x] Godot client is connected to the API for run state, Fate draws and Auto-battle.\n- [x] Client replays server-authoritative battle events, damage, healing and defeat states.
 - [x] Rust CI workflow.
-- [x] Latest full CI run green on exact foundation commit (Rust format, Clippy, tests, 2D audit and Godot 4.3 headless import).
+- [x] Full CI passed on commit `9362c28` (Rust format, Clippy, unit tests, 2D audit, Godot 4.3 import, seeded balance sample, HTTP smoke test and PostgreSQL restart-persistence test).
 
 ## Gameplay systems
 
@@ -40,8 +40,8 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [ ] Event, shop and route nodes.
 - [ ] Elite encounters and boss behavior.
 - [ ] Meta progression and unlocks.
-- [ ] Run summary, battle log and damage breakdown.
-- [ ] Balance simulation harness with seed batches and distribution reports.
+- [x] Server battle event log with tick, source, target, damage, healing and defeat events.\n- [ ] Player-facing run summary and detailed damage breakdown.
+- [x] Deterministic balance simulation harness with seed batches and distribution reports.\n- [x] First 1,000-seed wave-one baseline recorded in `docs/BALANCE_BASELINE.md`.
 
 ## Client and art
 
