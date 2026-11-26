@@ -340,10 +340,6 @@ func _unit_position(unit_id: int) -> Vector2:
 
     return Vector2(0, 0)
 
-func _pixel_point(point: Vector2) -> Vector2:
-    # One logical source pixel is two design units on the 640x360 viewport.
-    return Vector2(roundf(point.x / 2.0) * 2.0, roundf(point.y / 2.0) * 2.0)
-
 func _draw_battle_effects() -> void:
     for event in battle_frame_events:
         var source_id := int(event.get("source_unit_id", 0))
