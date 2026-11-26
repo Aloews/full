@@ -26,7 +26,8 @@ if 'data-action="route-choice"' not in client or "choose_route" not in api:
     raise SystemExit("branching route choice flow is not connected")
 if "JourneyRouteRequired" not in api or "pending_route" not in client:
     raise SystemExit("route progression gate or browser state is missing")
-\nif "function playBattleReplay(report)" not in client:
+
+if "function playBattleReplay(report)" not in client:
     raise SystemExit("battle replay renderer is missing")
 if 'data-action="journey-choice"' not in client or "resolve_event" not in api:
     raise SystemExit("journey event choice flow is not connected")
