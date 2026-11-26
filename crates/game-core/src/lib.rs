@@ -1348,6 +1348,8 @@ mod tests {
         let report = game.battle().unwrap();
         assert_eq!(report.wave, 1);
         assert_eq!(game.phase, RunPhase::Intermission);
+        assert!(game.pending_event.is_some());
+        game.resolve_journey_event(0).unwrap();
         game.next_wave().unwrap();
         assert_eq!(game.wave, 2);
         assert_eq!(game.spins_remaining, 6);
@@ -1373,6 +1375,8 @@ mod tests {
         assert!(game.core_offer.is_some());
         game.choose_core(2).unwrap();
         assert_eq!(game.unit_limit, 6);
+        game.resolve_journey_event(0).unwrap();
+        assert!(game.next_wave().is_ok());
     }
 
     #[test]
@@ -1430,6 +1434,7 @@ mod tests {
         game.battle().unwrap();
         assert_eq!(game.next_wave(), Err(GameError::CoreChoiceRequired));
         game.choose_core(0).unwrap();
+        game.resolve_journey_event(0).unwrap();
         assert!(game.next_wave().is_ok());
     }
     #[test]
@@ -1514,6 +1519,54 @@ mod tests {
         unit.current_health = Some(5);
         game.next_wave().unwrap();
         assert_eq!(game.units[0].current_health, Some(7));
+    }
+
+
+    #[test]
+    fn journey_event_is_seeded_and_reproducible() {
+        let mut a = run(411);
+        let mut b = run(411);
+        a.battle().unwrap();
+        b.battle().unwrap();
+        assert_eq!(a.pending_event, b.pending_event);
+        assert!(a.pending_event.as_ref().unwrap().choices.len() >= 2);
+    }
+
+    #[test]
+    fn journey_event_must_be_resolved_before_next_wave() {
+        let mut game = run(412);
+        game.battle().unwrap();
+        if game.phase == RunPhase::Intermission {
+            assert_eq!(game.next_wave(), Err(GameError::JourneyEventRequired));
+            game.resolve_journey_event(0).unwrap();
+            assert!(game.pending_event.is_none());
+            assert!(game.next_wave().is_ok());
+        }
+    }
+
+    #[test]
+    fn journey_event_rejects_invalid_and_replayed_choices() {
+        let mut game = run(413);
+        game.battle().unwrap();
+        if game.pending_event.is_some() {
+            assert_eq!(game.resolve_journey_event(99), Err(GameError::InvalidJourneyChoice));
+            game.resolve_journey_event(0).unwrap();
+            assert_eq!(game.resolve_journey_event(0), Err(GameError::NoJourneyEvent));
+            assert_eq!(game.event_history.len(), 1);
+        }
+    }
+
+    #[test]
+    fn resolved_journey_event_is_recorded_with_choice_and_outcome() {
+        let mut game = run(414);
+        game.battle().unwrap();
+        if game.pending_event.is_some() {
+            game.resolve_journey_event(0).unwrap();
+            let resolution = game.event_history.last().unwrap();
+            assert_eq!(resolution.event_id, format!("wave-{}-event", game.wave));
+            assert_eq!(resolution.choice_index, 0);
+            assert!(!resolution.outcome.is_empty());
+        }
     }
 
     #[test]
