@@ -760,6 +760,29 @@ mod tests {
     use super::*;
 
     #[test]
+    fn legacy_saved_runs_load_with_defaults_for_new_unit_and_relic_fields() {
+        let run = RunState::new(801);
+        let mut legacy = serde_json::to_value(run).unwrap();
+
+        let object = legacy.as_object_mut().unwrap();
+        object.remove("relics");
+        object.remove("pending_relics");
+
+        let party = object.get_mut("party").unwrap().as_array_mut().unwrap();
+        for unit in party {
+            let unit = unit.as_object_mut().unwrap();
+            unit.remove("lane");
+            unit.remove("support_heal_bonus");
+        }
+
+        let restored: RunState = serde_json::from_value(legacy).unwrap();
+        assert!(restored.relics.is_empty());
+        assert!(restored.pending_relics.is_empty());
+        assert_eq!(restored.party[0].lane, 0);
+        assert_eq!(restored.party[0].support_heal_bonus, 0);
+    }
+
+    #[test]
     fn same_seed_produces_same_draw_sequence() {
         let mut left = RunState::new(42);
         let mut right = RunState::new(42);
