@@ -1075,7 +1075,7 @@ mod tests {
         let starter_attack = run.party[0].attack;
         run.relics.push(Relic::HoneyBell);
         for unit in &mut run.party {
-            Self::apply_relic_to_unit(unit, Relic::HoneyBell);
+            RunState::apply_relic_to_unit(unit, Relic::HoneyBell);
         }
         assert_eq!(run.party[0].attack, starter_attack + 1);
 
