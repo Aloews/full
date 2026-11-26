@@ -212,7 +212,6 @@ pub fn app() -> Router {
 }
 
 #[cfg(test)]
-#[cfg(test)]
 fn app_with_data_dir(data_dir: PathBuf) -> Router {
     app_with_storage(data_dir, None)
 }
@@ -757,6 +756,11 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
 
         let mut legacy = GameState::new(7001, "legacy-run");
+        for unit in &mut legacy.units {
+            unit.attack = 100;
+            unit.health = 100;
+            unit.current_health = None;
+        }
         legacy.battle().unwrap();
         assert_eq!(legacy.phase, slotbound_core::RunPhase::Intermission);
         let mut value = serde_json::to_value(&legacy).unwrap();
