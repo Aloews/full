@@ -2182,7 +2182,10 @@ mod tests {
         let unique: std::collections::HashSet<(u8, u8)> = report
             .allies
             .iter()
-            .map(|snapshot| (snapshot.position.row, snapshot.position.lane))
+            .map(|snapshot| {
+                let position = snapshot.position.unwrap();
+                (position.row, position.lane)
+            })
             .collect();
         assert_eq!(unique.len(), report.allies.len());
     }
@@ -2304,7 +2307,7 @@ mod tests {
 
     #[test]
     fn old_battle_snapshots_without_positions_remain_readable() {
-        let game = run(802);
+        let mut game = run(802);
         let mut value = serde_json::to_value(game.battle().unwrap()).unwrap();
         let battle = value.as_object_mut().unwrap();
         for team in ["allies", "enemies"] {
