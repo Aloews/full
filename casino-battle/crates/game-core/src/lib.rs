@@ -109,6 +109,23 @@ pub struct DrawOutcome {
     pub party_size: usize,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BattleEventKind {
+    Attack,
+    Heal,
+    Defeat,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct BattleEvent {
+    pub tick: u32,
+    pub kind: BattleEventKind,
+    pub source_unit_id: u64,
+    pub target_unit_id: u64,
+    pub amount: u32,
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct BattleReport {
     pub victory: bool,
@@ -118,6 +135,7 @@ pub struct BattleReport {
     pub surviving_enemies: usize,
     pub hearts_left: u8,
     pub essence_reward: u32,
+    pub events: Vec<BattleEvent>,
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -266,14 +284,15 @@ impl RunState {
 
         let mut enemies = self.create_enemy_wave();
         let mut ticks = 0;
+        let mut events = Vec::new();
 
         while ticks < MAX_BATTLE_TICKS
             && self.party.iter().any(|unit| unit.hp > 0)
             && enemies.iter().any(|unit| unit.hp > 0)
         {
-            Self::advance_side(&mut self.party, &mut enemies);
-            Self::advance_side(&mut enemies, &mut self.party);
             ticks += 1;
+            events.extend(Self::advance_side(&mut self.party, &mut enemies, ticks));
+            events.extend(Self::advance_side(&mut enemies, &mut self.party, ticks));
         }
 
         let surviving_allies = self.party.iter().filter(|unit| unit.hp > 0).count();
@@ -310,6 +329,7 @@ impl RunState {
             surviving_enemies,
             hearts_left: self.hearts,
             essence_reward,
+            events,
         })
     }
 
