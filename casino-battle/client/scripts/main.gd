@@ -353,20 +353,27 @@ func _draw_battle_effects() -> void:
         if source == Vector2.ZERO or target == Vector2.ZERO:
             continue
 
+        source = _pixel_point(source)
+        target = _pixel_point(target)
         var kind := str(event.get("kind", "attack"))
         var amount := int(event.get("amount", 0))
+
         if kind == "attack":
-            draw_line(_pixel_point(source + Vector2(24, 0)), _pixel_point(target - Vector2(22, 0)), CLAY, 4.0, false)
-            draw_circle(target, 18.0, Color(CLAY, 0.22))
-            draw_string(ThemeDB.fallback_font, target + Vector2(-14, -25), "-%d" % amount, HORIZONTAL_ALIGNMENT_CENTER, 32, 16, CLAY)
+            draw_rect(Rect2(source + Vector2(22, -2), Vector2(maxf(2.0, absf(target.x - source.x) - 42.0), 4)), CLAY)
+            draw_rect(Rect2(target + Vector2(-10, -10), Vector2(20, 4)), Color(CLAY, 0.35))
+            draw_rect(Rect2(target + Vector2(-4, -16), Vector2(8, 16)), Color(CLAY, 0.35))
+            draw_rect(Rect2(target + Vector2(-14, -25), Vector2(4, 4)), HONEY)
+            draw_string(ThemeDB.fallback_font, _pixel_point(target + Vector2(-14, -25)), "-%d" % amount, HORIZONTAL_ALIGNMENT_CENTER, 32, 16, CLAY)
         elif kind == "heal":
-            draw_line(_pixel_point(source + Vector2(18, 0)), _pixel_point(target - Vector2(18, 0)), SAGE.lightened(0.18), 4.0, false)
-            draw_circle(target, 19.0, Color(SAGE, 0.24))
-            draw_string(ThemeDB.fallback_font, target + Vector2(-14, -25), "+%d" % amount, HORIZONTAL_ALIGNMENT_CENTER, 32, 16, SAGE.darkened(0.2))
+            draw_rect(Rect2(source + Vector2(18, -2), Vector2(maxf(2.0, absf(target.x - source.x) - 36.0), 4)), SAGE.lightened(0.18))
+            draw_rect(Rect2(target + Vector2(-10, -10), Vector2(20, 4)), Color(SAGE, 0.35))
+            draw_rect(Rect2(target + Vector2(-2, -16), Vector2(4, 16)), SAGE.lightened(0.18))
+            draw_string(ThemeDB.fallback_font, _pixel_point(target + Vector2(-14, -25)), "+%d" % amount, HORIZONTAL_ALIGNMENT_CENTER, 32, 16, SAGE.darkened(0.2))
         elif kind == "defeat":
-            for angle in range(0, 360, 60):
-                var direction := Vector2.from_angle(deg_to_rad(float(angle)))
-                draw_line(_pixel_point(target + direction * 13.0), _pixel_point(target + direction * 24.0), HONEY, 2.0, false)
+            draw_rect(Rect2(target + Vector2(-12, -2), Vector2(24, 4)), HONEY)
+            draw_rect(Rect2(target + Vector2(-2, -12), Vector2(4, 24)), HONEY)
+            draw_rect(Rect2(target + Vector2(-8, -8), Vector2(4, 4)), HONEY)
+            draw_rect(Rect2(target + Vector2(4, 4), Vector2(4, 4)), HONEY)
 
 func _update_relic_panel() -> void:
     if not is_instance_valid(relic_panel):
@@ -482,10 +489,11 @@ func _draw() -> void:
     _draw_party_strip(design_size)
 
 func _draw_paper_grain(size: Vector2) -> void:
-    for i in range(90):
+    for i in range(120):
         var x := fmod(float(i * 137 + 41), size.x)
         var y := fmod(float(i * 71 + 19), size.y)
-        draw_line(Vector2(x, y), Vector2(x + 2.0, y + 1.0), Color(0.35, 0.29, 0.22, 0.045), 1.0)
+        var pixel := _pixel_point(Vector2(x, y))
+        draw_rect(Rect2(pixel, Vector2(2, 2)), Color("#694653", 0.09))
 
 func _draw_header() -> void:
     var wave := int(run_snapshot.get("wave", 1))
@@ -947,3 +955,6 @@ func _draw_sigil_icon(origin: Vector2, sigil: String, color: Color) -> void:
                 Rect2(origin + Vector2(column_index * pixel_size, row_index * pixel_size), Vector2(pixel_size, pixel_size)),
                 palette.get(pixel, color)
             )
+
+func _pixel_point(point: Vector2) -> Vector2:
+    return Vector2(roundf(point.x / 2.0) * 2.0, roundf(point.y / 2.0) * 2.0)
