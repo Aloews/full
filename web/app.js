@@ -203,7 +203,7 @@ function renderUnit(unit) {
   return `<article class="unit-card ${keeper ? 'is-keeper' : ''}">
     <div class="unit-top"><span class="unit-symbol">${pixelSpriteMarkup(unit.class, meta[1])}</span><span class="unit-type">${esc(meta[2])}</span><button class="lock-button" data-action="lock" data-id="${unit.id}" aria-label="${unit.locked ? 'Unlock' : 'Lock'} ${esc(meta[1])}" ${!canAct ? 'disabled' : ''}>${unit.locked ? '🔒' : '⌑'}</button></div>
     <h3>${esc(unit.promotion || meta[1])}</h3><div class="unit-level">LV ${unit.level} · ABSORB ${unit.absorb_level}</div>
-    <div class="unit-stats"><span>⚔ ${unit.attack}</span><span>♥ ${unit.health}</span></div>
+    <div class="unit-stats"><span>⚔ ${unit.attack}</span><span>♥ ${unit.current_health ?? unit.health} / ${unit.health}</span></div>
     <div class="unit-imprint">${unit.imprint ? `✦ ${esc(unit.imprint)}` : 'No imprint'}</div>
     ${unit.pending_promotion ? `<div class="promotion-options"><span>PROMOTION</span>${unit.promotion_options.map((name) => `<button class="button button-small" data-action="promote" data-id="${unit.id}" data-choice="${esc(name)}">${esc(name)}</button>`).join('')}</div>` : ''}
     <div class="unit-actions"><button class="button button-quiet button-small" data-action="keep" data-id="${unit.id}" ${!canAct || unit.locked ? 'disabled' : ''}>${keeper ? 'KEEPER SELECTED' : 'SELECT KEEPER'}</button><button class="button button-danger button-small" data-action="feed" data-id="${unit.id}" ${!canAct || unit.locked || !keepId || keepId === unit.id ? 'disabled' : ''}>FEED</button></div>
@@ -220,7 +220,21 @@ function renderBattle(lost) {
     return;
   }
   if (game.phase === 'intermission' && report) {
-    $('battle-content').innerHTML = `<div class="battle-result ${report.victory ? 'victory' : 'defeat'}"><strong>${report.victory ? 'VICTORY' : 'DEFEAT'}</strong><span>${report.boss ? 'Judgment encounter' : `Wave ${report.wave}`} · ${report.army_power} power vs ${report.enemy_power}</span><small>${report.victory ? `+${report.gold_awarded} gold` : `-${report.damage_taken} heart · +${report.gold_awarded} gold`}</small></div>`;
+    const timeline = (report.events || []).slice(-8).reverse().map((entry) => {
+      const verbs = {
+        ally_attack: 'strikes',
+        enemy_attack: 'hits',
+        ally_defeated: 'is defeated by',
+        enemy_defeated: 'defeats',
+        unit_healed: 'restores health to',
+        boss_telegraph: 'telegraphs an attack at',
+        battle_ended: 'ends the battle:',
+      };
+      const verb = verbs[entry.kind] || 'acts on';
+      const amount = entry.amount ? ` · ${entry.kind === 'unit_healed' ? '+' : '-'}${entry.amount} HP` : '';
+      return `<div class="combat-event ${esc(entry.kind)}"><span>R${entry.tick}</span><strong>${esc(entry.actor)}</strong> ${verb} <b>${esc(entry.target)}</b>${amount}</div>`;
+    }).join('');
+    $('battle-content').innerHTML = `<div class="battle-result ${report.victory ? 'victory' : 'defeat'}"><strong>${report.victory ? 'VICTORY' : 'DEFEAT'}</strong><span>${report.boss ? 'Boss encounter' : `Wave ${report.wave}`} · ${report.rounds || 0} rounds · ${game.units.length} survivors</span><small>${report.victory ? `+${report.gold_awarded} gold` : `-${report.damage_taken} hearts · +${report.gold_awarded} gold`}</small></div><div class="combat-log"><span class="eyebrow">COMBAT LOG</span>${timeline || '<div class="empty-state">No combat events recorded.</div>'}</div>`;
     $('battle-actions').innerHTML = `<button class="button button-primary" id="next-wave" ${game.core_offer ? 'disabled' : ''}>${game.core_offer ? 'CHOOSE A CORE FIRST' : 'PREPARE NEXT WAVE'} <span>↗</span></button>`;
     $('next-wave').addEventListener('click', () => act('/next-wave'));
     return;
