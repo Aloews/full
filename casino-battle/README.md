@@ -37,7 +37,7 @@ Open `client/project.godot` in Godot 4 to run the 2D visual sandbox.
 ## API
 
 - `GET /healthz`
-- `POST /api/v1/runs` with optional `{"seed": 123}`
+- `POST /api/v1/runs` with an empty JSON object; the server generates the run seed
 - `GET /api/v1/runs/{run_id}`
 - `POST /api/v1/runs/{run_id}/draw`
 - `POST /api/v1/runs/{run_id}/merge` with `{"keeper_id": 1, "donor_id": 2}`
