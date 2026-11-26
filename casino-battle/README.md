@@ -17,7 +17,7 @@ The project lives in this directory on the `casino-battle/foundation` branch. It
 
 - `crates/game-core`: deterministic run state, a 4×4 connected-cluster Fate Board, rank-based recruitment, party synergies, duplicate evolution, lane-aware Auto-battle, bosses and relic rewards.
 - `crates/game-server`: Axum API, PostgreSQL JSONB persistence, transactional row-locked state transitions, non-secret public snapshots, configurable CORS and health check.\n- `client/`: reads run state from the API and replays the server-authoritative Auto-battle event log.
-- `client/`: strict 2D Godot prototype with original hand-drawn-style vector character studies, a 4×4 Fate Board preview, server-driven party HUD, preparation-only lane changes by clicking a unit and tick-by-tick Auto-battle replay. The code-drawn characters are still prototypes; final sprite sheets, hand-painted animation and finished UI art remain release work.
+- `client/`: strict 2D Godot prototype with original hand-drawn-style vector character studies, a 4×4 Fate Board preview, server-driven party HUD, preparation-only lane changes by clicking a unit and tick-by-tick Auto-battle replay. All six allied sigil families now have distinct 2D prototype silhouettes (Mossguard, Cinderkit, Puddlekin, Pebbleback, Moonmote and Breezeling). These are code-drawn prototypes; authored sprite sheets, hand-painted animation and finished UI art remain release work.
 
 ## Run
 
