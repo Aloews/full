@@ -743,10 +743,69 @@ mod tests {
 
         let mut attackers = vec![attacker];
         let mut defenders = vec![far_target, near_target];
-        RunState::advance_side(&mut attackers, &mut defenders);
+        RunState::advance_side(&mut attackers, &mut defenders, 1);
 
         assert_eq!(defenders[0].hp, 20);
         assert_eq!(defenders[1].hp, 15);
+    }
+
+    #[test]
+    fn support_units_heal_the_most_wounded_ally() {
+        let mut support = RunState::new(31).party[0].clone();
+        support.id = 1;
+        support.role = Role::Support;
+        support.hp = 10;
+
+        let mut wounded = support.clone();
+        wounded.id = 2;
+        wounded.role = Role::Striker;
+        wounded.hp = 5;
+        wounded.max_hp = 20;
+
+        let mut healthy = support.clone();
+        healthy.id = 3;
+        healthy.role = Role::Guardian;
+        healthy.hp = 20;
+        healthy.max_hp = 26;
+
+        let mut allies = vec![support, wounded, healthy];
+        let mut enemies = vec![];
+        let events = RunState::advance_side(&mut allies, &mut enemies, 1);
+
+        assert_eq!(allies[1].hp, 9);
+        assert_eq!(allies[2].hp, 20);
+        assert_eq!(events[0].kind, BattleEventKind::Heal);
+        assert_eq!(events[0].target_unit_id, 2);
+    }
+
+    #[test]
+    fn mystic_splashes_damage_to_a_second_target() {
+        let mut mystic = RunState::new(32).party[0].clone();
+        mystic.id = 1;
+        mystic.role = Role::Mystic;
+        mystic.attack = 6;
+        mystic.lane = 1;
+
+        let mut first = mystic.clone();
+        first.id = 100;
+        first.role = Role::Striker;
+        first.hp = 20;
+        first.max_hp = 20;
+        first.armor = 0;
+        first.lane = 1;
+
+        let mut second = first.clone();
+        second.id = 101;
+        second.lane = 2;
+
+        let mut attackers = vec![mystic];
+        let mut defenders = vec![first, second];
+        let events = RunState::advance_side(&mut attackers, &mut defenders, 1);
+
+        assert_eq!(defenders[0].hp, 13);
+        assert_eq!(defenders[1].hp, 17);
+        assert_eq!(events.len(), 2);
+        assert!(events.iter().all(|event| event.kind == BattleEventKind::Attack));
     }
 
     #[test]
