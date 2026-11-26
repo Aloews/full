@@ -77,6 +77,105 @@ impl UnitClass {
     }
 }
 
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PromotionNode {
+    Warden, Bulwark, Crossbowman, Pathfinder, Stormcaller, Arcanist,
+    Templar, Oracle, Duelist, Trickster, Ravager, DireBeast,
+    Vanguard, Sentinel, Aegis, Stonewall, Deadeye, Ballista,
+    Windrunner, Trailblazer, Tempest, Starcaller, Runesmith, Spellweaver,
+    Paladin, Lifebinder, Seer, Prophet, Assassin, Shadowstep,
+    Phantom, Saboteur, Behemoth, Packlord, Stalker, Alpha,
+}
+
+impl PromotionNode {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Warden => "Warden", Self::Bulwark => "Bulwark",
+            Self::Crossbowman => "Crossbowman", Self::Pathfinder => "Pathfinder",
+            Self::Stormcaller => "Stormcaller", Self::Arcanist => "Arcanist",
+            Self::Templar => "Templar", Self::Oracle => "Oracle",
+            Self::Duelist => "Duelist", Self::Trickster => "Trickster",
+            Self::Ravager => "Ravager", Self::DireBeast => "Dire Beast",
+            Self::Vanguard => "Vanguard", Self::Sentinel => "Sentinel",
+            Self::Aegis => "Aegis", Self::Stonewall => "Stonewall",
+            Self::Deadeye => "Deadeye", Self::Ballista => "Ballista",
+            Self::Windrunner => "Windrunner", Self::Trailblazer => "Trailblazer",
+            Self::Tempest => "Tempest", Self::Starcaller => "Starcaller",
+            Self::Runesmith => "Runesmith", Self::Spellweaver => "Spellweaver",
+            Self::Paladin => "Paladin", Self::Lifebinder => "Lifebinder",
+            Self::Seer => "Seer", Self::Prophet => "Prophet",
+            Self::Assassin => "Assassin", Self::Shadowstep => "Shadowstep",
+            Self::Phantom => "Phantom", Self::Saboteur => "Saboteur",
+            Self::Behemoth => "Behemoth", Self::Packlord => "Packlord",
+            Self::Stalker => "Stalker", Self::Alpha => "Alpha",
+        }
+    }
+
+    fn from_label(label: &str) -> Option<Self> {
+        ALL_PROMOTION_NODES.iter().copied().find(|node| node.label() == label)
+    }
+}
+
+const ALL_PROMOTION_NODES: [PromotionNode; 36] = [
+    PromotionNode::Warden, PromotionNode::Bulwark,
+    PromotionNode::Crossbowman, PromotionNode::Pathfinder,
+    PromotionNode::Stormcaller, PromotionNode::Arcanist,
+    PromotionNode::Templar, PromotionNode::Oracle,
+    PromotionNode::Duelist, PromotionNode::Trickster,
+    PromotionNode::Ravager, PromotionNode::DireBeast,
+    PromotionNode::Vanguard, PromotionNode::Sentinel,
+    PromotionNode::Aegis, PromotionNode::Stonewall,
+    PromotionNode::Deadeye, PromotionNode::Ballista,
+    PromotionNode::Windrunner, PromotionNode::Trailblazer,
+    PromotionNode::Tempest, PromotionNode::Starcaller,
+    PromotionNode::Runesmith, PromotionNode::Spellweaver,
+    PromotionNode::Paladin, PromotionNode::Lifebinder,
+    PromotionNode::Seer, PromotionNode::Prophet,
+    PromotionNode::Assassin, PromotionNode::Shadowstep,
+    PromotionNode::Phantom, PromotionNode::Saboteur,
+    PromotionNode::Behemoth, PromotionNode::Packlord,
+    PromotionNode::Stalker, PromotionNode::Alpha,
+];
+
+fn first_promotion_choices(class: UnitClass) -> [PromotionNode; 2] {
+    match class {
+        UnitClass::Guardian => [PromotionNode::Warden, PromotionNode::Bulwark],
+        UnitClass::Archer => [PromotionNode::Crossbowman, PromotionNode::Pathfinder],
+        UnitClass::Mage => [PromotionNode::Stormcaller, PromotionNode::Arcanist],
+        UnitClass::Cleric => [PromotionNode::Templar, PromotionNode::Oracle],
+        UnitClass::Rogue => [PromotionNode::Duelist, PromotionNode::Trickster],
+        UnitClass::Beast => [PromotionNode::Ravager, PromotionNode::DireBeast],
+    }
+}
+
+fn second_promotion_choices(parent: PromotionNode) -> Option<[PromotionNode; 2]> {
+    Some(match parent {
+        PromotionNode::Warden => [PromotionNode::Vanguard, PromotionNode::Sentinel],
+        PromotionNode::Bulwark => [PromotionNode::Aegis, PromotionNode::Stonewall],
+        PromotionNode::Crossbowman => [PromotionNode::Deadeye, PromotionNode::Ballista],
+        PromotionNode::Pathfinder => [PromotionNode::Windrunner, PromotionNode::Trailblazer],
+        PromotionNode::Stormcaller => [PromotionNode::Tempest, PromotionNode::Starcaller],
+        PromotionNode::Arcanist => [PromotionNode::Runesmith, PromotionNode::Spellweaver],
+        PromotionNode::Templar => [PromotionNode::Paladin, PromotionNode::Lifebinder],
+        PromotionNode::Oracle => [PromotionNode::Seer, PromotionNode::Prophet],
+        PromotionNode::Duelist => [PromotionNode::Assassin, PromotionNode::Shadowstep],
+        PromotionNode::Trickster => [PromotionNode::Phantom, PromotionNode::Saboteur],
+        PromotionNode::Ravager => [PromotionNode::Behemoth, PromotionNode::Alpha],
+        PromotionNode::DireBeast => [PromotionNode::Stalker, PromotionNode::Packlord],
+        _ => return None,
+    })
+}
+
+fn promotion_options_for(unit: &Unit) -> Option<[PromotionNode; 2]> {
+    match unit.promotion_path.as_slice() {
+        [] if unit.absorb_level >= 5 => Some(first_promotion_choices(unit.class)),
+        [parent] if unit.absorb_level >= 12 => second_promotion_choices(*parent),
+        _ => None,
+    }
+}
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum RunPhase {
@@ -203,6 +302,8 @@ pub struct Unit {
     #[serde(default)]
     pub imprints: Vec<UnitImprintSlot>,
     pub promotion: Option<String>,
+    #[serde(default)]
+    pub promotion_path: Vec<PromotionNode>,
     pub pending_promotion: bool,
     pub promotion_options: [String; 2],
     pub locked: bool,
@@ -520,7 +621,7 @@ impl GameState {
             spins_used: 0,
             next_spin_cost: 100,
             shop_prices: item_prices(),
-            ruleset_version: 3,
+            ruleset_version: 4,
             nudge_available: true,
             board: [[UnitClass::Guardian; 3]; 3],
             units: Vec::new(),
@@ -551,7 +652,7 @@ impl GameState {
     }
 
     pub fn migrate_legacy_state(&mut self) -> bool {
-        if self.ruleset_version >= 3 {
+        if self.ruleset_version >= 4 {
             return false;
         }
 
@@ -569,8 +670,7 @@ impl GameState {
                     .any(|resolution| resolution.event_id == current_event_id);
 
                 if current_event_was_resolved {
-                    self.pending_route =
-                        Some(self.generate_route_options(self.wave.saturating_add(1)));
+                    self.pending_route = Some(self.generate_route_options(self.wave.saturating_add(1)));
                 } else {
                     self.pending_event = Some(self.generate_journey_event());
                 }
@@ -603,9 +703,26 @@ impl GameState {
             }
             self.ruleset_version = 3;
         }
+
+        if self.ruleset_version < 4 {
+            for unit in &mut self.units {
+                if unit.promotion_path.is_empty() {
+                    if let Some(legacy) = unit.promotion.as_deref() {
+                        if let Some(node) = PromotionNode::from_label(legacy) {
+                            unit.promotion_path.push(node);
+                        }
+                    }
+                }
+                if unit.pending_promotion {
+                    if let Some(options) = promotion_options_for(unit) {
+                        unit.promotion_options = [options[0].label().to_string(), options[1].label().to_string()];
+                    }
+                }
+            }
+            self.ruleset_version = 4;
+        }
         true
     }
-
     pub fn spin(&mut self) -> Result<SpinReport, GameError> {
         self.ensure_preparation()?;
         if self.units.len() > self.unit_limit {
@@ -1632,6 +1749,7 @@ impl GameState {
             current_health: None,
             imprint: None,
             promotion: None,
+            promotion_path: Vec::new(),
             pending_promotion: false,
             promotion_options: [options[0].to_string(), options[1].to_string()],
             locked: false,
