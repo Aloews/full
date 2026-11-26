@@ -304,9 +304,7 @@ async fn stylesheet() -> Response {
     )
         .into_response()
 }
-async fn health(
-    State(state): State<AppState>,
-) -> Result<Json<serde_json::Value>, ApiError> {
+async fn health(State(state): State<AppState>) -> Result<Json<serde_json::Value>, ApiError> {
     let storage = if let Some(pool) = &state.pool {
         let table: Option<String> =
             sqlx::query_scalar("SELECT to_regclass('public.slotbound_runs')::text")
