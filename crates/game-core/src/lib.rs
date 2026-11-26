@@ -2547,6 +2547,16 @@ mod tests {
                 .iter()
                 .any(|slot| slot.kind == UnitImprint::Mending && slot.rank == 1)
         );
+
+        game.units.iter_mut().find(|unit| unit.id == target_id).unwrap().absorb_level = 11;
+        let third = game.spawn_unit(UnitClass::Rogue);
+        let third_id = third.id;
+        game.units.push(third);
+        game.absorb(target_id, third_id).unwrap();
+        let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
+        assert_eq!(target.absorb_level, 12);
+        assert_eq!(imprint_slot_capacity(target.absorb_level), 3);
+        assert!(target.imprints.iter().any(|slot| slot.kind == UnitImprint::Critical));
     }
 
     #[test]
