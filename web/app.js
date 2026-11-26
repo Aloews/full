@@ -292,7 +292,7 @@ function renderUnit(unit) {
     <div class="unit-build"><span class="build-label">TRAITS</span><div class="build-chips">${traits || '<span class="build-empty">NONE</span>'}</div></div>
     <div class="unit-build"><span class="build-label">IMPRINTS</span><div class="build-chips">${imprints || `<span class="build-empty">${imprintFallback || 'EMPTY'}</span>`}</div></div>
     ${unit.pending_promotion ? `<div class="promotion-options"><span>PROMOTION</span>${unit.promotion_options.map((name) => `<button class="button button-small" data-action="promote" data-id="${unit.id}" data-choice="${esc(name)}">${esc(name)}</button>`).join('')}</div>` : ''}
-    <div class="unit-actions"><button class="button button-quiet button-small" data-action="keep" data-id="${unit.id}" ${!canAct || unit.locked ? 'disabled' : ''}>${keeper ? 'KEEPER SELECTED' : 'SELECT KEEPER'}</button><button class="button button-danger button-small" data-action="feed" data-id="${unit.id}" ${!canAct || unit.locked || !keepId || keepId === unit.id || keeperAwaitingPromotion ? 'disabled' : ''}>FEED</button></div>
+    <div class="unit-actions"><button class="button button-quiet button-small" data-action="keep" data-id="${unit.id}" ${!canAct || unit.locked ? 'disabled' : ''}>${keeper ? 'KEEPER SELECTED' : 'SELECT KEEPER'}</button><button class="button button-danger button-small" data-action="feed" data-id="${unit.id}" ${!canAct || unit.locked || !keepId || keepId === unit.id || keeperAwaitingPromotion || unit.pending_promotion ? 'disabled' : ''}>FEED</button></div>
   </article>`;
 }
 
