@@ -174,9 +174,15 @@ impl RunState {
             return Err(GameError::InvalidMerge);
         }
 
-        let keeper_index = self.party.iter().position(|unit| unit.id == keeper_id)
+        let keeper_index = self
+            .party
+            .iter()
+            .position(|unit| unit.id == keeper_id)
             .ok_or(GameError::UnitNotFound)?;
-        let donor_index = self.party.iter().position(|unit| unit.id == donor_id)
+        let donor_index = self
+            .party
+            .iter()
+            .position(|unit| unit.id == donor_id)
             .ok_or(GameError::UnitNotFound)?;
 
         let keeper = &self.party[keeper_index];
