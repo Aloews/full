@@ -664,22 +664,28 @@ impl GameState {
         let route = self.current_route;
         let elite = route == Some(RouteNodeKind::Elite) && !boss;
         let mut enemies = build_enemy_party(self.wave, boss, elite);
-        let ally_snapshots = allies.iter().map(|unit| CombatantSnapshot {
-            id: unit.id,
-            name: unit.name.clone(),
-            class: unit.class,
-            max_health: unit.max_health,
-            current_health: unit.current_health,
-            boss: unit.boss,
-        }).collect::<Vec<_>>();
-        let enemy_snapshots = enemies.iter().map(|unit| CombatantSnapshot {
-            id: unit.id,
-            name: unit.name.clone(),
-            class: unit.class,
-            max_health: unit.max_health,
-            current_health: unit.current_health,
-            boss: unit.boss,
-        }).collect::<Vec<_>>();
+        let ally_snapshots = allies
+            .iter()
+            .map(|unit| CombatantSnapshot {
+                id: unit.id,
+                name: unit.name.clone(),
+                class: unit.class,
+                max_health: unit.max_health,
+                current_health: unit.current_health,
+                boss: unit.boss,
+            })
+            .collect::<Vec<_>>();
+        let enemy_snapshots = enemies
+            .iter()
+            .map(|unit| CombatantSnapshot {
+                id: unit.id,
+                name: unit.name.clone(),
+                class: unit.class,
+                max_health: unit.max_health,
+                current_health: unit.current_health,
+                boss: unit.boss,
+            })
+            .collect::<Vec<_>>();
         let enemy_power = enemies.iter().fold(0u32, |total, enemy| {
             total
                 .saturating_add(enemy.attack)
