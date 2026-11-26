@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, net::SocketAddr, str::FromStr, sync::Arc};
+use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
 
 use axum::{
     extract::{Path, State},
