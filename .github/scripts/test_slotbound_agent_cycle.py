@@ -82,5 +82,12 @@ class AgentPatchPolicyTests(unittest.TestCase):
         self.assertEqual(MODULE.BRANCH, "agents/slotbound-release-candidate")
 
 
+    def test_model_budget_is_bounded_for_hosted_runner(self):
+        self.assertLessEqual(MODULE.MODEL_CONTEXT, 8192)
+        self.assertGreaterEqual(MODULE.MODEL_TIMEOUT, 900)
+        self.assertLessEqual(MODULE.MAX_REPO_CONTEXT_CHARS, 20_000)
+        self.assertLessEqual(MODULE.IMPLEMENT_MAX_TOKENS, 2500)
+        self.assertLessEqual(MODULE.REVIEW_MAX_TOKENS, 600)
+
 if __name__ == "__main__":
     unittest.main()

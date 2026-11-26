@@ -12,8 +12,12 @@ import urllib.request
 from pathlib import Path
 
 MODEL = os.environ.get("AGENT_MODEL", "qwen2.5-coder:3b")
-MODEL_CONTEXT = 16384
-MODEL_TIMEOUT = 600
+MODEL_CONTEXT = int(os.environ.get("AGENT_MODEL_CONTEXT", "8192"))
+MODEL_TIMEOUT = int(os.environ.get("AGENT_MODEL_TIMEOUT", "1200"))
+MAX_REPO_CONTEXT_CHARS = 20_000
+PLAN_MAX_TOKENS = 650
+IMPLEMENT_MAX_TOKENS = 2200
+REVIEW_MAX_TOKENS = 550
 MAX_PATCH_BYTES = 16_000
 MAX_PATCH_FILES = 8
 MAX_REPAIRS = 2
@@ -104,29 +108,56 @@ def extract_patch(text: str) -> str:
 
 
 def repository_context(task: dict) -> str:
-    paths = [
+    role, role_contract = resolve_implementer_role(task)
+    common_paths = [
         "AGENTS.md",
         ".github/agents/systems-architect.agent.md",
         ".github/agents/game-systems-designer.agent.md",
-        ".github/agents/rust-gameplay-engineer.agent.md",
-        ".github/agents/persistence-engineer.agent.md",
-        ".github/agents/frontend-integrator.agent.md",
-        ".github/agents/simulation-qa.agent.md",
-        ".github/agents/product-integrator.agent.md",
-        ".github/agents/pixel-art-director.agent.md",
+        role_contract,
         "docs/GAME_DESIGN.md",
-        "docs/VISUAL_STYLE_GUIDE.md",
         "docs/BATTLE_SIMULATION_RULES.md",
-        "docs/AI_AGENT_EXECUTION_PLAN.md",
-        "docs/PRODUCT_CONCEPT.md",
-        "docs/MECHANICS_RESEARCH.md",
+        "docs/VISUAL_STYLE_GUIDE.md",
         "docs/MAP.md",
-        "crates/game-core/src/lib.rs",
-        "crates/api/src/main.rs",
-        "web/app.js",
-        "web/index.html",
-        "web/style.css",
+        "docs/PRODUCT_CONCEPT.md",
     ]
+    source_by_role = {
+        "rust-gameplay-engineer": [
+            "crates/game-core/src/lib.rs",
+            "crates/api/src/main.rs",
+        ],
+        "persistence-engineer": [
+            "crates/api/src/main.rs",
+            "crates/game-core/src/lib.rs",
+        ],
+        "frontend-integrator": [
+            "web/app.js",
+            "web/index.html",
+            "web/style.css",
+            "crates/api/src/main.rs",
+        ],
+        "pixel-art-director": [
+            "web/app.js",
+            "web/index.html",
+            "web/style.css",
+        ],
+    }
+    paths = common_paths + source_by_role.get(role, [])
+    limits = {
+        "AGENTS.md": 1_300,
+        ".github/agents/systems-architect.agent.md": 1_000,
+        ".github/agents/game-systems-designer.agent.md": 1_000,
+        role_contract: 1_200,
+        "docs/GAME_DESIGN.md": 2_000,
+        "docs/BATTLE_SIMULATION_RULES.md": 1_600,
+        "docs/VISUAL_STYLE_GUIDE.md": 1_000,
+        "docs/MAP.md": 1_000,
+        "docs/PRODUCT_CONCEPT.md": 900,
+        "crates/game-core/src/lib.rs": 7_000,
+        "crates/api/src/main.rs": 2_500,
+        "web/app.js": 4_000,
+        "web/index.html": 1_200,
+        "web/style.css": 2_000,
+    }
     chunks: list[str] = []
     total = 0
     for name in paths:
@@ -134,13 +165,14 @@ def repository_context(task: dict) -> str:
         if not path.is_file():
             continue
         content = path.read_text(encoding="utf-8")
-        content = content[:9000 if name.endswith("lib.rs") else 3500]
-        chunk = f"\n--- {name} ---\n{content}\n"
-        if total + len(chunk) > 22_000:
-            break
+        content = content[:limits.get(name, 1_000)]
+        chunk = f"\\n--- {name} ---\\n{content}\\n"
+        if total + len(chunk) > MAX_REPO_CONTEXT_CHARS:
+            continue
         chunks.append(chunk)
         total += len(chunk)
-    return "\n".join(chunks)
+    return "\\n".join(chunks)
+
 
 def run_checks() -> str:
     steps = [
@@ -239,7 +271,7 @@ def apply_generated_patch(task: dict, context: str, failure: str = "") -> tuple[
                 "Return a small ordered plan and identify likely risks."
             ),
         },
-    ], 1000)
+    ], PLAN_MAX_TOKENS)
 
     task_id = task.get("id", "")
     implementer_role, implementer_contract_path = resolve_implementer_role(task)
@@ -266,7 +298,7 @@ def apply_generated_patch(task: dict, context: str, failure: str = "") -> tuple[
                 ),
             },
             {"role": "user", "content": implementer_prompt},
-        ], 4000)
+        ], IMPLEMENT_MAX_TOKENS)
 
         try:
             patch = extract_patch(raw)
@@ -334,7 +366,7 @@ def apply_generated_patch(task: dict, context: str, failure: str = "") -> tuple[
                         "and list concrete findings."
                     ),
                 },
-            ], 900)
+            ], REVIEW_MAX_TOKENS)
             if not qa_review.startswith("APPROVE"):
                 raise RuntimeError(f"Simulation QA rejected the patch:\n{qa_review}")
 
@@ -361,7 +393,7 @@ def apply_generated_patch(task: dict, context: str, failure: str = "") -> tuple[
                         "list concrete gaps."
                     ),
                 },
-            ], 900)
+            ], REVIEW_MAX_TOKENS)
             if not product_review.startswith("ACCEPT"):
                 raise RuntimeError(f"Product integration review rejected the patch:\n{product_review}")
 
