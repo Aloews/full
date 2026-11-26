@@ -12,17 +12,21 @@ required_routes = {
     "/api/runs", "/api/runs/{run_id}", "/api/runs/{run_id}/spin", "/api/runs/{run_id}/nudge",
     "/api/runs/{run_id}/absorb", "/api/runs/{run_id}/promotion", "/api/runs/{run_id}/lock",
     "/api/runs/{run_id}/battle", "/api/runs/{run_id}/next-wave", "/api/runs/{run_id}/core",
-    "/api/runs/{run_id}/item", "/api/runs/{run_id}/event",
+    "/api/runs/{run_id}/item", "/api/runs/{run_id}/event", "/api/runs/{run_id}/route",
 }
 missing_routes = sorted(required_routes - routes)
 if missing_routes:
     raise SystemExit(f"API route contract missing: {missing_routes}")
-for endpoint in ("spin", "nudge", "absorb", "promotion", "lock", "battle", "next-wave", "core", "item", "event"):
+for endpoint in ("spin", "nudge", "absorb", "promotion", "lock", "battle", "next-wave", "core", "item", "event", "route"):
     if f"/{endpoint}" not in client:
         raise SystemExit(f"browser action missing API call suffix: /{endpoint}")
 
 
-if "function playBattleReplay(report)" not in client:
+if 'data-action="route-choice"' not in client or "choose_route" not in api:
+    raise SystemExit("branching route choice flow is not connected")
+if "JourneyRouteRequired" not in api or "pending_route" not in client:
+    raise SystemExit("route progression gate or browser state is missing")
+\nif "function playBattleReplay(report)" not in client:
     raise SystemExit("battle replay renderer is missing")
 if 'data-action="journey-choice"' not in client or "resolve_event" not in api:
     raise SystemExit("journey event choice flow is not connected")
