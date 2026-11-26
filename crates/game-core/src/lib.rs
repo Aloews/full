@@ -736,6 +736,7 @@ impl GameState {
                 max_health: unit.max_health,
                 current_health: unit.current_health,
                 boss: unit.boss,
+                position: unit.position,
             })
             .collect::<Vec<_>>();
         let enemy_power = enemies.iter().fold(0u32, |total, enemy| {
@@ -894,8 +895,8 @@ impl GameState {
                         actor_id: enemy.id,
                         target_id: target.id,
                         actor: enemy.name.clone(),
-                        target: target.name.clone(),
-                        amount: u32::from(target.position.lane) + 1,
+                        target: format!("{} · lane {}", target.name, target.position.lane + 1),
+                        amount: 0,
                         remaining_health: target.current_health,
                     });
                 }
