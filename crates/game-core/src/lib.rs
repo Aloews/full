@@ -2269,6 +2269,18 @@ mod tests {
     fn boss_telegraph_identifies_the_actual_target_and_lane() {
         let mut game = run(803);
         game.wave = 5;
+        for unit in &mut game.units {
+            unit.attack = 1;
+            unit.health = 100;
+            unit.current_health = None;
+        }
+        for class in [UnitClass::Archer, UnitClass::Mage, UnitClass::Rogue, UnitClass::Cleric] {
+            let mut unit = game.spawn_unit(class);
+            unit.attack = 1;
+            unit.health = 100;
+            unit.current_health = None;
+            game.units.push(unit);
+        }
         let report = game.battle().unwrap();
         let telegraph = report
             .events
