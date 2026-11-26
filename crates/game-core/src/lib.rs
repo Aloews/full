@@ -2448,8 +2448,6 @@ mod tests {
         assert_eq!(select_target_index(&targets, &attacker, false), Some(0));
     }
 
-
-
     #[test]
     fn stout_trait_adds_real_persistent_max_health_at_recruitment() {
         let mut found = false;
@@ -2462,7 +2460,10 @@ mod tests {
                 break;
             }
         }
-        assert!(found, "the deterministic seed sample must include a Stout recruit");
+        assert!(
+            found,
+            "the deterministic seed sample must include a Stout recruit"
+        );
     }
 
     #[test]
@@ -2490,7 +2491,13 @@ mod tests {
 
         game.absorb(target_id, donor_id).unwrap();
         let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
-        assert_eq!(target.imprints, vec![UnitImprintSlot { kind: UnitImprint::Spellpower, rank: 1 }]);
+        assert_eq!(
+            target.imprints,
+            vec![UnitImprintSlot {
+                kind: UnitImprint::Spellpower,
+                rank: 1
+            }]
+        );
         assert!(target.traits.contains(&donor_trait));
         assert_eq!(target.traits.len(), 2);
         assert!(game.units.iter().all(|unit| unit.id != donor_id));
@@ -2501,7 +2508,10 @@ mod tests {
         let mut game = run(903);
         let target_id = game.units[0].id;
         game.units[0].absorb_level = 4;
-        game.units[0].imprints = vec![UnitImprintSlot { kind: UnitImprint::Fortify, rank: 1 }];
+        game.units[0].imprints = vec![UnitImprintSlot {
+            kind: UnitImprint::Fortify,
+            rank: 1,
+        }];
 
         let duplicate = game.spawn_unit(UnitClass::Guardian);
         let duplicate_id = duplicate.id;
@@ -2517,7 +2527,12 @@ mod tests {
         game.units.push(new_donor);
         game.absorb(target_id, new_donor_id).unwrap();
         let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
-        assert!(target.imprints.iter().any(|slot| slot.kind == UnitImprint::Mending && slot.rank == 1));
+        assert!(
+            target
+                .imprints
+                .iter()
+                .any(|slot| slot.kind == UnitImprint::Mending && slot.rank == 1)
+        );
     }
 
     #[test]
@@ -2529,9 +2544,18 @@ mod tests {
             position: FormationPosition { row: 2, lane: 1 },
             traits: vec![UnitTrait::Brutal, UnitTrait::Swift],
             imprints: vec![
-                UnitImprintSlot { kind: UnitImprint::Pierce, rank: 1 },
-                UnitImprintSlot { kind: UnitImprint::Critical, rank: 2 },
-                UnitImprintSlot { kind: UnitImprint::Fury, rank: 1 },
+                UnitImprintSlot {
+                    kind: UnitImprint::Pierce,
+                    rank: 1,
+                },
+                UnitImprintSlot {
+                    kind: UnitImprint::Critical,
+                    rank: 2,
+                },
+                UnitImprintSlot {
+                    kind: UnitImprint::Fury,
+                    rank: 1,
+                },
             ],
             attack: 5,
             max_health: 10,
@@ -2540,14 +2564,20 @@ mod tests {
             boss: false,
         };
         let healthy_target = combatant(2, None, 0, 1);
-        let wounded_target = Combatant { current_health: 4, ..healthy_target.clone() };
+        let wounded_target = Combatant {
+            current_health: 4,
+            ..healthy_target.clone()
+        };
 
         assert_eq!(trait_attack_bonus(&actor.traits), 2);
         assert_eq!(trait_initiative_bonus(&actor.traits), 2);
         assert_eq!(imprint_attack_bonus(&actor, &healthy_target, 3), 6);
         assert_eq!(imprint_attack_bonus(&actor, &wounded_target, 3), 5);
         assert_eq!(trait_damage_reduction(&[UnitTrait::Guarded]), 1);
-        assert_eq!(imprint_rank_bonus(&actor.imprints, UnitImprint::Critical, 1), 2);
+        assert_eq!(
+            imprint_rank_bonus(&actor.imprints, UnitImprint::Critical, 1),
+            2
+        );
     }
 
     #[test]
@@ -2561,7 +2591,13 @@ mod tests {
         assert!(game.migrate_legacy_state());
         assert_eq!(game.ruleset_version, 3);
         assert_eq!(game.units[0].traits.len(), 1);
-        assert_eq!(game.units[0].imprints, vec![UnitImprintSlot { kind: UnitImprint::Pierce, rank: 1 }]);
+        assert_eq!(
+            game.units[0].imprints,
+            vec![UnitImprintSlot {
+                kind: UnitImprint::Pierce,
+                rank: 1
+            }]
+        );
         let trait_after_migration = game.units[0].traits.clone();
         let imprint_after_migration = game.units[0].imprints.clone();
         assert!(!game.migrate_legacy_state());

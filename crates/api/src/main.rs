@@ -781,7 +781,10 @@ mod tests {
         for key in ["route", "allies", "enemies"] {
             battle.remove(key);
         }
-        if let Some(units) = object.get_mut("units").and_then(serde_json::Value::as_array_mut) {
+        if let Some(units) = object
+            .get_mut("units")
+            .and_then(serde_json::Value::as_array_mut)
+        {
             for unit in units {
                 if let Some(fields) = unit.as_object_mut() {
                     fields.remove("traits");
