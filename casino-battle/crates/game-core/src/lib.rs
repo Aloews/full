@@ -527,7 +527,7 @@ impl RunState {
         };
         let multiplier = i32::from(rank.saturating_sub(1));
         let lane = (self.party.len() % 3) as u8;
-        let unit = Unit {
+        let mut unit = Unit {
             id: self.next_unit_id,
             name: name.to_owned(),
             sigil,
