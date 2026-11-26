@@ -584,7 +584,14 @@ impl GameState {
                     let mixed = self.seed
                         ^ unit.id.wrapping_mul(0x9E37_79B9_7F4A_7C15)
                         ^ 0xD1B5_4A32_D192_ED03;
-                    unit.traits.push(UnitTrait::from_roll((mixed ^ (mixed >> 29)) as u32));
+                    let rolled_trait = UnitTrait::from_roll((mixed ^ (mixed >> 29)) as u32);
+                    if rolled_trait == UnitTrait::Stout {
+                        unit.health = unit.health.saturating_add(3);
+                        if let Some(current) = unit.current_health.as_mut() {
+                            *current = current.saturating_add(3).min(unit.health);
+                        }
+                    }
+                    unit.traits.push(rolled_trait);
                 }
                 if unit.imprints.is_empty() {
                     if let Some(legacy) = unit.imprint.as_deref() {
@@ -836,13 +843,8 @@ impl GameState {
                 traits: unit.traits.clone(),
                 imprints: unit.imprints.clone(),
                 attack: unit.attack,
-                max_health: unit.health.saturating_add(trait_health_bonus(&unit.traits)).max(1),
-                current_health: unit
-                    .current_health
-                    .unwrap_or(unit.health)
-                    .saturating_add(trait_health_bonus(&unit.traits))
-                    .min(unit.health.saturating_add(trait_health_bonus(&unit.traits)))
-                    .max(1),
+                max_health: unit.health.max(1),
+                current_health: unit.current_health.unwrap_or(unit.health).min(unit.health).max(1),
                 initiative: class_initiative(unit.class).saturating_add(trait_initiative_bonus(&unit.traits)),
                 boss: false,
             })
@@ -1571,6 +1573,7 @@ impl GameState {
         self.next_unit_id = self.next_unit_id.saturating_add(1);
         let (attack, health) = class.base_stats();
         let variance = self.random_u32() % 3;
+        let rolled_trait = UnitTrait::from_roll(self.random_u32());
         let options = class.promotions();
         Unit {
             id,
@@ -1578,14 +1581,14 @@ impl GameState {
             level: 1,
             absorb_level: 0,
             attack: attack + variance,
-            health: health + variance,
+            health: health + variance + if rolled_trait == UnitTrait::Stout { 3 } else { 0 },
             current_health: None,
             imprint: None,
             promotion: None,
             pending_promotion: false,
             promotion_options: [options[0].to_string(), options[1].to_string()],
             locked: false,
-            traits: vec![UnitTrait::from_roll(self.random_u32())],
+            traits: vec![rolled_trait],
             imprints: Vec::new(),
         }
     }
@@ -1652,10 +1655,6 @@ fn class_initiative(class: UnitClass) -> u8 {
         UnitClass::Guardian => 6,
         UnitClass::Cleric => 5,
     }
-}
-
-fn trait_health_bonus(traits: &[UnitTrait]) -> u32 {
-    traits.iter().filter(|kind| **kind == UnitTrait::Stout).count() as u32 * 3
 }
 
 fn trait_initiative_bonus(traits: &[UnitTrait]) -> u8 {
@@ -1850,6 +1849,8 @@ mod tests {
             name: format!("Test {id}"),
             class,
             position: FormationPosition { row, lane },
+            traits: Vec::new(),
+            imprints: Vec::new(),
             attack: 4,
             max_health: 10,
             current_health: 10,
