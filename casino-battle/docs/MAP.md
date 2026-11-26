@@ -32,8 +32,8 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [x] Godot client is connected to the API for run state, Fate draws and Auto-battle.
 - [x] Client replays server-authoritative battle events, damage, healing and defeat states.
 - [x] Rust CI workflow.
-- [x] Full CI passed on commit `60e5ff6` (Rust format, Clippy, unit tests, 2D audit, Godot 4.3 import, seeded balance sample, formation API smoke tests and PostgreSQL restart-persistence test).
-- [ ] Re-run full CI with boss and relic reward systems on the current candidate commit.
+- [x] Current full CI passed on visual candidate commit `aa512c9ffaefd8dfcb210bcdefd5d0ee49214263` in GitHub Actions run [45892465386](https://github.com/Aloews/full/actions/runs/45892465386): strict 2D/pixel-art audit, Godot 4.3 import and launch, Rust format, Clippy, tests, seeded balance sample, HTTP API smoke, PostgreSQL migration and restart-persistence checks.
+- [ ] Re-run full CI after subsequent code changes; the verified commit above is the current tested visual candidate.
 
 ## Gameplay systems
 
@@ -56,9 +56,10 @@ The map is the source of truth for autonomous coding agents. Update status only 
 
 ## Client and art
 
-- [ ] Final sprite grid audit and tile-size consistency check.
-- [ ] Production-quality original hero and enemy sprite sheets (code-drawn pixel prototypes are not final art).
-- [ ] Idle / anticipation / attack / hit / defeat / victory animation sets.
+- [x] Nine distinct 16×16 pixel sprite maps: six allies, two common enemies and one boss; CI checks dimensions, palette keys, silhouette coverage and uniqueness.
+- [ ] Final sprite grid audit and tile-size consistency check across production art assets.
+- [ ] Production-quality original hero and enemy sprite sheets (current sprite maps are in-client prototypes, not final external art assets).
+- [~] Code-level animation prototype: staggered idle bob/blink, attack lunge, hit flash and heal glow; full authored anticipation/contact/recovery/defeat/victory frame strips remain pending.
 - [ ] Background biome kits with multiple layers.
 - [ ] Pixel-art VFX library with attack, hit, healing, defeat and reward frame strips.
 - [ ] UI components with readable text at 1280×720 and Steam Deck scale.
