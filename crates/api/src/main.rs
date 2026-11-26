@@ -436,13 +436,6 @@ async fn main() {
     let data_dir = default_data_dir();
     let pool = database_pool();
 
-    if let Some(pool) = &pool {
-        sqlx::migrate!("./migrations")
-            .run(pool)
-            .await
-            .expect("apply Slotbound database migrations");
-    }
-
     let port = std::env::var("PORT")
         .ok()
         .and_then(|v| v.parse::<u16>().ok())
