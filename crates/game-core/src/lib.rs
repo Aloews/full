@@ -782,8 +782,7 @@ impl GameState {
                         .expect("enemy list is checked as non-empty");
                     let splash_target = enemies[splash_index].clone();
                     let splash_base_damage = 2u32.saturating_mul(core_percent) / 100;
-                    let splash_damage =
-                        apply_boss_gate_bonus(splash_base_damage, boss_gate).max(1);
+                    let splash_damage = apply_boss_gate_bonus(splash_base_damage, boss_gate).max(1);
                     enemies[splash_index].current_health = enemies[splash_index]
                         .current_health
                         .saturating_sub(splash_damage);
@@ -1313,7 +1312,7 @@ impl GameState {
             RouteNodeKind::BossGate => {
                 "Entered the ancient boss gate: allied attacks gain 15% damage in this boss battle."
                     .to_string()
-            },
+            }
         };
         self.route_history.push(RouteResolution {
             wave: target_wave,
@@ -2103,7 +2102,6 @@ mod tests {
         assert!(report.boss);
         assert_eq!(report.route, Some(RouteNodeKind::BossGate));
     }
-
 
     #[test]
     fn boss_gate_increases_ally_attack_damage_by_at_least_fifteen_percent() {
