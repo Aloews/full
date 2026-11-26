@@ -17,6 +17,20 @@ jobs:
   rust:
     name: Rust domain and server
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: casino_battle_ci
+          POSTGRES_USER: casino_battle
+          POSTGRES_PASSWORD: casino_battle_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U casino_battle -d casino_battle_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: casino-battle
@@ -73,3 +87,63 @@ jobs:
             -d '{"keeper_id":1,"donor_id":1}' \
             "http://127.0.0.1:3917/api/v1/runs/$run_id/merge")"
           test "$merge_status" = "409"
+      - name: Verify PostgreSQL migrations, transactions and restart persistence
+        env:
+          DATABASE_URL: postgres://casino_battle:casino_battle_ci_only@127.0.0.1:5432/casino_battle_ci
+          CORS_ALLOWED_ORIGINS: http://localhost:5173
+        run: |
+          start_database_server() {
+            BIND_ADDR=127.0.0.1:3918 ./target/debug/casino-battle-server > /tmp/casino-battle-postgres.log 2>&1 &
+            database_server_pid=$!
+            for attempt in $(seq 1 30); do
+              if curl --fail --silent http://127.0.0.1:3918/healthz > /tmp/casino-battle-postgres-health.json; then
+                return 0
+              fi
+              if ! kill -0 "$database_server_pid" 2>/dev/null; then
+                cat /tmp/casino-battle-postgres.log
+                return 1
+              fi
+              sleep 1
+            done
+            cat /tmp/casino-battle-postgres.log
+            return 1
+          }
+          stop_database_server() {
+            if [ -n "${database_server_pid:-}" ]; then
+              kill "$database_server_pid" 2>/dev/null || true
+              wait "$database_server_pid" 2>/dev/null || true
+              unset database_server_pid
+            fi
+          }
+          trap stop_database_server EXIT
+
+          start_database_server
+          grep -q '"status":"ok"' /tmp/casino-battle-postgres-health.json
+          grep -q '"persistence":"postgres"' /tmp/casino-battle-postgres-health.json
+
+          run_json="$(curl --fail --silent --show-error -X POST \
+            -H 'content-type: application/json' \
+            -d '{}' http://127.0.0.1:3918/api/v1/runs)"
+          run_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])' <<< "$run_json")"
+          python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)["state"]
+          assert "seed" not in data and "rng_state" not in data and "next_unit_id" not in data
+          ' <<< "$run_json"
+
+          curl --fail --silent --show-error -X POST "http://127.0.0.1:3918/api/v1/runs/$run_id/draw" > /dev/null
+          curl --fail --silent --show-error -X POST "http://127.0.0.1:3918/api/v1/runs/$run_id/battle" > /dev/null
+          curl --fail --silent --show-error "http://127.0.0.1:3918/api/v1/runs/$run_id" > /tmp/casino-battle-persisted-before-restart.json
+
+          stop_database_server
+          start_database_server
+          curl --fail --silent --show-error "http://127.0.0.1:3918/api/v1/runs/$run_id" > /tmp/casino-battle-persisted-after-restart.json
+          python3 -c '
+          import json
+          with open("/tmp/casino-battle-persisted-before-restart.json", encoding="utf-8") as file:
+              before = json.load(file)
+          with open("/tmp/casino-battle-persisted-after-restart.json", encoding="utf-8") as file:
+              after = json.load(file)
+          assert before == after, "Run state changed after server restart"
+          assert "seed" not in after and "rng_state" not in after and "next_unit_id" not in after
+          '
