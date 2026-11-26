@@ -99,10 +99,10 @@ func _setup_controls() -> void:
     relic_panel.size = Vector2(760, 230)
     relic_panel.visible = false
     var relic_style := StyleBoxFlat.new()
-    relic_style.bg_color = Color("#F8F2E7")
+    relic_style.bg_color = Color("#F5E9BD")
     relic_style.border_color = INK
     relic_style.set_border_width_all(2)
-    relic_style.set_corner_radius_all(12)
+    relic_style.set_corner_radius_all(0)
     relic_panel.add_theme_stylebox_override("panel", relic_style)
     root.add_child(relic_panel)
 
