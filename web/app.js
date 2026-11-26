@@ -287,6 +287,14 @@ function paintBattlefield(report, eventLimit) {
     px(x, 54 + (x % 3) * 2, 8, 2, '#9bc477');
     px(x + 8, 116 - (x % 4) * 2, 8, 2, '#315b42');
   }
+  for (let lane = 0; lane < 3; lane += 1) {
+    const allyX = 12 + lane * 34;
+    const enemyX = 208 + lane * 30;
+    px(allyX, 34, 24, 76, '#355643');
+    px(enemyX, 34, 24, 76, '#3c5143');
+    px(allyX + 11, 34, 1, 76, '#789065');
+    px(enemyX + 11, 34, 1, 76, '#8e725b');
+  }
   px(154, 0, 2, 128, '#f3c969');
   px(156, 0, 1, 128, '#f5e9bd');
   const allEvents = report.events || [];
@@ -296,7 +304,10 @@ function paintBattlefield(report, eventLimit) {
   const add = (id, name, team, health, amount = 0) => {
     if (!id || !name || name === 'Squad') return;
     const initial = Number.isFinite(health) ? Math.max(1, health + amount) : 20;
-    const current = actors.get(id) || { id, name: normalizedName(name), team, hp: initial, max: initial, class: null, boss: false };
+    const current = actors.get(id) || {
+      id, name: normalizedName(name), team, hp: initial, max: initial,
+      class: null, boss: false, position: null,
+    };
     current.name = normalizedName(name);
     current.team = team;
     if (Number.isFinite(health)) current.hp = Math.max(0, health);
@@ -307,14 +318,14 @@ function paintBattlefield(report, eventLimit) {
     actors.set(unit.id, {
       id: unit.id, name: unit.name, team: 'ally',
       hp: unit.current_health, max: unit.max_health,
-      class: unit.class, boss: Boolean(unit.boss),
+      class: unit.class, boss: Boolean(unit.boss), position: unit.position || null,
     });
   });
   (report.enemies || []).forEach((unit) => {
     actors.set(unit.id, {
       id: unit.id, name: unit.name, team: 'enemy',
       hp: unit.current_health, max: unit.max_health,
-      class: unit.class, boss: Boolean(unit.boss),
+      class: unit.class, boss: Boolean(unit.boss), position: unit.position || null,
     });
   });
   events.forEach((entry) => {
@@ -329,7 +340,10 @@ function paintBattlefield(report, eventLimit) {
     if (entry.kind === 'enemy_defeated') add(entry.target_id, entry.target, 'enemy', 0);
     if (entry.kind === 'ally_defeated') add(entry.target_id, entry.target, 'ally', 0);
     if (entry.kind === 'unit_healed') add(entry.target_id, entry.target, 'ally', entry.remaining_health);
-    if (entry.kind === 'boss_telegraph') add(entry.actor_id, entry.actor, 'enemy');
+    if (entry.kind === 'boss_telegraph') {
+      add(entry.actor_id, entry.actor, 'enemy');
+      add(entry.target_id, entry.target, 'ally', entry.remaining_health);
+    }
   });
   const allies = [...actors.values()].filter((unit) => unit.team === 'ally');
   const enemies = [...actors.values()].filter((unit) => unit.team === 'enemy');
@@ -339,8 +353,12 @@ function paintBattlefield(report, eventLimit) {
     cleric: '#72b9d2', rogue: '#a66da6', beast: '#d7a36a',
   };
   const drawUnit = (unit, index, team) => {
-    const x = team === 'ally' ? 22 + (index % 3) * 38 : 204 + (index % 3) * 34;
-    const y = 67 + Math.floor(index / 3) * 25;
+    const fallbackRow = Math.floor(index / 3);
+    const fallbackLane = index % 3;
+    const row = Math.max(0, Math.min(2, Number(unit.position?.row ?? fallbackRow)));
+    const lane = Math.max(0, Math.min(2, Number(unit.position?.lane ?? fallbackLane)));
+    const x = team === 'ally' ? 14 + lane * 34 : 210 + lane * 30;
+    const y = 88 - row * 24;
     positions.set(unit.id, { x: x + 12, y: y + 9 });
     const color = team === 'ally' ? (allyColors[unit.class] || '#9bc477') : (unit.boss ? '#b94c3e' : '#d77b59');
     px(x + 4, y, 12, 4, '#2b2638'); px(x + 2, y + 4, 16, 12, '#2b2638');
@@ -350,31 +368,31 @@ function paintBattlefield(report, eventLimit) {
     px(x, y - 5, 24, 3, '#2b2638');
     px(x, y - 5, Math.max(0, Math.round(24 * unit.hp / Math.max(1, unit.max))), 3, team === 'ally' ? '#9bc477' : '#e87958');
     if (unit.boss) { px(x + 8, y - 11, 6, 4, '#f3c969'); }
+    ctx.fillStyle = '#e9e1c2';
+    ctx.font = '6px monospace';
+    ctx.fillText(String(lane + 1), x + 10, y + 27);
   };
   allies.forEach((unit, index) => drawUnit(unit, index, 'ally'));
   enemies.forEach((unit, index) => drawUnit(unit, index, 'enemy'));
   const lastEvent = events[events.length - 1];
-  if (lastEvent && ['ally_attack', 'enemy_attack', 'unit_healed'].includes(lastEvent.kind)) {
+  if (lastEvent && ['ally_attack', 'enemy_attack', 'unit_healed', 'boss_telegraph'].includes(lastEvent.kind)) {
     const from = positions.get(lastEvent.actor_id);
     const to = positions.get(lastEvent.target_id);
     if (from && to) {
-      ctx.strokeStyle = lastEvent.kind === 'unit_healed' ? '#9bc477' : '#f3c969';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = lastEvent.kind === 'unit_healed' ? '#9bc477' : lastEvent.kind === 'boss_telegraph' ? '#e87958' : '#f3c969';
+      ctx.lineWidth = lastEvent.kind === 'boss_telegraph' ? 3 : 2;
+      ctx.setLineDash(lastEvent.kind === 'boss_telegraph' ? [3, 2] : []);
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
-      px(to.x - 3, to.y - 3, 6, 6, lastEvent.kind === 'unit_healed' ? '#b7e0a1' : '#f3c969');
-    }
-  }
-  if (lastEvent?.kind === 'boss_telegraph') {
-    const boss = positions.get(lastEvent.actor_id);
-    if (boss) {
-      px(boss.x - 4, boss.y - 18, 8, 8, '#b94c3e');
-      px(boss.x - 1, boss.y - 16, 2, 4, '#f5e9bd');
-      px(boss.x - 1, boss.y - 11, 2, 2, '#f5e9bd');
+      ctx.setLineDash([]);
+      px(to.x - 3, to.y - 3, 6, 6, lastEvent.kind === 'unit_healed' ? '#b7e0a1' : lastEvent.kind === 'boss_telegraph' ? '#e87958' : '#f3c969');
     }
   }
   ctx.fillStyle = '#f5e9bd'; ctx.font = 'bold 7px monospace';
   ctx.fillText('YOUR PARTY', 12, 12); ctx.fillText(report.boss ? 'BOSS ENCOUNTER' : 'ENEMY PARTY', 214, 12);
   ctx.fillStyle = '#f3c969'; ctx.fillText('VS', 151, 15);
+  ctx.fillStyle = '#c9d4b0'; ctx.font = '6px monospace';
+  ctx.fillText('FRONT', 12, 27); ctx.fillText('MID', 12, 52); ctx.fillText('BACK', 12, 76);
+  ctx.fillText('FRONT', 208, 27); ctx.fillText('MID', 208, 52); ctx.fillText('BACK', 208, 76);
   if (!allies.length) { ctx.fillStyle = '#f5e9bd'; ctx.fillText('NO SURVIVORS', 12, 122); }
   if (!enemies.length) { ctx.fillStyle = '#f5e9bd'; ctx.fillText('CLEARED', 246, 122); }
 }
