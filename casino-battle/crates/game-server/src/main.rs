@@ -243,6 +243,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(TraceLayer::new_for_http());
 
     let address: SocketAddr = env::var("BIND_ADDR")
+        .or_else(|_| env::var("PORT").map(|port| format!("0.0.0.0:{port}")))
         .unwrap_or_else(|_| "0.0.0.0:3000".to_owned())
         .parse()?;
     let listener = tokio::net::TcpListener::bind(address).await?;
