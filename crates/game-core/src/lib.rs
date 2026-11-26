@@ -2661,7 +2661,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         let migrated_event = restored.pending_event.clone().unwrap();
-        assert_eq!(restored.ruleset_version, 3);
+        assert_eq!(restored.ruleset_version, 4);
         assert!(restored.pending_route.is_none());
         assert!(!restored.migrate_legacy_state());
         assert_eq!(restored.pending_event, Some(migrated_event));
@@ -2689,7 +2689,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         assert!(restored.pending_event.is_none());
-        assert_eq!(restored.ruleset_version, 3);
+        assert_eq!(restored.ruleset_version, 4);
         let options = restored.pending_route.as_ref().unwrap();
         assert_eq!(options.len(), 3);
         assert!(!restored.migrate_legacy_state());
@@ -2700,7 +2700,7 @@ mod tests {
         let mut game = run(703);
         game.ruleset_version = 1;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 3);
+        assert_eq!(game.ruleset_version, 4);
         assert!(game.pending_event.is_none());
         assert!(game.pending_route.is_none());
         assert!(!game.migrate_legacy_state());
@@ -3009,7 +3009,7 @@ mod tests {
         game.ruleset_version = 2;
 
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 3);
+        assert_eq!(game.ruleset_version, 4);
         assert_eq!(game.units[0].traits.len(), 1);
         assert_eq!(
             game.units[0].imprints,
@@ -3023,6 +3023,108 @@ mod tests {
         assert!(!game.migrate_legacy_state());
         assert_eq!(game.units[0].traits, trait_after_migration);
         assert_eq!(game.units[0].imprints, imprint_after_migration);
+    }
+
+
+    #[test]
+    fn promotion_path_second_tier_depends_on_first_tier_choice() {
+        let mut game = run(1001);
+        let target_id = game.units[0].id;
+        game.units[0].absorb_level = 4;
+        let donor = game.spawn_unit(UnitClass::Mage);
+        let donor_id = donor.id;
+        game.units.push(donor);
+
+        game.absorb(target_id, donor_id).unwrap();
+        let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
+        assert_eq!(target.absorb_level, 5);
+        assert!(target.pending_promotion);
+        assert_eq!(target.promotion_options, ["Warden".to_string(), "Bulwark".to_string()]);
+
+        let health_before = target.health;
+        game.choose_promotion(target_id, "Warden").unwrap();
+        let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
+        assert_eq!(target.promotion_path, vec![PromotionNode::Warden]);
+        assert_eq!(target.promotion.as_deref(), Some("Warden"));
+        assert_eq!(target.health, health_before + 8);
+
+        game.units.iter_mut().find(|unit| unit.id == target_id).unwrap().absorb_level = 11;
+        let donor = game.spawn_unit(UnitClass::Archer);
+        let donor_id = donor.id;
+        game.units.push(donor);
+        game.absorb(target_id, donor_id).unwrap();
+
+        let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
+        assert_eq!(target.absorb_level, 12);
+        assert!(target.pending_promotion);
+        assert_eq!(target.promotion_options, ["Vanguard".to_string(), "Sentinel".to_string()]);
+        let attack_before = target.attack;
+        game.choose_promotion(target_id, "Sentinel").unwrap();
+        let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
+        assert_eq!(target.promotion_path, vec![PromotionNode::Warden, PromotionNode::Sentinel]);
+        assert_eq!(target.health, health_before + 8 + 10);
+        assert_eq!(target.attack, attack_before);
+        assert!(!target.pending_promotion);
+    }
+
+    #[test]
+    fn second_tier_choices_are_branch_specific_and_invalid_branches_are_rejected() {
+        assert_eq!(second_promotion_choices(PromotionNode::Warden), Some([PromotionNode::Vanguard, PromotionNode::Sentinel]));
+        assert_eq!(second_promotion_choices(PromotionNode::Bulwark), Some([PromotionNode::Aegis, PromotionNode::Stonewall]));
+        assert_eq!(second_promotion_choices(PromotionNode::Pathfinder), Some([PromotionNode::Windrunner, PromotionNode::Trailblazer]));
+        assert_eq!(second_promotion_choices(PromotionNode::Arcanist), Some([PromotionNode::Runesmith, PromotionNode::Spellweaver]));
+        assert_eq!(second_promotion_choices(PromotionNode::DireBeast), Some([PromotionNode::Stalker, PromotionNode::Packlord]));
+        assert_eq!(second_promotion_choices(PromotionNode::Vanguard), None);
+
+        let mut game = run(1002);
+        let id = game.units[0].id;
+        game.units[0].absorb_level = 5;
+        game.units[0].pending_promotion = true;
+        assert_eq!(game.choose_promotion(id, "Sentinel"), Err(GameError::InvalidPromotion));
+        game.choose_promotion(id, "Bulwark").unwrap();
+        game.units[0].absorb_level = 12;
+        game.units[0].pending_promotion = true;
+        assert_eq!(game.choose_promotion(id, "Vanguard"), Err(GameError::InvalidPromotion));
+        assert!(game.units[0].pending_promotion);
+    }
+
+    #[test]
+    fn pending_promotion_blocks_absorption_and_wave_progression() {
+        let mut game = run(1003);
+        let target_id = game.units[0].id;
+        game.units[0].absorb_level = 5;
+        game.units[0].pending_promotion = true;
+        game.units[0].promotion_options = ["Warden".to_string(), "Bulwark".to_string()];
+        let donor = game.spawn_unit(UnitClass::Archer);
+        let donor_id = donor.id;
+        game.units.push(donor);
+        let count_before = game.units.len();
+        assert_eq!(game.absorb(target_id, donor_id), Err(GameError::PromotionChoiceRequired));
+        assert_eq!(game.units.len(), count_before);
+        game.phase = RunPhase::Intermission;
+        assert_eq!(game.next_wave(), Err(GameError::PromotionChoiceRequired));
+        game.choose_promotion(target_id, "Warden").unwrap();
+        assert_eq!(game.next_wave(), Err(GameError::JourneyRouteRequired));
+    }
+
+    #[test]
+    fn v3_save_migrates_legacy_promotion_to_typed_path_and_second_tier_options() {
+        let mut game = run(1004);
+        let unit = game.units.first_mut().unwrap();
+        unit.absorb_level = 12;
+        unit.promotion = Some("Warden".to_string());
+        unit.promotion_path.clear();
+        unit.pending_promotion = true;
+        unit.promotion_options = ["Warden".to_string(), "Bulwark".to_string()];
+        game.ruleset_version = 3;
+
+        assert!(game.migrate_legacy_state());
+        let unit = game.units.first().unwrap();
+        assert_eq!(game.ruleset_version, 4);
+        assert_eq!(unit.promotion_path, vec![PromotionNode::Warden]);
+        assert_eq!(unit.promotion_options, ["Vanguard".to_string(), "Sentinel".to_string()]);
+        assert!(unit.pending_promotion);
+        assert!(!game.migrate_legacy_state());
     }
 
     #[test]
