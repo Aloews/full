@@ -23,3 +23,8 @@ The API tests cover health, run creation/read, a real spin action, persisted sna
 ## Evidence policy
 
 CI checks must be read from the exact candidate commit. A local command that could not execute is not a pass. A green build does not prove deployment, multi-user isolation, multi-process persistence, balancing, or full feature parity.
+
+
+## Current validation candidate
+
+The isolated Slotbound validation branch `feat/slotbound-validation` is used to execute the exact-head CI workflow without merging the product branch into `main`.
