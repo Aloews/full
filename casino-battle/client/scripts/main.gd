@@ -833,28 +833,34 @@ func _creature_palette(coat: Color, label: String) -> Dictionary:
     }
 
 func _draw_nameplate(center: Vector2, label: String, friendly: bool, s: float, health_ratio: float) -> void:
-    var baseline := center.y + 48.0 * s
-    draw_string(ThemeDB.fallback_font, Vector2(center.x - 54.0 * s, baseline), label, HORIZONTAL_ALIGNMENT_CENTER, 108.0 * s, 12, INK)
-    var bar := Rect2(Vector2(center.x - 21.0 * s, baseline + 7.0), Vector2(42.0 * s, 4.0))
-    draw_rect(bar, Color(INK, 0.18))
-    draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(health_ratio, 0.0, 1.0), bar.size.y)), SAGE if friendly else CLAY)
+    var baseline := _pixel_point(Vector2(center.x, center.y + 48.0 * s)).y
+    var text_position := _pixel_point(Vector2(center.x - 54.0 * s, baseline))
+    draw_string(ThemeDB.fallback_font, text_position, label, HORIZONTAL_ALIGNMENT_CENTER, 108.0 * s, 12, INK)
+    var bar_position := _pixel_point(Vector2(center.x - 21.0 * s, baseline + 7.0))
+    var bar := Rect2(bar_position, Vector2(roundf(42.0 * s / 2.0) * 2.0, 4.0))
+    draw_rect(bar, Color(INK, 0.35))
+    var fill_width := roundf(bar.size.x * clampf(health_ratio, 0.0, 1.0) / 2.0) * 2.0
+    if fill_width > 0.0:
+        draw_rect(Rect2(bar.position, Vector2(fill_width, bar.size.y)), SAGE if friendly else CLAY)
 
 func _draw_pixel_plant(position: Vector2, variation: int) -> void:
+    var p := _pixel_point(position)
     var trunk_color := Color("#694653")
-    draw_rect(Rect2(position + Vector2(-4, -26), Vector2(8, 28)), trunk_color)
-    draw_rect(Rect2(position + Vector2(-12, -38), Vector2(24, 12)), SAGE.darkened(0.08))
-    draw_rect(Rect2(position + Vector2(-18, -32), Vector2(12, 12)), SAGE)
-    draw_rect(Rect2(position + Vector2(6, -44), Vector2(12, 14)), Color("#78B861"))
-    draw_rect(Rect2(position + Vector2(-8, -50), Vector2(16, 10)), Color("#9BCB69"))
-    draw_rect(Rect2(position + Vector2(-12, -26), Vector2(6, 4)), Color("#9BCB69"))
+    draw_rect(Rect2(p + Vector2(-4, -26), Vector2(8, 28)), trunk_color)
+    draw_rect(Rect2(p + Vector2(-12, -38), Vector2(24, 12)), SAGE.darkened(0.08))
+    draw_rect(Rect2(p + Vector2(-18, -32), Vector2(12, 12)), SAGE)
+    draw_rect(Rect2(p + Vector2(6, -44), Vector2(12, 14)), Color("#78B861"))
+    draw_rect(Rect2(p + Vector2(-8, -50), Vector2(16, 10)), Color("#9BCB69"))
+    draw_rect(Rect2(p + Vector2(-12, -26), Vector2(6, 4)), Color("#9BCB69"))
     if variation == 1:
-        draw_rect(Rect2(position + Vector2(12, -30), Vector2(6, 4)), HONEY)
+        draw_rect(Rect2(p + Vector2(12, -30), Vector2(6, 4)), HONEY)
 
 func _draw_leaf_sprinkle(position: Vector2, variation: int) -> void:
+    var p := _pixel_point(position)
     var color := Color("#9BCB69", 0.8) if variation == 1 else Color("#F3C969", 0.8)
-    draw_rect(Rect2(position, Vector2(4, 2)), color)
-    draw_rect(Rect2(position + Vector2(2, -2), Vector2(2, 6)), color)
-    draw_rect(Rect2(position + Vector2(6, 2), Vector2(4, 2)), color)
+    draw_rect(Rect2(p, Vector2(4, 2)), color)
+    draw_rect(Rect2(p + Vector2(2, -2), Vector2(2, 6)), color)
+    draw_rect(Rect2(p + Vector2(6, 2), Vector2(4, 2)), color)
 
 func _draw_party_strip(size: Vector2) -> void:
     var panel := Rect2(Vector2(70, 555), Vector2(size.x - 140, 112))
@@ -908,7 +914,8 @@ func _sigil_color(sigil: String) -> Color:
             return PAPER_SHADE
 
 func _draw_fate_preview(origin: Vector2) -> void:
-    draw_string(ThemeDB.fallback_font, origin + Vector2(-3, 0), "FATE BOARD", HORIZONTAL_ALIGNMENT_LEFT, 110, 10, INK)
+    origin = _pixel_point(origin)
+    draw_string(ThemeDB.fallback_font, origin + Vector2(-4, 0), "FATE BOARD", HORIZONTAL_ALIGNMENT_LEFT, 110, 10, INK)
     var tile_size := 16.0
     var gap := 6.0
     var sigils := ["leaf", "ember", "tide", "stone", "moon", "wing"]
@@ -922,6 +929,7 @@ func _draw_fate_preview(origin: Vector2) -> void:
             _draw_sigil_icon(tile_origin + Vector2(3, 3), sigil, color)
 
 func _draw_sigil_icon(origin: Vector2, sigil: String, color: Color) -> void:
+    origin = _pixel_point(origin)
     var rows: PackedStringArray
     match sigil:
         "leaf":
