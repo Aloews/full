@@ -292,49 +292,84 @@ function paintBattlefield(report, eventLimit) {
   const allEvents = report.events || [];
   const events = eventLimit === undefined ? allEvents : allEvents.slice(0, eventLimit);
   const actors = new Map();
-  const add = (name, team, health, amount) => {
-    if (!name || name === 'Squad') return;
+  const normalizedName = (name) => String(name || '').replace(/ \(spell\)$/, '');
+  const add = (id, name, team, health, amount = 0) => {
+    if (!id || !name || name === 'Squad') return;
     const initial = Number.isFinite(health) ? Math.max(1, health + amount) : 20;
-    const current = actors.get(name) || { name, team, hp: initial, max: initial };
+    const current = actors.get(id) || { id, name: normalizedName(name), team, hp: initial, max: initial, class: null, boss: false };
+    current.name = normalizedName(name);
     current.team = team;
-    if (health !== undefined) current.hp = Math.max(0, health);
-    current.max = Math.max(current.max, current.hp + amount);
-    actors.set(name, current);
+    if (Number.isFinite(health)) current.hp = Math.max(0, health);
+    current.max = Math.max(current.max, (Number.isFinite(health) ? health : current.hp) + amount);
+    actors.set(id, current);
   };
+  (report.allies || []).forEach((unit) => {
+    actors.set(unit.id, {
+      id: unit.id, name: unit.name, team: 'ally',
+      hp: unit.current_health, max: unit.max_health,
+      class: unit.class, boss: Boolean(unit.boss),
+    });
+  });
+  (report.enemies || []).forEach((unit) => {
+    actors.set(unit.id, {
+      id: unit.id, name: unit.name, team: 'enemy',
+      hp: unit.current_health, max: unit.max_health,
+      class: unit.class, boss: Boolean(unit.boss),
+    });
+  });
   events.forEach((entry) => {
-    if (entry.kind === 'ally_attack') { add(entry.actor, 'ally', undefined, 0); add(entry.target, 'enemy', entry.remaining_health, entry.amount); }
-    if (entry.kind === 'enemy_attack') { add(entry.actor, 'enemy', undefined, 0); add(entry.target, 'ally', entry.remaining_health, entry.amount); }
-    if (entry.kind === 'enemy_defeated') add(entry.target, 'enemy', 0, 0);
-    if (entry.kind === 'ally_defeated') add(entry.target, 'ally', 0, 0);
-    if (entry.kind === 'unit_healed') add(entry.target, 'ally', entry.remaining_health, entry.amount);
-    if (entry.kind === 'boss_telegraph') add(entry.actor, 'enemy', undefined, 0);
+    if (entry.kind === 'ally_attack') {
+      add(entry.actor_id, entry.actor, 'ally');
+      add(entry.target_id, entry.target, 'enemy', entry.remaining_health, entry.amount);
+    }
+    if (entry.kind === 'enemy_attack') {
+      add(entry.actor_id, entry.actor, 'enemy');
+      add(entry.target_id, entry.target, 'ally', entry.remaining_health, entry.amount);
+    }
+    if (entry.kind === 'enemy_defeated') add(entry.target_id, entry.target, 'enemy', 0);
+    if (entry.kind === 'ally_defeated') add(entry.target_id, entry.target, 'ally', 0);
+    if (entry.kind === 'unit_healed') add(entry.target_id, entry.target, 'ally', entry.remaining_health);
+    if (entry.kind === 'boss_telegraph') add(entry.actor_id, entry.actor, 'enemy');
   });
   const allies = [...actors.values()].filter((unit) => unit.team === 'ally');
   const enemies = [...actors.values()].filter((unit) => unit.team === 'enemy');
   const positions = new Map();
+  const allyColors = {
+    guardian: '#9bc477', archer: '#e87958', mage: '#b88ac4',
+    cleric: '#72b9d2', rogue: '#a66da6', beast: '#d7a36a',
+  };
   const drawUnit = (unit, index, team) => {
     const x = team === 'ally' ? 22 + (index % 3) * 38 : 204 + (index % 3) * 34;
     const y = 67 + Math.floor(index / 3) * 25;
-    positions.set(unit.name, { x: x + 12, y: y + 9 });
-    const color = team === 'ally' ? '#9bc477' : '#d77b59';
+    positions.set(unit.id, { x: x + 12, y: y + 9 });
+    const color = team === 'ally' ? (allyColors[unit.class] || '#9bc477') : (unit.boss ? '#b94c3e' : '#d77b59');
     px(x + 4, y, 12, 4, '#2b2638'); px(x + 2, y + 4, 16, 12, '#2b2638');
     px(x + 5, y + 2, 10, 5, color); px(x + 5, y + 7, 10, 7, color);
     px(x + 7, y + 4, 2, 2, '#f5e9bd'); px(x + 12, y + 4, 2, 2, '#f5e9bd');
     px(x + 5, y + 14, 4, 4, '#2b2638'); px(x + 12, y + 14, 4, 4, '#2b2638');
     px(x, y - 5, 24, 3, '#2b2638');
-    px(x, y - 5, Math.max(0, Math.round(24 * unit.hp / unit.max)), 3, team === 'ally' ? '#9bc477' : '#e87958');
+    px(x, y - 5, Math.max(0, Math.round(24 * unit.hp / Math.max(1, unit.max))), 3, team === 'ally' ? '#9bc477' : '#e87958');
+    if (unit.boss) { px(x + 8, y - 11, 6, 4, '#f3c969'); }
   };
   allies.forEach((unit, index) => drawUnit(unit, index, 'ally'));
   enemies.forEach((unit, index) => drawUnit(unit, index, 'enemy'));
   const lastEvent = events[events.length - 1];
-  if (lastEvent && ['ally_attack', 'enemy_attack', 'unit_healed', 'boss_telegraph'].includes(lastEvent.kind)) {
-    const from = positions.get(lastEvent.actor);
-    const to = positions.get(lastEvent.target);
+  if (lastEvent && ['ally_attack', 'enemy_attack', 'unit_healed'].includes(lastEvent.kind)) {
+    const from = positions.get(lastEvent.actor_id);
+    const to = positions.get(lastEvent.target_id);
     if (from && to) {
       ctx.strokeStyle = lastEvent.kind === 'unit_healed' ? '#9bc477' : '#f3c969';
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
       px(to.x - 3, to.y - 3, 6, 6, lastEvent.kind === 'unit_healed' ? '#b7e0a1' : '#f3c969');
+    }
+  }
+  if (lastEvent?.kind === 'boss_telegraph') {
+    const boss = positions.get(lastEvent.actor_id);
+    if (boss) {
+      px(boss.x - 4, boss.y - 18, 8, 8, '#b94c3e');
+      px(boss.x - 1, boss.y - 16, 2, 4, '#f5e9bd');
+      px(boss.x - 1, boss.y - 11, 2, 2, '#f5e9bd');
     }
   }
   ctx.fillStyle = '#f5e9bd'; ctx.font = 'bold 7px monospace';
@@ -343,7 +378,6 @@ function paintBattlefield(report, eventLimit) {
   if (!allies.length) { ctx.fillStyle = '#f5e9bd'; ctx.fillText('NO SURVIVORS', 12, 122); }
   if (!enemies.length) { ctx.fillStyle = '#f5e9bd'; ctx.fillText('CLEARED', 246, 122); }
 }
-
 
 function playBattleReplay(report) {
   const token = ++battleReplayToken;
@@ -366,6 +400,7 @@ function playBattleReplay(report) {
 
 function renderBattle(lost) {
   const report = game.last_battle;
+  if (lost || game.phase !== 'intermission') battleReplayToken += 1;
   if (lost) {
     $('battle-content').innerHTML = '<div class="battle-result defeat"><strong>RUN ENDED</strong><span>Your defence has fallen.</span></div>';
     $('battle-actions').innerHTML = '<button class="button button-primary" id="restart">START NEW RUN</button>';
