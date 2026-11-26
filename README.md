@@ -1,6 +1,8 @@
 # Slotbound
 
-A Rust-first, original slot-machine roguelite defence prototype. The project is structured as a deterministic gameplay domain, an Axum API, and a browser client. It is an independent implementation; it does not contain code, assets, audio, data tables, or binaries from the commercial game.
+Slotbound is an original 2D cozy-fantasy roguelite auto-battler. A 3×3 rune board recruits creatures; the player shapes a roster through absorption, promotion, items and permanent Cores; the squad fights automatically against escalating waves.
+
+**Visual direction:** Cozy 16-bit Fantasy Pixel Art. All game art, characters, environments, animations, audio and UI must be original or properly licensed. This project uses broad retro-game principles only and does not include commercial-game code, assets, audio, data tables or binaries.
 
 ## Run locally
 
@@ -10,27 +12,39 @@ Requirements: Rust 1.85+ (stable), Cargo, and a supported desktop browser.
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace --all-targets
+cargo build --release --workspace
 cargo run -p slotbound-api
 ```
 
-Open `http://localhost:3000`. `GET /healthz` is a readiness check: it reports PostgreSQL only after a live query confirms that `public.slotbound_runs` exists; a failed connection or missing table returns `503`. `local_file` is reported only when a local development run uses the JSON fallback. Runs use PostgreSQL when `SLOTBOUND_DATABASE_URL` (or fallback `DATABASE_URL`) is set. Schema changes are tracked under `crates/api/migrations/` and are applied by the database owner/deployment migration step; the application role has no DDL permissions. Each run update is committed in a transaction with a row lock. Without `DATABASE_URL`, local development falls back to JSON snapshots in `.slotbound-data/runs`; that fallback is single-process only and must not be used for a multi-instance deployment.
+Open `http://localhost:3000`.
+
+Runs use PostgreSQL when `SLOTBOUND_DATABASE_URL` (or fallback `DATABASE_URL`) is set. `GET /healthz` checks the database connection and required `public.slotbound_runs` table before reporting PostgreSQL readiness. The local JSON snapshot fallback is single-process only and must not be used for multi-instance deployment. Database migrations are under `crates/api/migrations` and are applied by a separate privileged migration step; the runtime application role does not receive DDL permissions.
 
 ## Current playable loop
 
-- Roll a 3×3 board. Three matching symbols on any of eight straight paylines summon a unit.
-- Six spins are available per wave. Paid spin cost rises by 50 gold each time, starting at 100.
-- Use one column nudge per wave to alter the last board and capture newly completed lines.
-- Manage the roster, lock units, absorb donors into a keeper, gain imprints, and choose promotions at growth thresholds.
-- Resolve an automatic battle, earn gold, take damage when the formation loses, and progress to the next wave.
-- Every fifth wave is a boss encounter. A victory offers one of three Cores; the between-wave cache sells permanent items and healing.
+- Review gold, hearts, roster, next spin cost and encounter.
+- Roll a 3×3 board with eight horizontal, vertical and diagonal paylines.
+- Three matching class symbols on a line summon a creature.
+- Use one column nudge per wave.
+- Select a keeper, lock important units and absorb donors to grow the keeper.
+- Choose promotions at growth thresholds.
+- Start an automatic battle, collect the result and continue.
+- Every fifth wave is a boss; a boss victory offers one of three Cores.
+- Use the between-wave cache for permanent attack, mitigation or healing items.
 
-The current build is a first playable slice, not a feature-complete recreation. See `docs/MAP.md` for implemented scope, limitations, and the next release gates.
+The current combat resolver is a deterministic power comparison, not yet a unit-by-unit battle timeline. The web visual layer is also a prototype: its symbols still need original pixel sprites, animation strips, bitmap typography and a full asset pipeline. See `docs/MAP.md` for implemented scope, limitations and release gates.
 
 ## Engineering contract
 
-`AGENTS.md` is mandatory for contributors and coding agents. Gameplay rules belong in `slotbound-core`, not UI handlers. Material state transitions must be deterministic for a fixed seed and input sequence, validated before mutation, persisted atomically, and covered by tests. CI on the exact candidate commit is a release gate. Never state that a build or runtime is verified without evidence from the relevant job or test.
+`AGENTS.md` is mandatory for contributors and coding agents. Gameplay rules belong in `slotbound-core`, not UI handlers. Material transitions must be deterministic for a fixed seed and ruleset, validated before mutation, persisted atomically and covered by tests. CI on the exact candidate commit is a release gate. Never state that a build, agent cycle, runtime, database or deployment is verified without direct evidence.
 
+Read:
+- `docs/PRODUCT_CONCEPT.md` — product and mechanics.
+- `docs/VISUAL_STYLE_GUIDE.md` — approved pixel-art direction and asset rules.
+- `docs/ARCHITECTURE.md` — domain/API/browser/storage boundaries.
+- `docs/AI_AGENT_OPERATING_MODEL.md` — specialist roles and delivery workflow.
+- `docs/MAP.md` — current state and executable roadmap.
 
-## Vercel deployment
+## Vercel
 
-The project uses the Vercel Container runtime through `Dockerfile.vercel`. The HTTP server reads Vercel's `PORT` environment variable. Configure a pooled Neon PostgreSQL `SLOTBOUND_DATABASE_URL` for preview and production; `DATABASE_URL` is accepted as a fallback. do not rely on the container filesystem for player saves. Do not rely on the container filesystem for player saves. The Vercel runtime is a request-serving container and can scale or restart independently of an individual run.
+A separate Vercel project named `slotbound` exists in the `aloews-projects` team. The first preview deployment request was rejected by the Vercel API with a daily deployments quota error (HTTP 402). No deployment URL has been verified. The Vercel Container build uses `Dockerfile.vercel`; player saves must use PostgreSQL, never the container filesystem. Configure a pooled `SLOTBOUND_DATABASE_URL` only after a dedicated database and migration path are provisioned and verified.
