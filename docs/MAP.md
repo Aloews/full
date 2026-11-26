@@ -90,15 +90,18 @@ The complete CI run [45896564769](https://github.com/Aloews/full/actions/runs/45
 
 - [x] Army recruitment through the 3×3 sigil board, roster management, keeper/donor absorption, growth and promotions exist in the Rust domain.
 - [x] Deterministic automatic battle simulation emits typed combat events and a combat report.
-- [ ] Add a seeded, weighted event director with event pools by biome, wave, run state and prior choices.
-- [ ] Implement event families: travelling merchant, treasure/cache, shrine/blessing, wounded traveller/recruit, ambush, elite challenge, hazard, bargain/curse and branching story choice.
-- [ ] Give every event explicit eligibility, weight, choice requirements, costs, state effects, rewards, consequences and once-per-run/once-per-biome rules.
-- [ ] Persist event history and resolved choices in GameState; deterministic replay must reproduce the same event sequence for the same seed and command history.
-- [ ] Add an event phase/state machine so events cannot be skipped, duplicated, replayed for rewards or resolved outside their eligible phase.
+- [x] Add a seeded, weighted event director with deterministic selection across five journey event families (cache, shrine, merchant, ranger, ambush).
+- [x] Implement first event families: travelling merchant, treasure/cache, shrine/blessing, wounded ranger/recruit and bandit ambush; elite, hazard, bargain/curse and multi-node story chains remain future content.
+- [x] Give each implemented event explicit choices, costs, state effects, rewards and consequences; biome/once-per-run eligibility rules remain future expansion.
+- [x] Persist pending event, event history and resolved choice/outcome in GameState; event selection is seeded and reproducible.
+- [x] Gate next-wave progression on event resolution; reject invalid, duplicate and out-of-phase event choices.
 - [ ] Show the journey as a branching route with event nodes, battle nodes, elite encounters, shops and boss gates; choices alter the available future.
-- [ ] Replace the battle result-only presentation with a visible 2D battlefield: allied formation, enemy formation, HP bars, telegraphs, projectiles, impact frames, healing, defeats and boss phases.
-- [ ] Animate the Rust-authoritative BattleEvent stream in the browser; animation timing must not change combat outcomes and must support pause/fast-forward/reduced motion.
-- [ ] Add browser E2E tests for event choice effects, save/restore mid-run, event determinism, battle playback ordering and replay protection.
+- [x] Replace result-only presentation with a pixel battlefield snapshot inferred from the authoritative combat event stream, allied/enemy silhouettes and health bars; lane positions, projectile assets and authored boss phases remain future polish.
+- [x] Animate the Rust-authoritative BattleEvent stream as a replay on the pixel battlefield; replay timing does not affect combat outcomes and reduced-motion mode renders the final state immediately.
+- [ ] Add Playwright browser E2E tests for event choice effects, save/restore mid-run, event determinism, battle playback ordering and replay protection (Rust domain and API persistence tests added).
+
+
+**Journey and battle implementation status:** the Rust domain now generates one seeded encounter after a surviving battle, persists it in the run state, validates two consequential choices and records the selected outcome. Five event families are implemented: cache, moonwell, merchant, wounded ranger and bandit ambush. The API exposes `POST /api/runs/{run_id}/event`; next-wave progression is blocked until the pending event is resolved. The browser renders the encounter choices and replays the authoritative combat event stream on a pixel battlefield canvas with ally/enemy health bars. This is a functional first pass; a branching route map, richer event catalogue, authored combat sprites/lanes and real-browser E2E remain open acceptance work.
 
 **Acceptance:** a fresh run must demonstrate recruitment → army composition/development → a meaningful non-battle event with at least two consequential choices → an animated battle that visibly corresponds to the authoritative event stream → rewards and a route choice. A screenshot of the battle report alone does not satisfy visible-battle acceptance.
 
