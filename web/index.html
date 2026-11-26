@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10131c">
+  <meta name="description" content="Slotbound — a slot-machine roguelite defense game prototype.">
+  <title>Slotbound</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Slotbound home"><span class="brand-mark">S</span><span>SLOTBOUND</span></a>
+      <div class="top-actions"><span class="version">PRE-ALPHA</span><button class="button button-quiet" id="new-run">New run</button></div>
+    </header>
+    <section class="hero-row">
+      <div><p class="eyebrow">THE REELS DECIDE. YOU BUILD THE DEFENCE.</p><h1>Fortune is a <em>resource.</em></h1></div>
+      <div class="run-stats" id="run-stats" aria-live="polite"></div>
+    </section>
+    <section class="game-layout">
+      <div class="main-column">
+        <section class="panel machine-panel">
+          <div class="panel-heading"><div><span class="eyebrow">RECRUITMENT ENGINE</span><h2>The machine</h2></div><div class="spins" id="spins"></div></div>
+          <div class="machine-frame"><div class="reel-grid" id="reels" aria-label="3 by 3 symbol board"></div><div class="machine-foot"><span id="last-spin">Waiting for the first spin</span><strong id="spin-price"></strong></div></div>
+          <div class="machine-controls"><button class="button button-primary" id="spin">SPIN <span>↗</span></button><div class="nudge-controls" id="nudge-controls"></div></div>
+        </section>
+        <section class="panel army-panel">
+          <div class="panel-heading"><div><span class="eyebrow">YOUR FORMATION</span><h2>Battle roster</h2></div><span class="unit-count" id="unit-count"></span></div>
+          <div class="army-tools"><span id="absorb-hint">Select a unit to keep, then feed another into it.</span><span id="target-label"></span></div>
+          <div class="unit-grid" id="units"></div>
+        </section>
+        <section class="panel battle-panel">
+          <div class="panel-heading"><div><span class="eyebrow">WAVE ENCOUNTER</span><h2 id="battle-title">The frontier</h2></div><span class="phase-pill" id="phase"></span></div>
+          <div class="battle-content" id="battle-content"></div>
+          <div class="battle-actions" id="battle-actions"></div>
+        </section>
+      </div>
+      <aside class="side-column">
+        <section class="panel status-panel"><span class="eyebrow">RUN STATUS</span><div id="status-list"></div></section>
+        <section class="panel core-panel"><div class="panel-heading"><div><span class="eyebrow">MACHINE MODIFIERS</span><h2>Cores</h2></div><span id="core-count" class="muted"></span></div><div id="cores"></div></section>
+        <section class="panel shop-panel"><div class="panel-heading"><div><span class="eyebrow">BETWEEN WAVES</span><h2>Supply cache</h2></div></div><div id="shop"></div></section>
+        <section class="panel log-panel"><span class="eyebrow">FIELD REPORT</span><div id="field-report" class="field-report" aria-live="polite">Your first deployment is ready.</div></section>
+      </aside>
+    </section>
+    <footer><span>SLOTBOUND</span><span>Deterministic prototype · Local run</span></footer>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+</body>
+</html>

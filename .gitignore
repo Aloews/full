@@ -1,0 +1,4 @@
+/target/
+/.slotbound-data/
+*.tmp
+.DS_Store
