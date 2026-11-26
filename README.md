@@ -13,7 +13,7 @@ cargo test --workspace --all-targets
 cargo run -p slotbound-api
 ```
 
-Open `http://localhost:3000`. Runs use PostgreSQL when `DATABASE_URL` is set. The API applies versioned SQL migrations at startup and updates each run inside a transaction with a row lock. Without `DATABASE_URL`, local development falls back to JSON snapshots in `.slotbound-data/runs`; that fallback is single-process only and must not be used for a multi-instance deployment.
+Open `http://localhost:3000`. Runs use PostgreSQL when `DATABASE_URL` is set. Schema changes are tracked under `migrations/` and are applied by the database owner/deployment migration step; the application role has no DDL permissions. Each run update is committed in a transaction with a row lock. Without `DATABASE_URL`, local development falls back to JSON snapshots in `.slotbound-data/runs`; that fallback is single-process only and must not be used for a multi-instance deployment.
 
 ## Current playable loop
 
