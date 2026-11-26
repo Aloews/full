@@ -7,7 +7,9 @@ Deliver a replayable, persistent roguelite defence game where the 3×3 recruitme
 ## Current repository shape
 
 - `crates/game-core` — pure deterministic gameplay state, rules, commands, progression and combat summary.
-- `crates/api` — Axum HTTP boundary; owns no gameplay rules. Serves browser assets and run API.
+- `crates/api` — Axum HTTP boundary; owns no gameplay rules. Serves browser assets and run API, with file and PostgreSQL storage adapters.
+- `crates/api/migrations` — versioned database migrations applied at API startup.
+- `Dockerfile.vercel` / `vercel.json` — Vercel Container runtime for the Axum server.
 - `web` — responsive browser client; no game-rule calculations beyond presentation previews.
 - `.github/agents` — role contracts for architecture, game design, Rust, persistence, frontend, QA and product integration.
 - `.github/workflows` — exact-SHA CI and bounded AI-agent cycle.
@@ -25,7 +27,7 @@ The source candidate contains:
 - Lock/unlock, donor absorption, stat growth, one imprint, promotion choices at absorb levels 5 and 12.
 - Deterministic wave/boss power resolution, hearts, gold rewards, three Core choices after a boss win, and a between-wave item cache.
 - Axum endpoints for create/read run, spin, nudge, absorb, promotion, lock, battle, next wave, Core selection and item purchase.
-- Transactional PostgreSQL save/load via `DATABASE_URL`, including row-level locking for each game command; local JSON snapshots remain the development fallback.
+- Transactional PostgreSQL save/load via `DATABASE_URL`, including row-level locking for each game command; startup applies SQLx migrations, while local JSON snapshots remain the development fallback.
 - Browser client with local run-ID recovery, responsive panels, machine, roster, shop, cores, battle results, and action feedback.
 
 These are code-level statements. Runtime/CI status must be added only after GitHub Actions completes on the exact commit.

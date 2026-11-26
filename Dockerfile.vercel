@@ -6,7 +6,6 @@ WORKDIR /workspace
 COPY rust-toolchain.toml Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY web ./web
-COPY migrations ./migrations
 
 RUN cargo build --locked --release --package slotbound-api
 
