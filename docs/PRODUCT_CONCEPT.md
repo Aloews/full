@@ -73,7 +73,7 @@ Future target: typed multiple imprint slots, donor inheritance rules, promotion 
 
 Combat must be fully automatic once started. It should be deterministic for a fixed seed, ruleset version, formation and command history. The battle engine belongs in the Rust gameplay domain; the browser may animate server-provided events but cannot decide hits, damage, targets or rewards.
 
-The current candidate uses a simplified comparison of army power and enemy power. It is not yet a full auto-battle simulation.
+The current candidate now includes a deterministic, bounded tick-based combat timeline in the Rust domain. Allies act in stable initiative order; enemies select targets with Guardian-first priority; attacks, defeats, healing and boss telegraphs are recorded as typed events. Guardian reduces incoming damage, Archer gains a timed attack bonus, Rogue has a flat strike bonus, Beast hits harder against healthy targets, Mage has periodic splash damage and Cleric heals a wounded ally on alternating ticks. Units retain remaining health between waves, defeated units leave the roster, and the camp restores a small amount of survivor health. This is a first combat foundation, not a fully balanced tactical system: formation lanes, richer ability cooldowns, status effects, equipment interactions, authored enemy waves and extensive simulation calibration remain future work.
 
 Target combat timeline:
 1. Build battle participants from the player's saved formation and encounter definition.
@@ -121,7 +121,7 @@ A full release should include:
 
 ## Current implementation boundary
 
-Implemented in the current source candidate: 3×3 board and eight paylines; six classes; deterministic seed/RNG; six spins with increasing gold cost; one column nudge per wave; roster, lock/unlock, absorption, simple imprints, threshold promotions; simplified battle power resolution; boss/Core choice; supply cache; Axum API; browser state and run restoration; PostgreSQL persistence adapter with row-level transactions plus local single-process JSON fallback.
+Implemented in the current source candidate: 3×3 board and eight paylines; six classes; deterministic seed/RNG; six spins with increasing gold cost; one column nudge per wave; roster, lock/unlock, absorption, simple imprints, threshold promotions; deterministic tick combat with typed event history; boss/Core choice; supply cache; Axum API; browser state and run restoration; PostgreSQL persistence adapter with row-level transactions plus local single-process JSON fallback.
 
 Not yet implemented as a complete game: unit-by-unit combat, abilities and cooldowns, authored enemy waves, branching route map, stage/biome content, multi-slot imprint inheritance, calibrated weighted symbol probabilities, full asset pipeline and production-quality sprite sheets, real-browser end-to-end coverage, authentication and production operations. See `docs/MAP.md` for current delivery status.
 
