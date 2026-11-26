@@ -15,7 +15,7 @@ The project lives in this directory on the `casino-battle/foundation` branch. It
 
 ## Current implementation
 
-- `crates/game-core`: deterministic run state, rune draws, line combinations and automatic battle simulation.
+- `crates/game-core`: deterministic run state, a 4×4 connected-cluster Fate Board, rank-based recruitment, party synergies, duplicate evolution and lane-aware automatic battle simulation.
 - `crates/game-server`: Axum API, optional PostgreSQL persistence, health check and run endpoints.
 - `client/`: strict 2D Godot presentation prototype. The current geometric actors are layout placeholders, not final production art.
 
@@ -40,6 +40,7 @@ Open `client/project.godot` in Godot 4 to run the 2D visual sandbox.
 - `POST /api/v1/runs` with optional `{"seed": 123}`
 - `GET /api/v1/runs/{run_id}`
 - `POST /api/v1/runs/{run_id}/draw`
+- `POST /api/v1/runs/{run_id}/merge` with `{"keeper_id": 1, "donor_id": 2}`
 - `POST /api/v1/runs/{run_id}/battle`
 
 The initial API is a local development foundation, not a production-hardened public service. Authentication, per-player ownership, migrations-as-a-release-step, rate limits, observability and deployment secrets are release gates.
