@@ -4,7 +4,6 @@ use std::{
     net::SocketAddr,
     str::FromStr,
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 use axum::{
@@ -180,9 +179,8 @@ struct ErrorBody {
 }
 
 #[derive(Deserialize)]
-struct CreateRunRequest {
-    seed: Option<u64>,
-}
+#[serde(deny_unknown_fields)]
+struct CreateRunRequest {}
 
 #[derive(Deserialize)]
 struct MergeRequest {
@@ -222,9 +220,9 @@ async fn create_run(
     State(state): State<AppState>,
     Json(request): Json<CreateRunRequest>,
 ) -> Result<(StatusCode, Json<CreateRunResponse>), ApiError> {
-    let seed = request.seed.unwrap_or_else(random_seed);
-    let run = RunState::new(seed);
+    let _ = request;
     let run_id = Uuid::new_v4();
+    let run = RunState::new(run_id.as_u128() as u64);
     state.save(run_id, &run).await?;
     Ok((
         StatusCode::CREATED,
@@ -272,14 +270,6 @@ async fn merge(
         })
         .await?;
     Ok(Json(RunSnapshot::from(&run)))
-}
-
-fn random_seed() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos() as u64)
-        .unwrap_or(1)
-        .max(1)
 }
 
 #[tokio::main]
