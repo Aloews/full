@@ -2,33 +2,135 @@
 
 ## Product definition
 
-A tactical roguelite defence game in which a 3×3 symbol machine recruits a small army. The player manages a scarce spin budget, decides which recruits to keep or absorb, develops unit roles, selects machine/army modifiers, and prepares for escalating enemy waves and boss encounters.
+Slotbound is a 2D cozy-fantasy roguelite auto-battler. The player runs a small woodland defence company whose recruitment board converts matching magical sigils into creatures. The player shapes the roster through controlled randomness, keeper selection, locking, absorption, promotion, items and permanent Cores. The squad then fights automatically against escalating waves and bosses.
 
-The machine is not an isolated gambling minigame: every result changes army composition, unit-cap pressure, available growth material, and the player's future combat options. Player agency comes from formation choices, absorption targets, nudge tools, item purchases, and core selection—not from passive random outcomes alone.
+The recruitment board is a game mechanic, not a real-money gambling product. There are no cash stakes, payouts or casino venue fantasy. No roulette tables, chips, cabinets or poker-room props belong in the art direction. The 3×3 board is an enchanted rune device that summons allies.
+
+**Core promise:** turn imperfect random recruits into a specialised team, then watch the choices you made in preparation determine the outcome of an automatic battle.
+
+## Player and experience
+
+- Audience: players who enjoy approachable roguelites, party-building, auto-battlers, collection and short strategic sessions.
+- Mood: warm, curious, optimistic and lightly adventurous. Losses should be understandable and encourage a new build, not feel punitive or opaque.
+- Session: a run is a sequence of quick preparation decisions, visible recruitment outcomes, automatic combat resolution and between-wave investment.
+- Player agency: the player does not control every attack. Agency comes from resource allocation, board manipulation, roster composition, sacrifice, formation, specialisation and build synergies.
+- Platform target: browser-first prototype, designed so the game domain can later support a desktop build without moving rules into the browser.
+
+## Visual identity
+
+The approved direction is **Cozy 16-bit Fantasy Pixel Art**. Classic 8/16-bit adventures are broad references for tile-based spaces, expressive silhouettes, limited palettes and readable action. Slotbound uses original characters, environments, animations, iconography, audio and UI. It must not reproduce Nintendo characters, sprites, maps, music, logos, exact compositions or distinctive trade dress.
+
+The visual guide is `docs/VISUAL_STYLE_GUIDE.md`. It defines a 2D-only renderer, crisp nearest-neighbour scaling, a warm parchment/forest/terracotta/honey palette, pixel-grid sizes, animation language, biomes and asset acceptance rules.
 
 ## Core player loop
 
-1. **Prepare** — review gold, health, roster, unit cap, core effects, and the next wave.
-2. **Recruit** — spend a limited number of spins to generate a 3×3 grid. A matching class across a valid line summons a unit.
-3. **Shape the result** — use a limited reel adjustment, choose a keeper, lock valuable units, and absorb donors into the unit being developed.
-4. **Specialize** — at growth thresholds choose a branch; retain compatible imprints and manage unit roles.
-5. **Defend** — resolve an automatic battle against a wave whose strength scales with progression.
-6. **Recover and invest** — earn or lose resources, select a Core after boss milestones, buy items/healing, and prepare the next wave.
+1. **Prepare.** Read the next encounter, current health, gold, roster capacity, spins, items and permanent Cores. Pick a keeper and decide what to protect.
+2. **Recruit.** Spend one of the wave's limited spins on the 3×3 sigil board. Three matching class symbols along a valid line summon a unit.
+3. **Manipulate.** Use the limited column nudge, then inspect the recruits. If the roster is crowded, choose which creature to develop and which donor to sacrifice.
+4. **Develop.** Absorb eligible donors into a keeper. Growth improves stats and records a class imprint. At growth thresholds choose a promotion branch.
+5. **Defend.** Start the battle. Allies and enemies act automatically under deterministic combat rules. The player reads a combat report rather than issuing per-unit attacks.
+6. **Invest.** Resolve rewards and damage. After a boss victory select a permanent Core. During intermission buy supplies or healing, then prepare the next wave.
 
-## Design principles
+## Recruitment board rules
 
-- **Deterministic rules, variable outcomes:** a stored seed plus command sequence reproduces the same run.
-- **Meaningful scarcity:** spins, gold, hearts, unit capacity, item slots, and core slots create competing priorities.
-- **Growth through sacrifice:** absorbing a donor is a permanent roster trade-off, not free experience.
-- **Readable probability:** symbol weights, payline rules, and modifiers must be inspectable and testable.
-- **Build diversity:** classes, imprints, promotions, items, and cores should change decisions rather than only inflate numbers.
-- **Causal combat reports:** show the formation power, enemy power, boss modifier, rewards, and damage.
-- **No false provenance:** third-party community guides are treated as secondary references; balance values in this implementation are our own until verified through controlled playtests.
+The first prototype uses a 3×3 board and eight straight three-cell lines: three horizontal rows, three vertical columns and two diagonals. A line with three matching class sigils summons one unit of that class. A board with all nine symbols identical therefore completes all eight lines.
 
-## Differentiation and originality
+Prototype economy:
+- six spins are available per wave;
+- the first paid spin costs 100 gold;
+- each subsequent paid spin costs 50 gold more than the previous one;
+- one vertical column nudge is available per wave;
+- a spin can temporarily take the roster above capacity; further recruiting is restricted until capacity is restored through absorption;
+- symbol classes are currently selected uniformly. This is a prototype distribution, not a calibrated or player-facing probability claim.
 
-The project may use broad genre-level ideas (reel-based recruitment, auto-battler defence, absorbing units, roguelite modifiers) as design references. It must use independently authored source code, original UI, original text, original sound and commissioned/original art. Do not import assets or decompile/copy code from commercial distributions or unofficial recovered builds.
+The board is designed to create decisions, not a passive slot-machine reward. The player can influence future choices by managing spend, preserving a keeper, using the single nudge and deciding what to absorb.
 
-## Initial balance model
+## Units and roster
 
-The first playable slice uses six classes, an eight-line 3×3 board, six spins per wave, an initial spin cost of 100 gold increasing by 50 each paid spin, a five-unit starting capacity, absorption thresholds at levels 5 and 12, and a boss milestone every five waves. These are explicit prototype parameters, not claims about the commercial game's exact internal balance. Each parameter must be moved into a versioned ruleset/configuration module before balance expansion.
+The six first-prototype roles are:
+
+| Class | Battle identity | Intended tactical value |
+|---|---|---|
+| Guardian | Frontline defender | Protects allies and holds lanes |
+| Archer | Ranged damage | Reliable damage from the back line |
+| Mage | Arcane damage | Burst, area effects or elemental status |
+| Cleric | Support | Healing and defensive utility |
+| Rogue | Skirmisher | Fast attacks, flanking or finishing |
+| Beast | Bruiser | Durable pressure and disruption |
+
+These identities are design roles; actual ability kits and a full combat timeline are not yet implemented. Units have stable IDs, class, level, absorption level, attack, health, lock state, imprint and optional promotion state in the current prototype.
+
+Roster operations:
+- **Select keeper:** designate the unit that receives a donor.
+- **Lock:** protect a unit from accidental sacrifice.
+- **Absorb:** consume an unlocked donor and transfer growth to the keeper.
+- **Promote:** choose a branch when a growth threshold is reached.
+- **Capacity:** create meaningful pressure between recruiting more units and improving the strongest existing unit.
+
+Future target: typed multiple imprint slots, donor inheritance rules, promotion skill trees and explicit formation positions. The current one-string imprint representation is a first version.
+
+## Auto-battle rules and target combat
+
+Combat must be fully automatic once started. It should be deterministic for a fixed seed, ruleset version, formation and command history. The battle engine belongs in the Rust gameplay domain; the browser may animate server-provided events but cannot decide hits, damage, targets or rewards.
+
+The current candidate uses a simplified comparison of army power and enemy power. It is not yet a full auto-battle simulation.
+
+Target combat timeline:
+1. Build battle participants from the player's saved formation and encounter definition.
+2. Apply persistent item/Core modifiers and stage effects.
+3. Resolve initiative, lane occupancy and target priority using stable tie-breaks.
+4. Advance deterministic ticks. Units select a legal target and perform basic attacks when ready.
+5. Resolve armour, guard, damage, healing, shields, status effects, critical effects and deaths in a documented order.
+6. Trigger cooldown abilities and boss telegraphs at explicit ticks.
+7. Emit a typed event for every meaningful state change.
+8. Stop on victory, defeat or a hard turn limit; persist the report and resulting player state atomically.
+
+The event stream should explain why a result happened: who attacked, who was targeted, damage blocked, healing received, status applied, unit defeated, reward granted and health lost.
+
+## Waves, bosses and rewards
+
+- Enemy strength and composition should scale by a versioned ruleset, not ad-hoc UI formulas.
+- The prototype marks every fifth wave as a boss encounter.
+- A boss victory offers three Core options; the player selects one.
+- Cores are persistent run modifiers and should change decisions, not only add generic power.
+- The between-wave supply cache offers items such as attack improvement, damage mitigation and healing.
+- A lost battle costs hearts; reaching zero ends the run.
+- Future stages and biomes should introduce enemy families, environmental rules and boss patterns, not only bigger health values.
+
+## Progression and replayability
+
+A full release should include:
+- authored stages and a branching route map;
+- distinct enemy families and boss patterns;
+- class abilities, synergies and meaningful promotions;
+- typed imprint inheritance;
+- multiple reel tools with explicit charges/costs;
+- items with slot/stack rules;
+- a broad but controlled set of Cores;
+- seeded run generation and deterministic replays;
+- difficulty variants and an endless or challenge mode after the core campaign is balanced.
+
+## Economy and balance principles
+
+- Gold, spins, hearts, roster capacity and item slots are competing resources.
+- Randomness is visible and reproducible. State the actual symbol weights once a calibrated distribution exists.
+- Every action has a clear cost and phase restriction.
+- No resource transition may silently overflow or underflow.
+- Balance reports must show sample count, seed range, win rate, run length, average gold, recruit distributions and uncertainty intervals.
+- Do not use a lucky sample as proof of fairness or difficulty.
+
+## Current implementation boundary
+
+Implemented in the current source candidate: 3×3 board and eight paylines; six classes; deterministic seed/RNG; six spins with increasing gold cost; one column nudge per wave; roster, lock/unlock, absorption, simple imprints, threshold promotions; simplified battle power resolution; boss/Core choice; supply cache; Axum API; browser state and run restoration; PostgreSQL persistence adapter with row-level transactions plus local single-process JSON fallback.
+
+Not yet implemented as a complete game: unit-by-unit combat, abilities and cooldowns, authored enemy waves, branching route map, stage/biome content, multi-slot imprint inheritance, calibrated weighted symbol probabilities, full asset pipeline and production-quality sprite sheets, real-browser end-to-end coverage, authentication and production operations. See `docs/MAP.md` for current delivery status.
+
+## Product principles
+
+- Original assets and source; no extraction or copying from commercial builds.
+- One authoritative rules implementation in Rust.
+- Deterministic state transitions and reproducible defects.
+- Full player journey before feature count.
+- Art and UI must be legible at actual play scale.
+- Every milestone has executable acceptance criteria.
+- Never describe a prototype, build or deployment as a finished game.
