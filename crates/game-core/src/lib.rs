@@ -1939,6 +1939,50 @@ mod tests {
         assert!(game.pending_event.is_some());
     }
 
+
+    #[test]
+    fn battle_report_captures_authoritative_starting_formations() {
+        let mut game = run(607);
+        let starting_units = game.units.clone();
+        let report = game.battle().unwrap();
+        assert_eq!(report.allies.len(), starting_units.len());
+        assert!(!report.enemies.is_empty());
+        for unit in starting_units {
+            let snapshot = report.allies.iter().find(|snapshot| snapshot.id == unit.id).unwrap();
+            assert_eq!(snapshot.max_health, unit.health);
+            assert_eq!(snapshot.current_health, unit.current_health.unwrap_or(unit.health));
+            assert_eq!(snapshot.class, Some(unit.class));
+        }
+    }
+
+    #[test]
+    fn legacy_save_without_event_route_and_battle_snapshot_fields_loads() {
+        let mut game = run(608);
+        game.battle().unwrap();
+        let mut value = serde_json::to_value(game).unwrap();
+        let object = value.as_object_mut().unwrap();
+        for key in ["pending_event", "event_history", "pending_route", "current_route", "route_history"] {
+            object.remove(key);
+        }
+        let battle = object
+            .get_mut("last_battle")
+            .and_then(serde_json::Value::as_object_mut)
+            .unwrap();
+        for key in ["route", "allies", "enemies"] {
+            battle.remove(key);
+        }
+        let restored: GameState = serde_json::from_value(value).unwrap();
+        assert!(restored.pending_event.is_none());
+        assert!(restored.event_history.is_empty());
+        assert!(restored.pending_route.is_none());
+        assert!(restored.current_route.is_none());
+        assert!(restored.route_history.is_empty());
+        let report = restored.last_battle.unwrap();
+        assert!(report.route.is_none());
+        assert!(report.allies.is_empty());
+        assert!(report.enemies.is_empty());
+    }
+
     #[test]
     fn route_fork_is_seeded_and_has_three_distinct_options() {
         let mut a = run(601);
