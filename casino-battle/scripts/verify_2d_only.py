@@ -65,16 +65,64 @@ else:
     sprite_blocks = re.findall(r"return PackedStringArray\(\[(.*?)\]\)", creature_section, re.DOTALL)
     if len(sprite_blocks) < 8:
         violations.append(f"main.gd: expected at least 8 original sprite maps, found {len(sprite_blocks)}")
+
+    required_characters = (
+        "Mossguard",
+        "Cinderkit",
+        "Puddlekin",
+        "Pebbleback",
+        "Moonmote",
+        "Breezeling",
+        "Gloomling",
+        "Murkling",
+        "Mosswood Guardian",
+    )
+    for character in required_characters:
+        if f'"{character}":' not in creature_section:
+            violations.append(f"main.gd: missing distinct sprite definition for {character}")
+
+    sprite_signatures: set[tuple[str, ...]] = set()
+    allowed_pixels = set(".ksbhaep")
     for sprite_index, block in enumerate(sprite_blocks):
         rows = re.findall(r'"([^"]*)"', block)
         if len(rows) != 16:
             violations.append(f"main.gd: sprite map {sprite_index} must contain 16 rows, found {len(rows)}")
             continue
+
+        dimensions_valid = True
         for row_index, row in enumerate(rows):
             if len(row) != 16:
+                dimensions_valid = False
                 violations.append(
                     f"main.gd: sprite map {sprite_index} row {row_index} must be 16 pixels wide, found {len(row)}"
                 )
+
+        if not dimensions_valid:
+            continue
+
+        pixels = set("".join(rows))
+        unknown_pixels = pixels - allowed_pixels
+        if unknown_pixels:
+            violations.append(
+                f"main.gd: sprite map {sprite_index} uses unknown palette keys {sorted(unknown_pixels)}"
+            )
+
+        if not {"k", "s", "b"}.issubset(pixels):
+            violations.append(f"main.gd: sprite map {sprite_index} needs outline, shadow and base clusters")
+
+        filled_pixels = sum(character != "." for row in rows for character in row)
+        if filled_pixels < 24 or filled_pixels > 220:
+            violations.append(
+                f"main.gd: sprite map {sprite_index} has implausible silhouette coverage ({filled_pixels}/256)"
+            )
+
+        signature = tuple(rows)
+        if signature in sprite_signatures:
+            violations.append(f"main.gd: sprite map {sprite_index} duplicates another unit silhouette")
+        sprite_signatures.add(signature)
+
+    if len(sprite_signatures) < 8:
+        violations.append("main.gd: fewer than eight unique pixel silhouettes are defined")
 
 if violations:
     print("\n".join(violations), file=sys.stderr)
