@@ -27,6 +27,7 @@ Requirements: Rust stable (1.85+) and Godot 4.3+ for the client.
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace --all-targets
+cargo run -p casino-battle-core --bin balance -- 5000
 cargo run -p casino-battle-server
 ```
 
