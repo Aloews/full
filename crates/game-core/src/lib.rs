@@ -85,7 +85,6 @@ pub enum RunPhase {
     Lost,
 }
 
-
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum UnitTrait {
@@ -570,7 +569,8 @@ impl GameState {
                     .any(|resolution| resolution.event_id == current_event_id);
 
                 if current_event_was_resolved {
-                    self.pending_route = Some(self.generate_route_options(self.wave.saturating_add(1)));
+                    self.pending_route =
+                        Some(self.generate_route_options(self.wave.saturating_add(1)));
                 } else {
                     self.pending_event = Some(self.generate_journey_event());
                 }
@@ -729,10 +729,17 @@ impl GameState {
             target.imprint = Some(donor.class.imprint().to_string());
         }
         let inherited_imprint = UnitImprint::from_class(donor.class);
-        if let Some(slot) = target.imprints.iter_mut().find(|slot| slot.kind == inherited_imprint) {
+        if let Some(slot) = target
+            .imprints
+            .iter_mut()
+            .find(|slot| slot.kind == inherited_imprint)
+        {
             slot.rank = slot.rank.saturating_add(1).min(3);
         } else if target.imprints.len() < imprint_slot_capacity(target.absorb_level) {
-            target.imprints.push(UnitImprintSlot { kind: inherited_imprint, rank: 1 });
+            target.imprints.push(UnitImprintSlot {
+                kind: inherited_imprint,
+                rank: 1,
+            });
         }
         for inherited_trait in donor.traits {
             if target.traits.len() < 3 && !target.traits.contains(&inherited_trait) {
@@ -844,8 +851,13 @@ impl GameState {
                 imprints: unit.imprints.clone(),
                 attack: unit.attack,
                 max_health: unit.health.max(1),
-                current_health: unit.current_health.unwrap_or(unit.health).min(unit.health).max(1),
-                initiative: class_initiative(unit.class).saturating_add(trait_initiative_bonus(&unit.traits)),
+                current_health: unit
+                    .current_health
+                    .unwrap_or(unit.health)
+                    .min(unit.health)
+                    .max(1),
+                initiative: class_initiative(unit.class)
+                    .saturating_add(trait_initiative_bonus(&unit.traits)),
                 boss: false,
             })
             .collect();
@@ -951,8 +963,12 @@ impl GameState {
                     let splash_index = select_target_index(&enemies, &actor, false)
                         .expect("enemy list is checked as non-empty");
                     let splash_target = enemies[splash_index].clone();
-                    let imprint_splash = imprint_rank_bonus(&actor.imprints, UnitImprint::Spellpower, 2);
-                    let splash_base_damage = 2u32.saturating_add(imprint_splash).saturating_mul(core_percent) / 100;
+                    let imprint_splash =
+                        imprint_rank_bonus(&actor.imprints, UnitImprint::Spellpower, 2);
+                    let splash_base_damage = 2u32
+                        .saturating_add(imprint_splash)
+                        .saturating_mul(core_percent)
+                        / 100;
                     let splash_damage = apply_boss_gate_bonus(splash_base_damage, boss_gate).max(1);
                     enemies[splash_index].current_health = enemies[splash_index]
                         .current_health
@@ -1043,7 +1059,11 @@ impl GameState {
                 let telegraph_bonus = if enemy.boss && tick % 3 == 0 { 2 } else { 0 };
                 let guard_reduction = u32::from(target.class == Some(UnitClass::Guardian))
                     .saturating_add(trait_damage_reduction(&target.traits))
-                    .saturating_add(imprint_rank_bonus(&target.imprints, UnitImprint::Fortify, 1));
+                    .saturating_add(imprint_rank_bonus(
+                        &target.imprints,
+                        UnitImprint::Fortify,
+                        1,
+                    ));
                 let damage = enemy
                     .attack
                     .saturating_add(telegraph_bonus)
@@ -1581,7 +1601,13 @@ impl GameState {
             level: 1,
             absorb_level: 0,
             attack: attack + variance,
-            health: health + variance + if rolled_trait == UnitTrait::Stout { 3 } else { 0 },
+            health: health
+                + variance
+                + if rolled_trait == UnitTrait::Stout {
+                    3
+                } else {
+                    0
+                },
             current_health: None,
             imprint: None,
             promotion: None,
@@ -1641,7 +1667,6 @@ impl GameState {
     }
 }
 
-
 fn imprint_slot_capacity(absorb_level: u16) -> usize {
     1 + usize::from(absorb_level >= 5) + usize::from(absorb_level >= 12)
 }
@@ -1658,34 +1683,45 @@ fn class_initiative(class: UnitClass) -> u8 {
 }
 
 fn trait_initiative_bonus(traits: &[UnitTrait]) -> u8 {
-    (traits.iter().filter(|kind| **kind == UnitTrait::Swift).count() as u8).saturating_mul(2)
+    (traits
+        .iter()
+        .filter(|kind| **kind == UnitTrait::Swift)
+        .count() as u8)
+        .saturating_mul(2)
 }
 
 fn trait_attack_bonus(traits: &[UnitTrait]) -> u32 {
-    traits.iter().filter(|kind| **kind == UnitTrait::Brutal).count() as u32 * 2
+    traits
+        .iter()
+        .filter(|kind| **kind == UnitTrait::Brutal)
+        .count() as u32
+        * 2
 }
 
 fn trait_damage_reduction(traits: &[UnitTrait]) -> u32 {
-    traits.iter().filter(|kind| **kind == UnitTrait::Guarded).count() as u32
+    traits
+        .iter()
+        .filter(|kind| **kind == UnitTrait::Guarded)
+        .count() as u32
 }
 
 fn imprint_rank_bonus(imprints: &[UnitImprintSlot], kind: UnitImprint, per_rank: u32) -> u32 {
     imprints
         .iter()
         .filter(|slot| slot.kind == kind)
-        .fold(0u32, |total, slot| total.saturating_add(u32::from(slot.rank).saturating_mul(per_rank)))
+        .fold(0u32, |total, slot| {
+            total.saturating_add(u32::from(slot.rank).saturating_mul(per_rank))
+        })
 }
 
 fn imprint_attack_bonus(actor: &Combatant, target: &Combatant, tick: u32) -> u32 {
     trait_attack_bonus(&actor.traits)
         .saturating_add(imprint_rank_bonus(&actor.imprints, UnitImprint::Pierce, 1))
-        .saturating_add(
-            if tick % 3 == 0 {
-                imprint_rank_bonus(&actor.imprints, UnitImprint::Critical, 1)
-            } else {
-                0
-            },
-        )
+        .saturating_add(if tick % 3 == 0 {
+            imprint_rank_bonus(&actor.imprints, UnitImprint::Critical, 1)
+        } else {
+            0
+        })
         .saturating_add(
             if target.current_health.saturating_mul(2) > target.max_health {
                 imprint_rank_bonus(&actor.imprints, UnitImprint::Fury, 1)
