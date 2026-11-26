@@ -262,7 +262,6 @@ pub struct JourneyEventResolution {
     pub outcome: String,
 }
 
-
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum RouteNodeKind {
@@ -1160,37 +1159,70 @@ impl GameState {
 
     fn generate_route_options(&mut self, target_wave: u32) -> Vec<RouteOption> {
         let kinds = if target_wave % 5 == 0 {
-            [RouteNodeKind::Rest, RouteNodeKind::Merchant, RouteNodeKind::BossGate, RouteNodeKind::BossGate]
+            [
+                RouteNodeKind::Rest,
+                RouteNodeKind::Merchant,
+                RouteNodeKind::BossGate,
+                RouteNodeKind::BossGate,
+            ]
         } else {
-            [RouteNodeKind::Battle, RouteNodeKind::Rest, RouteNodeKind::Merchant, RouteNodeKind::Elite]
+            [
+                RouteNodeKind::Battle,
+                RouteNodeKind::Rest,
+                RouteNodeKind::Merchant,
+                RouteNodeKind::Elite,
+            ]
         };
         let start = (self.random_u32() % 4) as usize;
         let mut selected = Vec::with_capacity(3);
         for offset in 0..4 {
             let kind = kinds[(start + offset) % 4];
-            if selected.iter().any(|option: &RouteOption| option.kind == kind) {
+            if selected
+                .iter()
+                .any(|option: &RouteOption| option.kind == kind)
+            {
                 continue;
             }
             let (title, description) = match kind {
-                RouteNodeKind::Battle => ("Old forest road", "A standard encounter. No detours, no extra danger."),
-                RouteNodeKind::Rest => ("Mosslight sanctuary", "Recover one heart and restore 5 health to each surviving companion."),
-                RouteNodeKind::Merchant => ("Caravan crossing", "Find a travelling supply cart and gain 75 gold for the expedition."),
-                RouteNodeKind::Elite => ("Thornwarden lair", "Face an elite enemy group. The route pays an extra 35 gold if you win."),
-                RouteNodeKind::BossGate => ("Ancient boss gate", "The next wave is a boss encounter. Choose your approach before entering."),
+                RouteNodeKind::Battle => (
+                    "Old forest road",
+                    "A standard encounter. No detours, no extra danger.",
+                ),
+                RouteNodeKind::Rest => (
+                    "Mosslight sanctuary",
+                    "Recover one heart and restore 5 health to each surviving companion.",
+                ),
+                RouteNodeKind::Merchant => (
+                    "Caravan crossing",
+                    "Find a travelling supply cart and gain 75 gold for the expedition.",
+                ),
+                RouteNodeKind::Elite => (
+                    "Thornwarden lair",
+                    "Face an elite enemy group. The route pays an extra 35 gold if you win.",
+                ),
+                RouteNodeKind::BossGate => (
+                    "Ancient boss gate",
+                    "The next wave is a boss encounter. Choose your approach before entering.",
+                ),
             };
             selected.push(RouteOption {
-                id: format!("route-{target_wave}-{}", match kind {
-                    RouteNodeKind::Battle => "battle",
-                    RouteNodeKind::Rest => "rest",
-                    RouteNodeKind::Merchant => "merchant",
-                    RouteNodeKind::Elite => "elite",
-                    RouteNodeKind::BossGate => "boss",
-                }),
+                id: format!(
+                    "route-{target_wave}-{}",
+                    match kind {
+                        RouteNodeKind::Battle => "battle",
+                        RouteNodeKind::Rest => "rest",
+                        RouteNodeKind::Merchant => "merchant",
+                        RouteNodeKind::Elite => "elite",
+                        RouteNodeKind::BossGate => "boss",
+                    }
+                ),
                 kind,
                 title: title.to_string(),
                 description: description.to_string(),
             });
-            if selected.len() == 3 { break; }
+            if selected.len() == 3 {
+                break;
+            }
         }
         selected
     }
@@ -1202,8 +1234,14 @@ impl GameState {
         if self.pending_event.is_some() {
             return Err(GameError::JourneyEventRequired);
         }
-        let options = self.pending_route.clone().ok_or(GameError::NoJourneyRoute)?;
-        let option = options.get(index).cloned().ok_or(GameError::InvalidRouteChoice)?;
+        let options = self
+            .pending_route
+            .clone()
+            .ok_or(GameError::NoJourneyRoute)?;
+        let option = options
+            .get(index)
+            .cloned()
+            .ok_or(GameError::InvalidRouteChoice)?;
         let target_wave = self.wave.saturating_add(1);
         if option.kind == RouteNodeKind::BossGate && target_wave % 5 != 0 {
             return Err(GameError::InvalidRouteChoice);
@@ -1217,13 +1255,16 @@ impl GameState {
                     let restored = health.saturating_add(5).min(unit.health);
                     unit.current_health = (restored < unit.health).then_some(restored);
                 }
-                "Rested at Mosslight sanctuary: +1 heart and up to 5 health per survivor.".to_string()
+                "Rested at Mosslight sanctuary: +1 heart and up to 5 health per survivor."
+                    .to_string()
             }
             RouteNodeKind::Merchant => {
                 self.gold = self.gold.saturating_add(75);
                 "Traded at the caravan crossing: +75 gold.".to_string()
             }
-            RouteNodeKind::Elite => "Entered Thornwarden lair: elite enemies ahead, +35 gold on victory.".to_string(),
+            RouteNodeKind::Elite => {
+                "Entered Thornwarden lair: elite enemies ahead, +35 gold on victory.".to_string()
+            }
             RouteNodeKind::BossGate => "Entered the ancient boss gate.".to_string(),
         };
         self.route_history.push(RouteResolution {
@@ -1414,11 +1455,16 @@ fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> 
             } else {
                 8u32.saturating_add(wave.saturating_mul(2))
             };
-            let base_health = if elite && !boss { base_health.saturating_mul(5) / 4 } else { base_health };
+            let base_health = if elite && !boss {
+                base_health.saturating_mul(5) / 4
+            } else {
+                base_health
+            };
             let attack = if boss {
                 4u32.saturating_add(wave / 3)
             } else {
-                2u32.saturating_add(wave / 5).saturating_add(if elite { 1 } else { 0 })
+                2u32.saturating_add(wave / 5)
+                    .saturating_add(if elite { 1 } else { 0 })
             };
             Combatant {
                 id: u64::MAX.saturating_sub(index as u64),
@@ -1449,7 +1495,6 @@ mod tests {
     fn run(seed: u64) -> GameState {
         GameState::new(seed, "test-run")
     }
-
 
     fn set_route(game: &mut GameState, kind: RouteNodeKind) {
         game.phase = RunPhase::Intermission;
@@ -1854,7 +1899,6 @@ mod tests {
         assert_eq!(game.units.len(), game.unit_limit);
         assert!(game.pending_event.is_some());
     }
-
 
     #[test]
     fn route_fork_is_seeded_and_has_three_distinct_options() {

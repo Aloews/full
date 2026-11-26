@@ -684,30 +684,55 @@ mod tests {
             assert_eq!(restored.event_history, saved.event_history);
             assert!(restored.pending_route.is_some());
             let route_uri = format!("/api/runs/{}/route", created.run_id);
-            let selected = router.clone().oneshot(
-                Request::builder().method("POST").uri(&route_uri)
-                    .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(r#"{"index":0}"#)).unwrap()
-            ).await.unwrap();
+            let selected = router
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri(&route_uri)
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(r#"{"index":0}"#))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
             assert_eq!(selected.status(), StatusCode::OK);
-            let selected: GameState = serde_json::from_slice(
-                &selected.into_body().collect().await.unwrap().to_bytes()
-            ).unwrap();
+            let selected: GameState =
+                serde_json::from_slice(&selected.into_body().collect().await.unwrap().to_bytes())
+                    .unwrap();
             assert!(selected.pending_route.is_none());
             assert_eq!(selected.route_history.len(), 1);
-            let route_replay = router.clone().oneshot(
-                Request::builder().method("POST").uri(&route_uri)
-                    .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(r#"{"index":0}"#)).unwrap()
-            ).await.unwrap();
+            let route_replay = router
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri(&route_uri)
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(r#"{"index":0}"#))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
             assert_eq!(route_replay.status(), StatusCode::CONFLICT);
-            let restored_after_route = app_with_data_dir(dir.clone()).oneshot(
-                Request::builder().uri(format!("/api/runs/{}", created.run_id))
-                    .body(Body::empty()).unwrap()
-            ).await.unwrap();
+            let restored_after_route = app_with_data_dir(dir.clone())
+                .oneshot(
+                    Request::builder()
+                        .uri(format!("/api/runs/{}", created.run_id))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
             let restored_after_route: GameState = serde_json::from_slice(
-                &restored_after_route.into_body().collect().await.unwrap().to_bytes()
-            ).unwrap();
+                &restored_after_route
+                    .into_body()
+                    .collect()
+                    .await
+                    .unwrap()
+                    .to_bytes(),
+            )
+            .unwrap();
             assert_eq!(restored_after_route.route_history, selected.route_history);
             exercised = true;
             break;
