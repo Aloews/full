@@ -236,7 +236,7 @@ where
     if let Some(pool) = &state.pool {
         let mut transaction = pool.begin().await.map_err(|_| ApiError::database())?;
         let stored: Option<sqlx::types::Json<GameState>> =
-            sqlx::query_as("SELECT state FROM slotbound_runs WHERE run_id = $1 FOR UPDATE")
+            sqlx::query_scalar("SELECT state FROM slotbound_runs WHERE run_id = $1 FOR UPDATE")
                 .bind(&run_id)
                 .fetch_optional(&mut *transaction)
                 .await
@@ -334,7 +334,7 @@ async fn get_run(
 ) -> Result<Json<GameState>, ApiError> {
     if let Some(pool) = &state.pool {
         let stored: Option<sqlx::types::Json<GameState>> =
-            sqlx::query_as("SELECT state FROM slotbound_runs WHERE run_id = $1")
+            sqlx::query_scalar("SELECT state FROM slotbound_runs WHERE run_id = $1")
                 .bind(&run_id)
                 .fetch_optional(pool)
                 .await
