@@ -163,7 +163,8 @@ fn app_state(data_dir: PathBuf, pool: Option<PgPool>) -> AppState {
                     .ok()
                     .and_then(|bytes| serde_json::from_slice::<GameState>(&bytes).ok())
                 {
-                    Some(game) => {
+                    Some(mut game) => {
+                        game.migrate_legacy_state();
                         runs.insert(game.run_id.clone(), game);
                     }
                     None => eprintln!("Skipping unreadable Slotbound save: {}", path.display()),
@@ -271,6 +272,7 @@ where
                 .await
                 .map_err(|_| ApiError::database())?;
         let mut game = stored.map(|row| row.0).ok_or_else(ApiError::not_found)?;
+        game.migrate_legacy_state();
 
         mutation(&mut game).map_err(ApiError::from_game)?;
 
@@ -291,7 +293,9 @@ where
     let mut runs = state.runs.write().await;
     let game = runs.get_mut(&run_id).ok_or_else(ApiError::not_found)?;
     let previous = game.clone();
+    game.migrate_legacy_state();
     if let Err(error) = mutation(game) {
+        *game = previous;
         return Err(ApiError::from_game(error));
     }
     if save_game(&state.data_dir, game).await.is_err() {
@@ -382,19 +386,20 @@ async fn get_run(
                 .fetch_optional(pool)
                 .await
                 .map_err(|_| ApiError::database())?;
-        return stored
-            .map(|row| Json(row.0))
-            .ok_or_else(ApiError::not_found);
+        let mut game = stored.map(|row| row.0).ok_or_else(ApiError::not_found)?;
+        game.migrate_legacy_state();
+        return Ok(Json(game));
     }
 
-    state
+    let mut game = state
         .runs
         .read()
         .await
         .get(&run_id)
         .cloned()
-        .map(Json)
-        .ok_or_else(ApiError::not_found)
+        .ok_or_else(ApiError::not_found)?;
+    game.migrate_legacy_state();
+    Ok(Json(game))
 }
 async fn spin(
     State(state): State<AppState>,
@@ -741,6 +746,78 @@ mod tests {
             exercised,
             "the deterministic seed sample must produce at least one survivable event"
         );
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+
+    #[tokio::test]
+    async fn legacy_intermission_save_is_migrated_and_can_continue() {
+        let dir = std::env::temp_dir().join(format!("slotbound-api-legacy-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let mut legacy = GameState::new(7001, "legacy-run");
+        legacy.battle().unwrap();
+        assert_eq!(legacy.phase, slotbound_core::RunPhase::Intermission);
+        let mut value = serde_json::to_value(&legacy).unwrap();
+        let object = value.as_object_mut().unwrap();
+        object.insert("ruleset_version".to_string(), serde_json::json!(1));
+        for key in ["pending_event", "pending_route", "current_route", "route_history"] {
+            object.remove(key);
+        }
+        let battle = object.get_mut("last_battle").unwrap().as_object_mut().unwrap();
+        for key in ["route", "allies", "enemies"] {
+            battle.remove(key);
+        }
+        fs::write(dir.join("legacy-run.json"), serde_json::to_vec(&value).unwrap()).unwrap();
+
+        let router = app_with_data_dir(dir.clone());
+        let response = router.clone().oneshot(
+            Request::builder().uri("/api/runs/legacy-run").body(Body::empty()).unwrap()
+        ).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let migrated: GameState = serde_json::from_slice(
+            &response.into_body().collect().await.unwrap().to_bytes()
+        ).unwrap();
+        assert_eq!(migrated.ruleset_version, 2);
+        assert!(migrated.pending_event.is_some());
+
+        let resolved = router.clone().oneshot(
+            Request::builder().method("POST")
+                .uri("/api/runs/legacy-run/event")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(r#"{"index":1}"#)).unwrap()
+        ).await.unwrap();
+        assert_eq!(resolved.status(), StatusCode::OK);
+        let after_event: GameState = serde_json::from_slice(
+            &resolved.into_body().collect().await.unwrap().to_bytes()
+        ).unwrap();
+        assert!(after_event.pending_event.is_none());
+        assert_eq!(after_event.pending_route.as_ref().unwrap().len(), 3);
+
+        let selected = router.clone().oneshot(
+            Request::builder().method("POST")
+                .uri("/api/runs/legacy-run/route")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(r#"{"index":0}"#)).unwrap()
+        ).await.unwrap();
+        assert_eq!(selected.status(), StatusCode::OK);
+        let after_route: GameState = serde_json::from_slice(
+            &selected.into_body().collect().await.unwrap().to_bytes()
+        ).unwrap();
+        assert!(after_route.pending_route.is_none());
+        assert_eq!(after_route.route_history.len(), 1);
+
+        let next = router.oneshot(
+            Request::builder().method("POST")
+                .uri("/api/runs/legacy-run/next-wave").body(Body::empty()).unwrap()
+        ).await.unwrap();
+        assert_eq!(next.status(), StatusCode::OK);
+        let advanced: GameState = serde_json::from_slice(
+            &next.into_body().collect().await.unwrap().to_bytes()
+        ).unwrap();
+        assert_eq!(advanced.wave, 2);
+
         fs::remove_dir_all(dir).unwrap();
     }
 
