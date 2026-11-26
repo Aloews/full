@@ -1,6 +1,6 @@
 # Casino Battle development map
 
-**Current gate: Foundation branch — Rust domain, server API and 2D visual sandbox.**
+**Current gate: Foundation branch — Rust domain, server API and strict 2D visual sandbox.**
 
 The map is the source of truth for autonomous coding agents. Update status only when a file, test, CI run or deployment proves the state.
 
@@ -19,7 +19,7 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [x] Standalone project subtree under `casino-battle/`.
 - [x] Rust workspace.
 - [x] Deterministic core crate.
-- [x] 3×3 sigil-draw prototype and eight matching lines.
+- [x] 4×4 Fate Board using orthogonally connected clusters (no paylines).
 - [x] Initial party roster and recruit cap.
 - [x] Automatic battle simulator.
 - [x] Axum API endpoints for start, state, draw and battle.
@@ -27,15 +27,14 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [x] Health endpoint that distinguishes Postgres from memory-only mode.
 - [x] Godot 2D visual sandbox.
 - [x] Rust CI workflow.
-- [ ] CI result inspected and all failures fixed.
-- [ ] Godot headless import / parse verification.
+- [x] Latest full CI run green on exact foundation commit (Rust format, Clippy, tests, 2D audit and Godot 4.3 headless import).
 
 ## Gameplay systems
 
-- [ ] Formation grid with front / middle / back rows and lane targeting.
-- [ ] Unit roles, affinities, factions and tier data as content definitions.
-- [ ] Duplicate merging, rank-up and branching evolution.
-- [ ] Imprints / traits that alter combat behavior.
+- [x] Three-lane targeting with nearest-lane target selection (basic prototype).
+- [x] Initial unit roles and sigil synergies (two tiers); data-driven content definitions remain open.
+- [x] Duplicate merging and rank-up to three ranks (basic prototype).
+- [ ] Branching evolution, imprints and traits that alter combat behavior.
 - [ ] Relics and build-defining cores.
 - [ ] Player-controlled preparation tools: lock, nudge, reroll and pity.
 - [ ] Event, shop and route nodes.
@@ -58,7 +57,7 @@ The map is the source of truth for autonomous coding agents. Update status only 
 ## Backend and production
 
 - [ ] Player identity and run ownership.
-- [ ] Durable state transitions with concurrency control.
+- [ ] Cross-instance database locking, transaction-level state transitions and player run ownership.
 - [ ] Session security and request validation.
 - [ ] PostgreSQL schema versioning and migration release job.
 - [ ] Rate limits and abuse protection.
