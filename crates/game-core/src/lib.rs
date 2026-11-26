@@ -140,7 +140,7 @@ pub struct CombatantSnapshot {
     pub current_health: u32,
     pub boss: bool,
     #[serde(default)]
-    pub position: FormationPosition,
+    pub position: Option<FormationPosition>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -724,7 +724,7 @@ impl GameState {
                 max_health: unit.max_health,
                 current_health: unit.current_health,
                 boss: unit.boss,
-                position: unit.position,
+                position: Some(unit.position),
             })
             .collect::<Vec<_>>();
         let enemy_snapshots = enemies
@@ -2156,6 +2156,7 @@ mod tests {
                 .find(|snapshot| snapshot.class == Some(class))
                 .unwrap()
                 .position
+                .unwrap()
         };
         assert_eq!(position_for(UnitClass::Guardian), FormationPosition { row: 0, lane: 1 });
         assert_eq!(position_for(UnitClass::Beast), FormationPosition { row: 0, lane: 0 });
@@ -2247,6 +2248,24 @@ mod tests {
         assert!(report.route.is_none());
         assert!(report.allies.is_empty());
         assert!(report.enemies.is_empty());
+    }
+
+
+    #[test]
+    fn old_battle_snapshots_without_positions_remain_readable() {
+        let mut game = run(802);
+        let mut value = serde_json::to_value(game.battle().unwrap()).unwrap();
+        let battle = value.as_object_mut().unwrap();
+        for team in ["allies", "enemies"] {
+            if let Some(units) = battle.get_mut(team).and_then(serde_json::Value::as_array_mut) {
+                for unit in units {
+                    unit.as_object_mut().unwrap().remove("position");
+                }
+            }
+        }
+        let restored: BattleReport = serde_json::from_value(value).unwrap();
+        assert!(restored.allies.iter().all(|unit| unit.position.is_none()));
+        assert!(restored.enemies.iter().all(|unit| unit.position.is_none()));
     }
 
     #[test]
