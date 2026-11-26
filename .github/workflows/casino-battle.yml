@@ -45,6 +45,8 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace --all-targets
+      - name: Run deterministic balance sample
+        run: cargo run -p casino-battle-core --bin balance -- 1000
       - name: Build and smoke-test the HTTP server
         run: |
           cargo build -p casino-battle-server
