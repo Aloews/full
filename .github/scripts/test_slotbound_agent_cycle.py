@@ -31,6 +31,34 @@ class AgentPatchPolicyTests(unittest.TestCase):
     def test_accepts_small_unified_patch(self):
         self.assertEqual(MODULE.patch_paths(patch()), ["crates/game-core/src/lib.rs"])
 
+    def test_normalizes_incorrect_hunk_counts(self):
+        malformed = patch().replace("@@ -1 +1 @@", "@@ -1,99 +1,88 @@")
+        normalized = MODULE.normalize_unified_diff(malformed)
+        self.assertIn("@@ -1,1 +1,1 @@", normalized)
+        self.assertEqual(MODULE.patch_paths(normalized), ["crates/game-core/src/lib.rs"])
+
+    def test_recounts_each_hunk_independently(self):
+        value = """diff --git a/crates/game-core/src/lib.rs b/crates/game-core/src/lib.rs
+--- a/crates/game-core/src/lib.rs
++++ b/crates/game-core/src/lib.rs
+@@ -1,20 +1,30 @@
+ context
+-old
++new
+@@ -40,90 +40,90 @@
+-left
+-right
++replacement
+"""
+        normalized = MODULE.normalize_unified_diff(value)
+        self.assertIn("@@ -1,2 +1,2 @@", normalized)
+        self.assertIn("@@ -40,2 +40,1 @@", normalized)
+
+    def test_rejects_malformed_hunk_lines(self):
+        malformed = patch().replace("-old", "old without a diff prefix")
+        with self.assertRaises(ValueError):
+            MODULE.normalize_unified_diff(malformed)
+
     def test_rejects_patch_outside_allowlist(self):
         with self.assertRaises(ValueError):
             MODULE.patch_paths(patch(".github/workflows/ci.yml"))

@@ -95,11 +95,88 @@ def model(messages: list[dict[str, str]], max_tokens: int = 4096) -> str:
     return content.strip()
 
 
+def normalize_unified_diff(patch: str) -> str:
+    """Recalculate hunk counts from patch lines returned by an LLM.
+
+    Models frequently produce correct additions/removals but stale @@ counts.
+    Recounting is deterministic and leaves the actual patch content untouched.
+    """
+    lines = patch.splitlines(keepends=True)
+    output: list[str] = []
+    index = 0
+    found_hunk = False
+
+    while index < len(lines):
+        line = lines[index]
+        if line.startswith("diff --git "):
+            output.append(line)
+            index += 1
+            continue
+
+        if not line.startswith("@@"):
+            output.append(line)
+            index += 1
+            continue
+
+        header = line.rstrip("\r\n")
+        match = re.fullmatch(
+            r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)",
+            header,
+        )
+        if not match:
+            raise ValueError(f"Malformed unified diff hunk header at line {index + 1}")
+
+        old_start, new_start, suffix = match.groups()
+        index += 1
+        hunk_lines: list[str] = []
+        old_count = 0
+        new_count = 0
+
+        while index < len(lines):
+            current = lines[index]
+            if current.startswith("diff --git ") or current.startswith("@@"):
+                break
+
+            if current.startswith(" "):
+                old_count += 1
+                new_count += 1
+            elif current.startswith("-"):
+                old_count += 1
+            elif current.startswith("+"):
+                new_count += 1
+            elif current.rstrip("\r\n") == "\\ No newline at end of file":
+                pass
+            else:
+                raise ValueError(
+                    f"Malformed unified diff hunk line at line {index + 1}: "
+                    f"{current.rstrip()[:100]!r}"
+                )
+
+            hunk_lines.append(current)
+            index += 1
+
+        if not hunk_lines:
+            raise ValueError(f"Empty unified diff hunk starting at line {index + 1}")
+
+        output.append(
+            f"@@ -{old_start},{old_count} +{new_start},{new_count} @@{suffix}\n"
+        )
+        output.extend(hunk_lines)
+        found_hunk = True
+
+    if not found_hunk:
+        raise ValueError("Unified diff contains no hunks")
+
+    normalized = "".join(output)
+    return normalized if normalized.endswith("\n") else normalized + "\n"
+
+
 def extract_patch(text: str) -> str:
     start = text.find("diff --git ")
     if start < 0:
         raise ValueError("Implementer did not return a unified git diff")
-    return text[start:].strip() + "\n"
+    raw_patch = text[start:].strip() + "\n"
+    return normalize_unified_diff(raw_patch)
 
 
 def repository_context(task: dict) -> str:
@@ -265,7 +342,7 @@ def apply_generated_patch(task: dict, context: str, failure: str = "") -> tuple[
                 raise ValueError(f"Agent patch would overwrite an untracked file: {path}")
 
         check = subprocess.run(
-            ["git", "apply", "--check", "--whitespace=error", "-"],
+            ["git", "apply", "--recount", "--check", "--whitespace=error", "-"],
             input=patch,
             text=True,
             stdout=subprocess.PIPE,
@@ -277,7 +354,7 @@ def apply_generated_patch(task: dict, context: str, failure: str = "") -> tuple[
             continue
 
         applied = subprocess.run(
-            ["git", "apply", "--whitespace=error", "-"],
+            ["git", "apply", "--recount", "--whitespace=error", "-"],
             input=patch,
             text=True,
             stdout=subprocess.PIPE,
