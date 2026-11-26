@@ -1,6 +1,10 @@
 name: Slotbound AI Agent Cycle
 
 on:
+  push:
+    branches: [feat/slotbound-gdd-agent-routing]
+  pull_request:
+    branches: [feat/slotbound-gdd-agent-routing]
   workflow_run:
     workflows: ["Slotbound CI"]
     types: [completed]
@@ -18,7 +22,11 @@ concurrency:
 jobs:
   agents:
     if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/feat/slotbound-gdd-agent-routing') ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/slotbound-gdd-agent-routing') ||
+      (github.event_name == 'pull_request' &&
+        github.event.pull_request.base.ref == 'feat/slotbound-gdd-agent-routing' &&
+        github.event.pull_request.head.ref == 'agents/slotbound-gdd') ||
       (github.event_name == 'workflow_run' &&
         ((github.event.workflow_run.head_branch == 'feat/slotbound-gdd-agent-routing' &&
           contains(fromJSON('["push","workflow_dispatch"]'), github.event.workflow_run.event) &&
@@ -32,7 +40,7 @@ jobs:
       - name: Check out exact triggering commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -40,7 +48,59 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Resolve candidate mode and wait for PR CI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_BASE: feat/slotbound-gdd-agent-routing
+          EXPECTED_AGENT: agents/slotbound-gdd
+        shell: bash
+        run: |
+          set -euo pipefail
+          event_name="${GITHUB_EVENT_NAME}"
+          if [[ "$event_name" == "pull_request" ]]; then
+            expected_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+            expected_branch="$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")"
+            if [[ "$expected_branch" != "$EXPECTED_AGENT" ]]; then
+              echo "AGENT_SKIP=true" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            found=""
+            for attempt in $(seq 1 120); do
+              runs="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow slotbound-ci.yml --branch "$expected_branch" --commit "$expected_sha" --json databaseId,status,conclusion,headSha --limit 20)"
+              found="$(jq -c --arg sha "$expected_sha" '[.[] | select(.headSha == $sha)] | sort_by(.databaseId) | last // empty' <<<"$runs")"
+              status="$(jq -r '.status // empty' <<<"$found")"
+              if [[ "$status" == "completed" ]]; then
+                conclusion="$(jq -r '.conclusion // empty' <<<"$found")"
+                if [[ "$conclusion" == "failure" ]]; then
+                  echo "AGENT_MODE=repair" >> "$GITHUB_ENV"
+                  echo "AGENT_FAILED_RUN_ID=$(jq -r '.databaseId' <<<"$found")" >> "$GITHUB_ENV"
+                  exit 0
+                fi
+                if [[ "$conclusion" == "success" ]]; then
+                  echo "AGENT_SKIP=true" >> "$GITHUB_ENV"
+                  echo "PR CI is green; no autonomous repair is required."
+                  exit 0
+                fi
+                echo "AGENT_SKIP=true" >> "$GITHUB_ENV"
+                echo "PR CI ended with $conclusion; stopping for human triage."
+                exit 0
+              fi
+              sleep 10
+            done
+            echo "Timed out waiting for exact-head PR CI."
+            exit 1
+          fi
+          if [[ "$event_name" == "workflow_run" ]] &&
+             [[ "$(jq -r '.workflow_run.head_branch' "$GITHUB_EVENT_PATH")" == "$EXPECTED_AGENT" ]] &&
+             [[ "$(jq -r '.workflow_run.conclusion' "$GITHUB_EVENT_PATH")" == "failure" ]]; then
+            echo "AGENT_MODE=repair" >> "$GITHUB_ENV"
+            echo "AGENT_FAILED_RUN_ID=$(jq -r '.workflow_run.id' "$GITHUB_EVENT_PATH")" >> "$GITHUB_ENV"
+          else
+            echo "AGENT_MODE=advance" >> "$GITHUB_ENV"
+          fi
+
       - name: Restore pinned Ollama runtime and model cache
+        if: env.AGENT_SKIP != 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -50,6 +110,7 @@ jobs:
           key: slotbound-ollama-v0.40.17-qwen2.5-coder-3b-${{ runner.os }}
 
       - name: Install pinned Ollama runtime
+        if: env.AGENT_SKIP != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -68,6 +129,7 @@ jobs:
           mkdir -p "$HOME/.ollama/models"
 
       - name: Start Qwen coder and verify model availability
+        if: env.AGENT_SKIP != 'true'
         env:
           OLLAMA_HOST: 127.0.0.1:11434
           AGENT_MODEL: qwen2.5-coder:3b
@@ -88,21 +150,22 @@ jobs:
           ollama show "$AGENT_MODEL" >/dev/null
 
       - name: Collect failed exact-head CI logs
-        if: github.event.workflow_run.conclusion == 'failure'
+        if: env.AGENT_MODE == 'repair'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ID: ${{ env.AGENT_FAILED_RUN_ID || github.event.workflow_run.id }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed > "$RUNNER_TEMP/slotbound-failure.log" || true
 
       - name: Run bounded architect, implementer and independent QA roles
+        if: env.AGENT_SKIP != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           AGENT_MODEL: qwen2.5-coder:3b
           AGENT_FAILURE_LOG: ${{ runner.temp }}/slotbound-failure.log
-          AGENT_MODE: ${{ github.event.workflow_run.head_branch == 'agents/slotbound-gdd' && github.event.workflow_run.conclusion == 'failure' && 'repair' || 'advance' }}
+          AGENT_MODE: ${{ env.AGENT_MODE || 'advance' }}
         run: python .github/scripts/slotbound_agent_cycle.py

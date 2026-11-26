@@ -18,6 +18,7 @@ MAX_PATCH_BYTES = 16_000
 MAX_PATCH_FILES = 8
 MAX_REPAIRS = 2
 BASE_BRANCH = "feat/slotbound-gdd-agent-routing"
+BASE_BRANCH = "feat/slotbound-gdd-agent-routing"
 BRANCH = "agents/slotbound-gdd"
 BACKLOG = Path(".github/agent-backlog.json")
 STATE = Path(".github/agent-state.json")
@@ -387,13 +388,14 @@ def main() -> int:
     event_path = os.environ.get("GITHUB_EVENT_PATH")
     event = json.loads(Path(event_path).read_text(encoding="utf-8")) if event_path and Path(event_path).is_file() else {}
     workflow_run = event.get("workflow_run", {})
-    branch = workflow_run.get("head_branch", "")
+    pull_request = event.get("pull_request", {})
+    branch = workflow_run.get("head_branch") or pull_request.get("head", {}).get("ref", "")
     conclusion = workflow_run.get("conclusion", "")
     run_event = workflow_run.get("event", "")
     mode = os.environ.get("AGENT_MODE")
     if not mode:
         mode = "repair" if branch == BRANCH and run_event == "pull_request" and conclusion == "failure" else "advance"
-    head_sha = workflow_run.get("head_sha") or os.environ.get("GITHUB_SHA", "")
+    head_sha = workflow_run.get("head_sha") or pull_request.get("head", {}).get("sha") or os.environ.get("GITHUB_SHA", "")
     if not re.fullmatch(r"[0-9a-f]{40}", head_sha):
         raise RuntimeError("No valid triggering commit SHA was supplied")
 
