@@ -2351,7 +2351,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         assert!(restored.pending_event.is_none());
-        assert_eq!(restored.ruleset_version, 2);
+        assert_eq!(restored.ruleset_version, 3);
         let options = restored.pending_route.as_ref().unwrap();
         assert_eq!(options.len(), 3);
         assert!(!restored.migrate_legacy_state());
