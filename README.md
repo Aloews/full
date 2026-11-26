@@ -4,6 +4,10 @@ Slotbound is an original 2D cozy-fantasy roguelite auto-battler. A 3×3 Fate Boa
 
 **Visual direction:** Cozy 16-bit Fantasy Pixel Art. All game art, characters, environments, animations, audio and UI must be original or properly licensed. This project uses broad retro-game principles only and does not include commercial-game code, assets, audio, data tables or binaries.
 
+## Canonical game specification
+
+Read [the complete game design](docs/GAME_DESIGN.md), [visual style guide](docs/VISUAL_STYLE_GUIDE.md), [architecture](docs/ARCHITECTURE.md), [AI agent execution plan](docs/AI_AGENT_EXECUTION_PLAN.md) and [project MAP](docs/MAP.md). The canonical recruitment board is 3×3 with eight straight lines; this is not the experimental 4×4 Casino Battle prototype.
+
 ## Run locally
 
 Requirements: Rust 1.85+ (stable), Cargo, and a supported desktop browser.
@@ -47,8 +51,13 @@ Read:
 
 ## Vercel
 
-A separate Vercel project named `slotbound` exists in the `aloews-projects` team. The first preview deployment request was rejected by the Vercel API with a daily deployments quota error (HTTP 402). No deployment URL has been verified. The Vercel Container build uses `Dockerfile.vercel`; player saves must use PostgreSQL, never the container filesystem. Configure a pooled `SLOTBOUND_DATABASE_URL` only after a dedicated database and migration path are provisioned and verified.
+A separate Vercel project named `slotbound` exists in the `aloews-projects` team. The previous preview deployment request was rejected by the Vercel API with a daily deployments quota error (HTTP 402). The existing `slotbound` project still needs a verified deployment URL; check current deployment records before claiming it is live. The Vercel Container build uses `Dockerfile.vercel`; player saves must use PostgreSQL, never the container filesystem. Configure a pooled `SLOTBOUND_DATABASE_URL` only after a dedicated database and migration path are provisioned and verified.
 
 ## Agent task pipeline
 
 The backlog records a responsible implementing role per task. The local Qwen/Ollama workflow has bounded patch rules, independent Simulation QA and Product Integrator reviews, and exact-head CI gates. Its current branch/base wiring is not yet safe for autonomous delivery on this isolated branch; no agent run is considered active until the workflow is adapted and a real successful cycle is observed. See `docs/AI_AGENT_OPERATING_MODEL.md` and `.github/agent-backlog.json`.
+
+
+## Isolated development and agents
+
+The current delivery branch is `feat/slotbound-gdd-agent-routing`; autonomous task PRs target this branch, never `main`. The current runner invokes a single Ollama-hosted Qwen 2.5 Coder 3B model through role-specific architect, design, implementer, QA and product prompts. This is bounded role orchestration, not a multi-model fleet. Check GitHub Actions for the first successful cycle before treating agent automation as active.

@@ -7,7 +7,9 @@ Deliver a replayable 2D cozy-fantasy roguelite auto-battler. A 3×3 rune board r
 ## Repository and branch
 
 - Repository: `Aloews/full`.
-- Active Slotbound source branch: `feat/slotbound-rust-rebuild`.
+- Source baseline: `feat/slotbound-rust-rebuild`.
+- Current isolated delivery/integration branch: `feat/slotbound-gdd-agent-routing`.
+- Autonomous task PR branch: `agents/slotbound-gdd`; its base is the integration branch above, not `main`.
 - This branch contains an isolated Slotbound project tree at repository root; the default `main` branch is not modified by this work.
 - A separate GitHub repository could not be created through the available GitHub actions in this session. Keep the game isolated on this branch until repository creation/transfer is available.
 - Vercel project `slotbound` was created in team `aloews-projects`. A preview deployment request was rejected by Vercel's daily deployment API quota (402); no deployment URL is available yet. Do not describe the project as deployed.
@@ -126,6 +128,12 @@ The complete CI run [45896564769](https://github.com/Aloews/full/actions/runs/45
 - [ ] Preview deployment, deployed API/player journey smoke and rollback plan.
 - [ ] Desktop packaging, build artifacts, release checklist and controlled playtest report.
 
+## Product specification and current design decision
+
+- [x] Canonical design specification written in `docs/GAME_DESIGN.md`.
+- [x] Canonical Slotbound recruitment board confirmed as 3×3 with eight straight lines; the separate 4×4 Casino Battle prototype is not part of this game.
+- [x] Art direction, gameplay scope and prototype tunings documented; uncalibrated values are not represented as final balance.
+
 ## AI agent delivery system
 
 - [x] Specialist role contracts exist for architect, game designer, Rust engineer, persistence engineer, frontend integrator, simulation QA, product integrator and Pixel Art Director.
@@ -157,3 +165,17 @@ A milestone is accepted only when:
 7. MAP, release notes and deployment claims match observed evidence.
 
 Stop autonomous work and request human triage on unsafe migrations, unexpected branch drift, missing required secrets/permissions, repeated test failures after the repair limit, unexplained balance regressions, or a proposed change to production data/hosting configuration.
+
+
+## Isolated agent-routing iteration
+
+- [x] Create integration branch `feat/slotbound-gdd-agent-routing` from the current Slotbound source candidate.
+- [x] Configure Qwen agent workflow trigger for successful CI on that integration branch.
+- [x] Configure task PRs to target `feat/slotbound-gdd-agent-routing`, not `main`.
+- [x] Configure exact-head auto-merge to validate that base and dispatch CI after merge.
+- [x] Add an explicit policy test for integration and agent branch names.
+- [ ] Verify CI on the exact branch HEAD after workflow/documentation changes.
+- [ ] Observe a successful real `Slotbound AI Agent Cycle` run on the integration branch; configuration alone is not execution evidence.
+- [ ] Confirm an agent task PR was created, exact-head CI passed and the merge gate behaved as expected.
+- [ ] Create/transfer a dedicated GitHub repository when repository-creation permission is available. The current GitHub connector exposes repository listing and branch/file actions, but no repository-creation action; do not overwrite unrelated projects.
+- [ ] Create and verify a Vercel preview deployment for the exact integration-branch commit.

@@ -92,3 +92,10 @@ python3 -m unittest discover -s .github/scripts -p 'test_slotbound_agent_cycle.p
 ```
 
 A PR is acceptable only when all required checks are green on its current head and the independent reviewer records no unresolved critical or high-severity issue.
+
+
+## Isolated Slotbound delivery branch
+
+The current agent-delivery branch pair is documented in `docs/AI_AGENT_EXECUTION_PLAN.md`: integration branch `feat/slotbound-gdd-agent-routing` and task branch `agents/slotbound-gdd`. Workflow conditions, PR base and exact-head merge checks are configured for this pair only. The default `main` branch is not the agent PR base. The runner still uses a single Qwen 2.5 Coder 3B model with distinct role prompts; execution status must be read from GitHub Actions, not inferred from these files.
+
+See `docs/GAME_DESIGN.md` for the canonical 3×3 Fate Board and complete game specification. The 4×4 board prototype from the separate Casino Battle branch is not part of Slotbound.
