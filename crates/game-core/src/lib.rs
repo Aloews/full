@@ -2594,6 +2594,64 @@ mod tests {
         );
     }
 
+
+    #[test]
+    fn inheriting_stout_adds_health_to_the_existing_keeper() {
+        let mut game = run(905);
+        let target_id = game.units[0].id;
+        {
+            let target = &mut game.units[0];
+            target.health = 40;
+            target.current_health = Some(18);
+            target.traits = vec![UnitTrait::Brutal];
+        }
+        let mut donor = game.spawn_unit(UnitClass::Mage);
+        donor.health = 24;
+        donor.traits = vec![UnitTrait::Stout];
+        let donor_id = donor.id;
+        game.units.push(donor);
+
+        let expected_absorb_health = (24u32 / 6).max(1);
+        game.absorb(target_id, donor_id).unwrap();
+        let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
+        assert_eq!(target.health, 40 + expected_absorb_health + 3);
+        assert_eq!(target.current_health, Some(18 + expected_absorb_health + 3));
+        assert!(target.traits.contains(&UnitTrait::Stout));
+    }
+
+    #[test]
+    fn spellpower_imprint_grants_splash_to_non_mage_units() {
+        let mut game = run(906);
+        let unit = game.units.first_mut().unwrap();
+        unit.attack = 1;
+        unit.health = 100;
+        unit.current_health = None;
+        unit.imprints = vec![UnitImprintSlot { kind: UnitImprint::Spellpower, rank: 1 }];
+        let report = game.battle().unwrap();
+        assert!(report.events.iter().any(|event| {
+            event.kind == BattleEventKind::AllyAttack
+                && event.actor.contains("(spell)")
+                && event.actor.starts_with("Guardian")
+        }));
+    }
+
+    #[test]
+    fn mending_imprint_grants_healing_to_non_cleric_units() {
+        let mut game = run(907);
+        let unit = game.units.first_mut().unwrap();
+        unit.attack = 1;
+        unit.health = 40;
+        unit.current_health = Some(12);
+        unit.imprints = vec![UnitImprintSlot { kind: UnitImprint::Mending, rank: 2 }];
+        let unit_id = unit.id;
+        let report = game.battle().unwrap();
+        assert!(report.events.iter().any(|event| {
+            event.kind == BattleEventKind::UnitHealed
+                && event.actor_id == unit_id
+                && event.amount >= 2
+        }));
+    }
+
     #[test]
     fn v2_saves_gain_traits_and_typed_imprints_without_rerolling_on_second_migration() {
         let mut game = run(904);
