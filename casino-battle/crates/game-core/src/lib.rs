@@ -435,7 +435,7 @@ impl RunState {
                 let sigil = Sigil::from_index(self.random_index(Sigil::ALL.len()));
                 let base_hp = 10 + self.wave as i32 * 3 + index as i32 * 2;
                 let unit = Unit {
-                    id: u64::MAX - index as u64,
+                    id: i64::MAX as u64 - index as u64,
                     name: format!("Gloomling {}", index + 1),
                     sigil,
                     role: match sigil {
