@@ -50,15 +50,17 @@ The baseline source candidate commit `680ec889595b4defaa590f1721f000630d3c7ab4` 
 - push run [45849594472](https://github.com/Aloews/full/actions/runs/45849594472);
 - pull-request run [45849612291](https://github.com/Aloews/full/actions/runs/45849612291).
 
-The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Vercel container image build, JavaScript syntax, API/browser contract checks and agent patch-policy tests. This evidence applies to that exact source commit only. The later GDD, pixel renderer and combat timeline changes require a new green run on the latest candidate SHA before they can be called verified.
+The complete CI run [45895453002](https://github.com/Aloews/full/actions/runs/45895453002) passed on candidate `34703fa20df7221c7d5e7bdde3ea3a378076c566`. All steps were green: Rust formatting, Clippy, all Rust unit/integration tests, release API build, Vercel container build, Node syntax, API/browser contract and autonomous patch-policy tests. GitHub Actions then created formatting/lockfile commit `a6762bd2efa076c813a4568705b22e8bec00023a` from the exact tested workspace state. The workflow run is recorded against its triggering parent SHA; the bot commit contains only rustfmt output and the generated dependency lockfile.
 
 ## Product and art direction
 
 - [x] Product direction defined: 2D roguelite auto-battler with symbolic recruitment, army development and wave defence.
 - [x] Cozy 16-bit Fantasy Pixel Art direction documented in `docs/VISUAL_STYLE_GUIDE.md`.
 - [x] Originality, rendering grid, palette, silhouette, animation, biome, interface and asset QA rules documented.
-- [ ] Replace emoji glyphs and prototype interface styling with original production sprite sheets and pixel UI assets.
+- [x] Replace the six class emoji placeholders with original coded 16×16 pixel-sprite prototypes and pixel-style UI treatment.
+- [ ] Replace the prototype drawing code with a validated, versioned external pixel-asset and sprite-sheet pipeline.
 - [ ] Add bitmap font and asset provenance/atlas manifest.
+- [x] Add a first procedural woodland-frontier Canvas scene with a rune shrine, stepped mountains, tree silhouettes and path tiles (composition prototype; not a production tilemap).
 - [x] Add a first procedural woodland-frontier Canvas scene with a rune shrine, stepped mountains, tree silhouettes and path tiles (composition prototype; not a production tilemap).
 - [ ] Create first full biome tile set and parallax/ambient layers.
 - [ ] Author animation strips for all common units, enemies and bosses.
@@ -72,6 +74,7 @@ The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Ver
 - [x] Basic promotions, boss/Core reward and item cache.
 - [x] Run persistence adapter and exact-head CI on commit above.
 - [ ] Real-browser Playwright first-wave journey and reload/restore verification.
+- [ ] Verify the woodland scene and six class sprites at desktop/mobile sizes; add visual regression coverage.
 - [ ] Verify the new woodland scene and six class sprites at desktop/mobile sizes; add visual regression coverage.
 
 ### S1 — Make battles real and readable
@@ -80,6 +83,7 @@ The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Ver
 - [x] Boss telegraph events and causal combat event log rendered by the browser.
 - [ ] Full lane/position model, armour/shields/status system, cooldown-based abilities and richer boss patterns.
 - [ ] Authored enemy definitions and wave compositions (current groups are generated from wave number).
+- [x] Remove player-facing casino/reel terminology: the recruitment device is labelled Fate Board and sigil draws in the UI.
 - [ ] Battle outcome properties: empty army, simultaneous defeat, stalemate/turn cap, tie-break order and terminal state.
 
 ### S2 — Make runs strategic
@@ -107,7 +111,8 @@ The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Ver
 - [x] Scoped backlog, agent task state and patch-policy tests exist.
 - [x] Local Qwen/Ollama agent runner and GitHub Actions workflow are defined in source.
 - [ ] Verify a real successful agent cycle run before claiming autonomous delivery is active.
-- [ ] Adapt workflow branch/base conditions and merge policy to this isolated feature branch before enabling the agent cycle. Current agent workflow targets `main` and the `agents/slotbound-autonomy` branch; do not allow it to open or merge Slotbound work against the unrelated default branch.
+- [x] Add task-specific implementing-agent metadata to the task backlog and a pixel-art specialist role contract.
+- [ ] Adapt workflow branch/base conditions and merge policy to this isolated feature branch before enabling the agent cycle. The controller currently opens agent PRs against `main` and uses an `agents/slotbound-autonomy` branch. Do not enable it until the exact base and PR target are corrected and reviewed.
 - [ ] Human review of workflow permissions and exact merge target.
 
 ## Infrastructure and release blockers
@@ -115,6 +120,7 @@ The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Ver
 - [x] Separate Vercel project `slotbound` created.
 - [ ] Preview deployment pending: Vercel returned `402 payment_required` due to `api-deployments-free-per-day` quota (>100 deployments/day); retry only after the provider's 24-hour reset or plan/quota resolution.
 - [ ] Production/preview PostgreSQL connection not configured or verified for Slotbound.
+- [ ] The working branch is isolated inside `Aloews/full`, not yet transferred to a dedicated GitHub repository. The available GitHub connection does not expose repository creation.
 - [ ] No production deployment, public playable build or release has been verified.
 
 ## Acceptance and stop criteria

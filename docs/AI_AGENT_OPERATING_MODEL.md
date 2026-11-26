@@ -43,7 +43,7 @@ The repository includes:
 - exact-head CI with Rust, PostgreSQL, container, browser syntax and policy checks;
 - an auto-merge workflow that checks the exact successful candidate before merging an eligible automation PR.
 
-The configured model is a local Qwen 2.5 Coder 3B runner, not proof of a multi-model team or external Claude/GPT agents. The workflow source is present, but automation is only considered active when a real run appears in Actions and passes. Do not infer agent activity from the existence of YAML, an agent manifest or a role prompt.
+The configured model is a local Qwen 2.5 Coder 3B runner, not proof of a multi-model team or external Claude/GPT agents. Each backlog task now names an implementing role, with role-to-contract routing validated by unit tests. Pixel-art work has a dedicated Pixel Art Director contract. The orchestrator still does not start on this branch until its trigger/base/PR-target wiring is corrected; role metadata and green policy tests do not count as an executed agent cycle. The workflow source is present, but automation is only considered active when a real run appears in Actions and passes. Do not infer agent activity from the existence of YAML, an agent manifest or a role prompt.
 
 ## Current branch and activation constraint
 

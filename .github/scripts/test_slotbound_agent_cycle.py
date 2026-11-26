@@ -59,6 +59,16 @@ class AgentPatchPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             MODULE.patch_paths(value)
 
+
+    def test_routes_declared_pixel_art_role_to_its_contract(self):
+        role, contract = MODULE.resolve_implementer_role({"agent_role": "pixel-art-director"})
+        self.assertEqual(role, "pixel-art-director")
+        self.assertEqual(contract, ".github/agents/pixel-art-director.agent.md")
+
+    def test_rejects_unknown_implementing_role(self):
+        with self.assertRaises(ValueError):
+            MODULE.resolve_implementer_role({"agent_role": "unregistered-agent"})
+
     def test_patch_size_limit_is_small_enough_for_local_qa_context(self):
         self.assertEqual(MODULE.MAX_PATCH_BYTES, 16_000)
 

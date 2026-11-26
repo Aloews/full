@@ -112,6 +112,7 @@ def repository_context(task: dict) -> str:
         ".github/agents/frontend-integrator.agent.md",
         ".github/agents/simulation-qa.agent.md",
         ".github/agents/product-integrator.agent.md",
+        ".github/agents/pixel-art-director.agent.md",
         "docs/PRODUCT_CONCEPT.md",
         "docs/MECHANICS_RESEARCH.md",
         "docs/MAP.md",
@@ -192,6 +193,24 @@ def select_task() -> dict | None:
     return None
 
 
+ROLE_CONTRACTS = {
+    "rust-gameplay-engineer": ".github/agents/rust-gameplay-engineer.agent.md",
+    "persistence-engineer": ".github/agents/persistence-engineer.agent.md",
+    "frontend-integrator": ".github/agents/frontend-integrator.agent.md",
+    "pixel-art-director": ".github/agents/pixel-art-director.agent.md",
+}
+
+
+def resolve_implementer_role(task: dict) -> tuple[str, str]:
+    role = task.get("agent_role", "rust-gameplay-engineer")
+    contract = ROLE_CONTRACTS.get(role)
+    if contract is None:
+        raise ValueError(f"Unknown implementing agent role: {role}")
+    if not Path(contract).is_file():
+        raise ValueError(f"Implementing agent contract is missing: {contract}")
+    return role, contract
+
+
 def apply_generated_patch(task: dict, context: str, failure: str = "") -> tuple[str, list[str]]:
     acceptance = "\n".join(f"- {item}" for item in task.get("acceptance", []))
     architect_contract = Path(".github/agents/systems-architect.agent.md").read_text(encoding="utf-8")
@@ -218,15 +237,7 @@ def apply_generated_patch(task: dict, context: str, failure: str = "") -> tuple[
     ], 1000)
 
     task_id = task.get("id", "")
-    if task_id == "GAME-007":
-        implementer_role = "frontend-integrator"
-        implementer_contract_path = ".github/agents/frontend-integrator.agent.md"
-    elif task_id == "GAME-001":
-        implementer_role = "persistence-engineer"
-        implementer_contract_path = ".github/agents/persistence-engineer.agent.md"
-    else:
-        implementer_role = "rust-gameplay-engineer"
-        implementer_contract_path = ".github/agents/rust-gameplay-engineer.agent.md"
+    implementer_role, implementer_contract_path = resolve_implementer_role(task)
     implementer_contract = Path(implementer_contract_path).read_text(encoding="utf-8")
 
     errors = failure

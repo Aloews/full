@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "Slotbound",
-  "policy": "One scoped task per autonomous PR. Tasks are considered complete only after their PR is merged and its required checks pass.",
+  "policy": "One scoped task per autonomous PR. Each task declares one implementing agent role, objective and executable acceptance criteria. Tasks are complete only after merge and exact-head CI success; skipped agent runs or draft PRs do not count.",
   "tasks": [
     {
       "id": "GAME-001",
@@ -11,17 +11,21 @@
         "A fixed seed and ordered command sequence reconstruct identical canonical GameState snapshots.",
         "Invalid commands do not append events or mutate the saved state.",
         "Tests cover replay of spins, nudge, absorption, battle and wave progression."
-      ]
+      ],
+      "agent_role": "persistence-engineer"
     },
     {
       "id": "GAME-002",
-      "title": "Implement a deterministic unit-by-unit combat timeline",
-      "objective": "Replace the single power comparison with deterministic combat ticks, target selection, attack resolution, health, deaths and a causal battle log. Keep the simulation pure Rust in slotbound-core.",
+      "title": "Extend the deterministic tactical auto-battle engine",
+      "objective": "Build on the existing deterministic 40-tick combat timeline. Add actual lane/formation positions, typed armour and shields, cooldown-based class abilities, status effects, boss targeting patterns and explicit turn-cap resolution. Keep every rule in pure Rust slotbound-core and expose causal events to the browser.",
       "acceptance": [
-        "Combat order and tie-breaking are stable for a fixed seed and roster.",
-        "Each hit/death is represented in an inspectable combat event.",
-        "Tests cover frontline targeting, defeat, victory, simultaneous death and empty army."
-      ]
+        "Formation positions and legal lane targets are typed domain state with stable tie-breaks.",
+        "Every ability has a documented cooldown/trigger condition and resource/state prerequisites.",
+        "Armour, shields, status application and expiry resolve in one documented order.",
+        "Boss telegraphs identify affected lane/targets before damage resolves.",
+        "Tests cover victory, defeat, simultaneous elimination, empty army, turn cap, status stacking and deterministic replay."
+      ],
+      "agent_role": "rust-gameplay-engineer"
     },
     {
       "id": "GAME-003",
@@ -31,17 +35,19 @@
         "No balance constant remains duplicated across API and browser presentation.",
         "Same ruleset version and seed always produce the same result.",
         "Simulator output includes sample count, seed range and uncertainty intervals."
-      ]
+      ],
+      "agent_role": "rust-gameplay-engineer"
     },
     {
       "id": "GAME-004",
-      "title": "Add Blast and configurable reel modifiers",
+      "title": "Add a second sigil-board manipulation tool and modifier loadout",
       "objective": "Implement a limited-use Blast action with explicit cost and state validation, then model reel tools as typed modifiers rather than UI-only shortcuts.",
       "acceptance": [
         "Blast cannot be used twice in one wave unless a defined modifier grants it.",
         "Invalid target or phase leaves the board and resources unchanged.",
         "Tests cover all modifier combinations and replay determinism."
-      ]
+      ],
+      "agent_role": "rust-gameplay-engineer"
     },
     {
       "id": "GAME-005",
@@ -51,7 +57,8 @@
         "Imprint slot capacity and eligibility are validated in the domain.",
         "Absorption is atomic and deterministic with a typed result preview.",
         "Promotion choices are data-driven and covered at every threshold."
-      ]
+      ],
+      "agent_role": "rust-gameplay-engineer"
     },
     {
       "id": "GAME-006",
@@ -61,7 +68,8 @@
         "A run selects and persists a stage and stage ruleset.",
         "Boss encounter effects are deterministic and visible before combat.",
         "Tests cover stage boundaries and boss reward conditions."
-      ]
+      ],
+      "agent_role": "rust-gameplay-engineer"
     },
     {
       "id": "GAME-007",
@@ -71,6 +79,57 @@
         "The full first-wave journey passes in a real browser.",
         "Reload restores the same saved run state.",
         "Errors, disabled actions and small-screen layout receive coverage."
+      ],
+      "agent_role": "frontend-integrator"
+    },
+    {
+      "id": "GAME-008",
+      "title": "Build the original pixel-art asset and tile pipeline",
+      "agent_role": "pixel-art-director",
+      "objective": "Replace code-only character placeholder drawing with a validated, versioned asset manifest and authored pixel-grid data. Add original animation strips and a Mosslight Meadow tile set; record provenance and keep all rendering strictly 2D with nearest-neighbour scaling.",
+      "acceptance": [
+        "Every asset has a manifest entry with dimensions, palette role, provenance/licence, frame count and loop policy.",
+        "Common ally silhouettes are distinct at native 1x and integer-scaled 2x.",
+        "Tile edges/corners join without seams and biome props align to the 16x16 logical grid.",
+        "Asset validation rejects off-grid sizes, unknown palette keys, missing provenance and malformed frame strips.",
+        "Browser renderer reads the manifest and does not contain duplicated hard-coded asset palettes."
+      ]
+    },
+    {
+      "id": "GAME-009",
+      "title": "Animate automatic combat from authoritative event streams",
+      "agent_role": "frontend-integrator",
+      "objective": "Create a legible 2D battle playback that consumes the authoritative Rust event stream, animates attacks, hit reactions, healing, defeats and boss telegraphs, and supports skip/reduced-motion controls without altering combat outcomes.",
+      "acceptance": [
+        "Playback ordering and event counts exactly match the returned server event sequence.",
+        "Skip and reduced-motion render the same final state and event summary.",
+        "No client-side combat calculations or random outcomes are introduced.",
+        "Keyboard controls, focus management and mobile layout remain usable."
+      ]
+    },
+    {
+      "id": "GAME-010",
+      "title": "Version saves and add run ownership and recovery",
+      "agent_role": "persistence-engineer",
+      "objective": "Add explicit save schema versions and safe migrations, idempotency for mutating API commands, run ownership/authentication and database backup/restore rehearsal without weakening transaction safety.",
+      "acceptance": [
+        "Old save fixtures migrate to the current schema with unchanged gameplay state.",
+        "Repeated idempotency keys do not spend currency or advance RNG twice.",
+        "Unauthorised callers cannot read or mutate another player's run.",
+        "Migration and restore tests use a real ephemeral PostgreSQL instance.",
+        "Runtime database credentials cannot create or alter schema objects."
+      ]
+    },
+    {
+      "id": "GAME-011",
+      "title": "Add branching route map and biome progression",
+      "agent_role": "rust-gameplay-engineer",
+      "objective": "Implement a deterministic authored route map with battle, rest, shop, event and boss nodes, then connect it to original biome/stage content. Keep route generation in the domain and visualisation in the browser.",
+      "acceptance": [
+        "A fixed seed and ruleset version produce an identical route graph.",
+        "Every route has at least one reachable boss path and no unreachable mandatory node.",
+        "Node choices persist atomically and invalid moves leave route state unchanged.",
+        "Biome/stage transitions change encounters and visual tile set without changing past battle reports."
       ]
     }
   ]

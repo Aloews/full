@@ -230,19 +230,19 @@ function render() {
     <div class="stat-chip"><span>GOLD</span><strong>◈ ${game.gold.toLocaleString()}</strong></div>
     <div class="stat-chip"><span>HEARTS</span><strong>${'♥'.repeat(game.hearts)}${'♡'.repeat(Math.max(0, 5 - game.hearts))}</strong></div>
     <div class="stat-chip"><span>WAVE</span><strong>${game.wave.toString().padStart(2, '0')}</strong></div>`;
-  $('spins').innerHTML = `<span class="spin-dots">${'●'.repeat(game.spins_remaining)}${'○'.repeat(Math.max(0, 6-game.spins_remaining))}</span><small>${game.spins_remaining} spins left</small>`;
-  $('spin-price').textContent = `NEXT SPIN · ${game.next_spin_cost} GOLD`;
+  $('spins').innerHTML = `<span class="spin-dots">${'●'.repeat(game.spins_remaining)}${'○'.repeat(Math.max(0, 6-game.spins_remaining))}</span><small>${game.spins_remaining} draws left</small>`;
+  $('spin-price').textContent = `NEXT DRAW · ${game.next_spin_cost} GOLD`;
   $('spin').disabled = lost || game.phase !== 'preparation' || game.spins_remaining === 0 || game.units.length > game.unit_limit || game.gold < game.next_spin_cost || busy;
-  $('reels').innerHTML = game.board.flatMap((row, r) => row.map((symbol, c) => {
+  $('sigil-board').innerHTML = game.board.flatMap((row, r) => row.map((symbol, c) => {
     const meta = CLASS_META[symbol] || ['?', symbol, ''];
     const wins = game.last_spin?.wins?.some((win) => win.class === symbol && game.last_spin.board[r][c] === symbol);
     return `<div class="reel-cell ${wins ? 'reel-win' : ''}">${pixelSpriteMarkup(symbol, meta[1])}<small>${meta[1]}</small></div>`;
   })).join('');
   $('last-spin').textContent = game.last_spin
-    ? `${game.last_spin.wins.length} winning line${game.last_spin.wins.length === 1 ? '' : 's'}${game.last_spin.jackpot ? ' · JACKPOT' : ''}`
+    ? `${game.last_spin.wins.length} winning line${game.last_spin.wins.length === 1 ? '' : 's'}${game.last_spin.jackpot ? ' · PERFECT RESONANCE' : ''}`
     : 'Match three symbols along a line';
   $('nudge-controls').innerHTML = [0,1,2].map((column) =>
-    `<button class="button button-quiet button-small" data-action="nudge" data-column="${column}" data-direction="1" ${!game.nudge_available || !game.last_spin || game.phase !== 'preparation' || lost ? 'disabled' : ''}>NUDGE ${column + 1} ↕</button>`
+    `<button class="button button-quiet button-small" data-action="nudge" data-column="${column}" data-direction="1" ${!game.nudge_available || !game.last_spin || game.phase !== 'preparation' || lost ? 'disabled' : ''}>SHIFT ${column + 1} ↕</button>`
   ).join('');
   $('unit-count').textContent = `${game.units.length} / ${game.unit_limit} SLOTS`;
   $('units').innerHTML = game.units.length ? game.units.map((unit) => renderUnit(unit)).join('') : '<div class="empty-state">No units in the formation.</div>';
@@ -323,16 +323,16 @@ function renderStatus() {
   $('status-list').innerHTML = `<div class="status-row"><span>Gold reserve</span><strong>◈ ${game.gold.toLocaleString()}</strong></div>
     <div class="status-row"><span>Defence integrity</span><strong>${game.hearts} / 5</strong></div>
     <div class="status-row"><span>Army capacity</span><strong>${game.units.length} / ${game.unit_limit}</strong></div>
-    <div class="status-row"><span>Spins remaining</span><strong>${game.spins_remaining} / 6</strong></div>
-    <div class="status-row"><span>Machine nudge</span><strong>${game.nudge_available ? 'READY' : 'USED'}</strong></div>
+    <div class="status-row"><span>Draws remaining</span><strong>${game.spins_remaining} / 6</strong></div>
+    <div class="status-row"><span>Sigil shift</span><strong>${game.nudge_available ? 'READY' : 'USED'}</strong></div>
     <div class="status-row"><span>Items carried</span><strong>${game.items.length}</strong></div>`;
   if (game.last_battle) {
     const b = game.last_battle;
-    $('field-report').textContent = `${b.victory ? 'Victory' : 'Defeat'} on wave ${b.wave}. Army ${b.army_power}; enemy ${b.enemy_power}. ${b.victory ? `Earned ${b.gold_awarded} gold.` : `Lost ${b.damage_taken} heart.`}`;
+    $('field-report').textContent = `${b.victory ? 'Victory' : 'Defeat'} on wave ${b.wave} after ${b.rounds || 0} rounds. ${game.units.length} allies remain. ${b.victory ? `Earned ${b.gold_awarded} gold.` : `Lost ${b.damage_taken} hearts.`}`;
   } else if (game.last_spin) {
-    $('field-report').textContent = `${game.last_spin.wins.length} line matches. ${game.last_spin.wins.map((win) => CLASS_META[win.class][1]).join(', ') || 'No units summoned.'}`;
+    $('field-report').textContent = `${game.last_spin.wins.length} sigil lines aligned. ${game.last_spin.wins.map((win) => CLASS_META[win.class][1]).join(', ') || 'No companions summoned.'}`;
   } else {
-    $('field-report').textContent = 'The machine is loaded. Recruit your formation before the wave begins.';
+    $('field-report').textContent = 'The Fate Board is ready. Align three matching sigils to call a companion.';
   }
 }
 

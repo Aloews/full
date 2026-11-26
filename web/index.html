@@ -16,7 +16,7 @@
       <div class="top-actions"><span class="version">PIXEL PRE-ALPHA</span><button class="button button-quiet" id="new-run">New run</button></div>
     </header>
     <section class="hero-row">
-      <div><p class="eyebrow">THE REELS DECIDE. YOU BUILD THE DEFENCE.</p><h1>Fortune is a <em>resource.</em></h1></div>
+      <div><p class="eyebrow">THE SIGILS SHAPE YOUR FATE. YOU SHAPE THE DEFENCE.</p><h1>Fortune is a <em>resource.</em></h1></div>
       <div class="run-stats" id="run-stats" aria-live="polite"></div>
     </section>
 
@@ -27,9 +27,9 @@
     <section class="game-layout">
       <div class="main-column">
         <section class="panel machine-panel">
-          <div class="panel-heading"><div><span class="eyebrow">RECRUITMENT ENGINE</span><h2>The machine</h2></div><div class="spins" id="spins"></div></div>
-          <div class="machine-frame"><div class="reel-grid" id="reels" aria-label="3 by 3 symbol board"></div><div class="machine-foot"><span id="last-spin">Waiting for the first spin</span><strong id="spin-price"></strong></div></div>
-          <div class="machine-controls"><button class="button button-primary" id="spin">SPIN <span>↗</span></button><div class="nudge-controls" id="nudge-controls"></div></div>
+          <div class="panel-heading"><div><span class="eyebrow">FATE BOARD</span><h2>Sigil board</h2></div><div class="spins" id="spins"></div></div>
+          <div class="machine-frame"><div class="reel-grid" id="sigil-board" aria-label="3 by 3 magical sigil board"></div><div class="machine-foot"><span id="last-spin">Waiting for the first draw</span><strong id="spin-price"></strong></div></div>
+          <div class="machine-controls"><button class="button button-primary" id="spin">DRAW SIGILS <span>↗</span></button><div class="nudge-controls" id="nudge-controls"></div></div>
         </section>
         <section class="panel army-panel">
           <div class="panel-heading"><div><span class="eyebrow">YOUR FORMATION</span><h2>Battle roster</h2></div><span class="unit-count" id="unit-count"></span></div>
@@ -44,12 +44,12 @@
       </div>
       <aside class="side-column">
         <section class="panel status-panel"><span class="eyebrow">RUN STATUS</span><div id="status-list"></div></section>
-        <section class="panel core-panel"><div class="panel-heading"><div><span class="eyebrow">MACHINE MODIFIERS</span><h2>Cores</h2></div><span id="core-count" class="muted"></span></div><div id="cores"></div></section>
+        <section class="panel core-panel"><div class="panel-heading"><div><span class="eyebrow">RUN CORES</span><h2>Cores</h2></div><span id="core-count" class="muted"></span></div><div id="cores"></div></section>
         <section class="panel shop-panel"><div class="panel-heading"><div><span class="eyebrow">BETWEEN WAVES</span><h2>Supply cache</h2></div></div><div id="shop"></div></section>
         <section class="panel log-panel"><span class="eyebrow">FIELD REPORT</span><div id="field-report" class="field-report" aria-live="polite">Your first deployment is ready.</div></section>
       </aside>
     </section>
-    <footer><span>SLOTBOUND</span><span>Deterministic prototype · Local run</span></footer>
+    <footer><span>SLOTBOUND</span><span>Woodland defence · Local pre-alpha</span></footer>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </main>
 </body>

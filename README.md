@@ -1,6 +1,6 @@
 # Slotbound
 
-Slotbound is an original 2D cozy-fantasy roguelite auto-battler. A 3×3 rune board recruits creatures; the player shapes a roster through absorption, promotion, items and permanent Cores; the squad fights automatically against escalating waves.
+Slotbound is an original 2D cozy-fantasy roguelite auto-battler. A 3×3 Fate Board aligns magical sigils to recruit creatures; the player shapes a roster through absorption, promotion, items and permanent Cores; the squad fights automatically against escalating waves.
 
 **Visual direction:** Cozy 16-bit Fantasy Pixel Art. All game art, characters, environments, animations, audio and UI must be original or properly licensed. This project uses broad retro-game principles only and does not include commercial-game code, assets, audio, data tables or binaries.
 
@@ -22,10 +22,10 @@ Runs use PostgreSQL when `SLOTBOUND_DATABASE_URL` (or fallback `DATABASE_URL`) i
 
 ## Current playable loop
 
-- Review gold, hearts, roster, next spin cost and encounter.
-- Roll a 3×3 board with eight horizontal, vertical and diagonal paylines.
+- Review gold, hearts, roster, next draw cost and encounter.
+- Draw a 3×3 sigil board with eight horizontal, vertical and diagonal lines.
 - Three matching class symbols on a line summon a creature.
-- Use one column nudge per wave.
+- Use one column shift per wave.
 - Select a keeper, lock important units and absorb donors to grow the keeper.
 - Choose promotions at growth thresholds.
 - Start an automatic battle, collect the result and continue.
@@ -48,3 +48,7 @@ Read:
 ## Vercel
 
 A separate Vercel project named `slotbound` exists in the `aloews-projects` team. The first preview deployment request was rejected by the Vercel API with a daily deployments quota error (HTTP 402). No deployment URL has been verified. The Vercel Container build uses `Dockerfile.vercel`; player saves must use PostgreSQL, never the container filesystem. Configure a pooled `SLOTBOUND_DATABASE_URL` only after a dedicated database and migration path are provisioned and verified.
+
+## Agent task pipeline
+
+The backlog records a responsible implementing role per task. The local Qwen/Ollama workflow has bounded patch rules, independent Simulation QA and Product Integrator reviews, and exact-head CI gates. Its current branch/base wiring is not yet safe for autonomous delivery on this isolated branch; no agent run is considered active until the workflow is adapted and a real successful cycle is observed. See `docs/AI_AGENT_OPERATING_MODEL.md` and `.github/agent-backlog.json`.
