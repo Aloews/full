@@ -932,26 +932,11 @@ impl GameState {
             _ => JourneyEventKind::BanditAmbush,
         };
         let (title, description, choices) = match kind {
-            JourneyEventKind::LostCache => ("A cache beneath the roots", "A moss-covered chest lies half-buried beside the old road. Something valuable remains inside.", vec![
-                ("Take the gold", "Gain 70 gold.").to_string(),
-                ("Drink the tonic", "Restore one heart, up to the run limit.").to_string(),
-            ]),
-            JourneyEventKind::MoonwellShrine => ("The moonwell shrine", "Silver water circles a cracked stone altar. The shrine answers only one offering.", vec![
-                ("Offer 60 gold", "Restore up to 4 health to every surviving unit.").to_string(),
-                ("Take the blessing", "Every surviving unit gains 2 attack.").to_string(),
-            ]),
-            JourneyEventKind::TravellingMerchant => ("A travelling merchant", "A lantern-lit cart blocks the narrow forest path. Its owner has one rare supply.", vec![
-                ("Buy a sharpening stone · 80 gold", "Gain a permanent battle attack item.").to_string(),
-                ("Trade stories", "Leave peacefully and gain 25 gold.").to_string(),
-            ]),
-            JourneyEventKind::WoundedRanger => ("A wounded ranger", "A scout from the northern trail offers to join, if you can spare supplies.", vec![
-                ("Recruit · 50 gold", "Recruit a random class if your formation has room.").to_string(),
-                ("Share provisions", "Gain 35 gold from the ranger's recovered map.").to_string(),
-            ]),
-            JourneyEventKind::BanditAmbush => ("Bandits on the old road", "Masked bandits demand payment. You can surrender your purse or fight through.", vec![
-                ("Pay the toll", "Lose 40 gold and avoid injury.").to_string(),
-                ("Stand your ground", "Gain 90 gold, but lose one heart.").to_string(),
-            ]),
+            JourneyEventKind::LostCache => ("A cache beneath the roots", "A moss-covered chest lies half-buried beside the old road. Something valuable remains inside.", vec![("Take the gold", "Gain 70 gold."), ("Drink the tonic", "Restore one heart, up to the run limit.")]),
+            JourneyEventKind::MoonwellShrine => ("The moonwell shrine", "Silver water circles a cracked stone altar. The shrine answers only one offering.", vec![("Offer 60 gold", "Restore up to 4 health to every surviving unit."), ("Take the blessing", "Every surviving unit gains 2 attack.")]),
+            JourneyEventKind::TravellingMerchant => ("A travelling merchant", "A lantern-lit cart blocks the narrow forest path. Its owner has one rare supply.", vec![("Buy a sharpening stone · 80 gold", "Gain a permanent battle attack item."), ("Trade stories", "Leave peacefully and gain 25 gold.")]),
+            JourneyEventKind::WoundedRanger => ("A wounded ranger", "A scout from the northern trail offers to join, if you can spare supplies.", vec![("Recruit · 50 gold", "Recruit a random class if your formation has room."), ("Share provisions", "Gain 35 gold from the ranger's recovered map.")]),
+            JourneyEventKind::BanditAmbush => ("Bandits on the old road", "Masked bandits demand payment. You can surrender your purse or fight through.", vec![("Pay the toll", "Lose 40 gold and avoid injury."), ("Stand your ground", "Gain 90 gold, but lose one heart.")]),
         };
         JourneyEvent {
             id: format!("wave-{}-event", self.wave),
@@ -959,8 +944,7 @@ impl GameState {
             kind,
             title: title.to_string(),
             description: description.to_string(),
-            choices: choices.into_iter().map(|value| {
-                let (label, description) = value.split_once(" · ").unwrap_or((&value, ""));
+            choices: choices.into_iter().map(|(label, description)| {
                 JourneyChoice { label: label.to_string(), description: description.to_string() }
             }).collect(),
         }
