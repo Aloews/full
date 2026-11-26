@@ -260,6 +260,8 @@ function render() {
 function renderUnit(unit) {
   const meta = CLASS_META[unit.class] || ['?', unit.class, ''];
   const keeper = keepId === unit.id;
+  const keeperUnit = game.units.find((candidate) => candidate.id === keepId);
+  const keeperAwaitingPromotion = Boolean(keeperUnit?.pending_promotion);
   const canAct = ['preparation', 'intermission'].includes(game.phase) && !busy;
   const traitEffects = {
     brutal: '+2 attack damage',
@@ -285,11 +287,12 @@ function renderUnit(unit) {
   return `<article class="unit-card ${keeper ? 'is-keeper' : ''}">
     <div class="unit-top"><span class="unit-symbol">${pixelSpriteMarkup(unit.class, meta[1])}</span><span class="unit-type">${esc(meta[2])}</span><button class="lock-button" data-action="lock" data-id="${unit.id}" aria-label="${unit.locked ? 'Unlock' : 'Lock'} ${esc(meta[1])}" ${!canAct ? 'disabled' : ''}>${unit.locked ? '🔒' : '⌑'}</button></div>
     <h3>${esc(unit.promotion || meta[1])}</h3><div class="unit-level">LV ${unit.level} · ABSORB ${unit.absorb_level}</div>
+    ${unit.promotion_path?.length ? `<div class="promotion-path"><span class="build-label">PATH</span>${unit.promotion_path.map((node) => esc(String(node).split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' '))).join(' <span class="path-arrow">›</span> ')}</div>` : ''}
     <div class="unit-stats"><span>⚔ ${unit.attack}</span><span>♥ ${unit.current_health ?? unit.health} / ${unit.health}</span></div>
     <div class="unit-build"><span class="build-label">TRAITS</span><div class="build-chips">${traits || '<span class="build-empty">NONE</span>'}</div></div>
     <div class="unit-build"><span class="build-label">IMPRINTS</span><div class="build-chips">${imprints || `<span class="build-empty">${imprintFallback || 'EMPTY'}</span>`}</div></div>
     ${unit.pending_promotion ? `<div class="promotion-options"><span>PROMOTION</span>${unit.promotion_options.map((name) => `<button class="button button-small" data-action="promote" data-id="${unit.id}" data-choice="${esc(name)}">${esc(name)}</button>`).join('')}</div>` : ''}
-    <div class="unit-actions"><button class="button button-quiet button-small" data-action="keep" data-id="${unit.id}" ${!canAct || unit.locked ? 'disabled' : ''}>${keeper ? 'KEEPER SELECTED' : 'SELECT KEEPER'}</button><button class="button button-danger button-small" data-action="feed" data-id="${unit.id}" ${!canAct || unit.locked || !keepId || keepId === unit.id ? 'disabled' : ''}>FEED</button></div>
+    <div class="unit-actions"><button class="button button-quiet button-small" data-action="keep" data-id="${unit.id}" ${!canAct || unit.locked ? 'disabled' : ''}>${keeper ? 'KEEPER SELECTED' : 'SELECT KEEPER'}</button><button class="button button-danger button-small" data-action="feed" data-id="${unit.id}" ${!canAct || unit.locked || !keepId || keepId === unit.id || keeperAwaitingPromotion ? 'disabled' : ''}>FEED</button></div>
   </article>`;
 }
 
