@@ -74,20 +74,6 @@ These are code-level statements. Runtime/CI status must be added only after GitH
 - [ ] Playwright end-to-end journeys and accessibility audit.
 - [ ] Build artifacts, signed desktop packaging, crash reporting and release checklist.
 
-
-## Visual milestone — 16-bit pixel-art conversion
-
-- [x] Establish original console-era fantasy pixel-art direction and palette.
-- [x] Replace the glossy rounded dashboard skin with hard-edged pixel-panel styling.
-- [x] Add procedural, class-specific pixel glyphs for the six recruit classes in the reel board and roster.
-- [ ] Replace procedural glyphs with original authored sprite sheets at a fixed logical resolution.
-- [ ] Add tile-based battlefield/world scene with layered ground, collision, props and parallax-free pixel rendering.
-- [ ] Animate reel stops, winning paylines, summon effects, unit idle/hit/death, enemy turns and boss entrances.
-- [ ] Render combat from authoritative Rust combat events; browser animation must not calculate outcomes.
-- [ ] Add visual regression screenshots at desktop, tablet and narrow mobile widths; verify nearest-neighbour scaling and reduced-motion behavior.
-
-**Current visual implementation status:** the browser currently has a first-pass CSS pixel-art skin and procedural 8×8 class glyphs. This is a direction-setting prototype, not a finished sprite-art package or a complete world renderer. Existing gameplay layout and mechanics remain in place while the renderer is expanded.
-
 ## Acceptance gates
 
 A milestone is accepted only when its domain invariants pass, fixed-seed replays match, API tests exercise the real router, save/load round-trips preserve state, browser journeys use the real API, CI is green on the exact candidate SHA, and an independent QA role records no unresolved critical/high defects. A successful compile alone is not acceptance.
