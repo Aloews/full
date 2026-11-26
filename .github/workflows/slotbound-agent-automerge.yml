@@ -19,7 +19,7 @@ jobs:
   merge:
     if: >-
       contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event.workflow_run.event) &&
-      github.event.workflow_run.head_branch == 'agents/slotbound-autonomy' &&
+      github.event.workflow_run.head_branch == 'agents/slotbound-gdd' &&
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -29,7 +29,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
-          EXPECTED_BRANCH: agents/slotbound-autonomy
+          EXPECTED_BRANCH: agents/slotbound-gdd
         shell: bash
         run: |
           set -euo pipefail
@@ -38,7 +38,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --state open \
             --head "$EXPECTED_BRANCH" \
-            --base main \
+            --base feat/slotbound-gdd-agent-routing \
             --json number,headRefOid,isDraft > "$RUNNER_TEMP/open-prs.json"
 
           pr_number="$(jq -r --arg sha "$EXPECTED_SHA" \
@@ -91,7 +91,7 @@ jobs:
               raise SystemExit("PR is not open; refusing to merge.")
           if pr.get("isDraft") is not False:
               raise SystemExit("PR is still a draft; refusing to merge.")
-          if pr.get("baseRefName") != "main":
+          if pr.get("baseRefName") != "feat/slotbound-gdd-agent-routing":
               raise SystemExit("PR base is not main; refusing to merge.")
           if pr.get("headRefOid") != expected_sha:
               raise SystemExit("PR head changed after CI; refusing to merge stale SHA.")
@@ -101,4 +101,4 @@ jobs:
 
           # GITHUB_TOKEN merges do not trigger another push workflow. Dispatch CI on
           # the new main head; the next agent cycle starts only after that CI succeeds.
-          gh workflow run slotbound-ci.yml --repo "$GITHUB_REPOSITORY" --ref main
+          gh workflow run slotbound-ci.yml --repo "$GITHUB_REPOSITORY" --ref feat/slotbound-gdd-agent-routing

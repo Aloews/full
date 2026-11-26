@@ -18,12 +18,12 @@ concurrency:
 jobs:
   agents:
     if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/slotbound-gdd-agent-routing') ||
       (github.event_name == 'workflow_run' &&
-        ((github.event.workflow_run.head_branch == 'main' &&
+        ((github.event.workflow_run.head_branch == 'feat/slotbound-gdd-agent-routing' &&
           contains(fromJSON('["push","workflow_dispatch"]'), github.event.workflow_run.event) &&
           github.event.workflow_run.conclusion == 'success') ||
-         (github.event.workflow_run.head_branch == 'agents/slotbound-autonomy' &&
+         (github.event.workflow_run.head_branch == 'agents/slotbound-gdd' &&
           contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event.workflow_run.event) &&
           github.event.workflow_run.conclusion == 'failure')))
     runs-on: ubuntu-latest
@@ -104,5 +104,5 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           AGENT_MODEL: qwen2.5-coder:3b
           AGENT_FAILURE_LOG: ${{ runner.temp }}/slotbound-failure.log
-          AGENT_MODE: ${{ github.event.workflow_run.head_branch == 'agents/slotbound-autonomy' && github.event.workflow_run.conclusion == 'failure' && 'repair' || 'advance' }}
+          AGENT_MODE: ${{ github.event.workflow_run.head_branch == 'agents/slotbound-gdd' && github.event.workflow_run.conclusion == 'failure' && 'repair' || 'advance' }}
         run: python .github/scripts/slotbound_agent_cycle.py

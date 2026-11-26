@@ -69,6 +69,10 @@ class AgentPatchPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             MODULE.resolve_implementer_role({"agent_role": "unregistered-agent"})
 
+    def test_agent_cycle_targets_isolated_slotbound_branch(self):
+        self.assertEqual(MODULE.BASE_BRANCH, "feat/slotbound-gdd-agent-routing")
+        self.assertEqual(MODULE.BRANCH, "agents/slotbound-gdd")
+
     def test_patch_size_limit_is_small_enough_for_local_qa_context(self):
         self.assertEqual(MODULE.MAX_PATCH_BYTES, 16_000)
 
