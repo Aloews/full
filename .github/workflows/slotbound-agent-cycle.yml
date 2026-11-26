@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: slotbound-agent-cycle-${{ github.event.pull_request.number || github.ref_name }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   agents:
@@ -128,6 +128,8 @@ jobs:
         env:
           OLLAMA_HOST: 127.0.0.1:11434
           AGENT_MODEL: qwen2.5-coder:3b
+          AGENT_MODEL_CONTEXT: "8192"
+          AGENT_MODEL_TIMEOUT: "1200"
         shell: bash
         run: |
           set -euo pipefail
