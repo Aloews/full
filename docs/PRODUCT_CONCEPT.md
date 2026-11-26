@@ -97,6 +97,28 @@ The event stream should explain why a result happened: who attacked, who was tar
 - A lost battle costs hearts; reaching zero ends the run.
 - Future stages and biomes should introduce enemy families, environmental rules and boss patterns, not only bigger health values.
 
+
+## Journey events and branching expedition
+
+A run is an expedition, not a sequence of identical arena waves. Between battles, the player encounters seeded events whose availability and consequences depend on the biome, wave, party condition, inventory, previous choices and run history. The event director must be deterministic for a fixed seed, ruleset version and command history.
+
+Event families include:
+- **Discovery:** hidden caches, relics, lost supplies and secret paths.
+- **People:** travelling merchants, wounded travellers, guides, recruits and rival adventurers.
+- **Mystical:** shrines, blessings, bargains, curses and strange forest phenomena.
+- **Threats:** ambushes, hazards, elite patrols, traps and optional challenge fights.
+- **Narrative choices:** short branching encounters with explicit trade-offs, delayed consequences and possible follow-up events.
+
+Every event definition must declare eligibility conditions, selection weight, choices, costs, rewards, state mutations, failure outcomes, repeat policy and telemetry key. Avoid cosmetic choices that do not change game state. Event history and resolved choices must be persisted so reloads cannot reroll an event or claim its reward twice.
+
+The route map connects battle, event, merchant, elite and boss nodes. The player should be able to weigh risk, reward, army health, gold, roster composition and current build before selecting a route.
+
+## Visible battle presentation
+
+The battle engine remains deterministic and authoritative in Rust. The browser renders its typed event stream as a readable 2D pixel-art encounter: allied and enemy formations occupy clear positions; units animate attacks, movement, casts, healing, damage reactions and defeat; enemies telegraph dangerous actions; bosses have distinct phases and tells. Health bars and combat log remain available so animation never hides important information.
+
+The renderer must consume recorded event data rather than independently simulate combat. Playback supports pause, normal speed, fast-forward and reduced-motion mode. A battle is not considered visually implemented merely because the final victory/defeat report and text log are shown.
+
 ## Progression and replayability
 
 A full release should include:
