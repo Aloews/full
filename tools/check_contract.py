@@ -12,18 +12,18 @@ required_routes = {
     "/api/runs", "/api/runs/{run_id}", "/api/runs/{run_id}/spin", "/api/runs/{run_id}/nudge",
     "/api/runs/{run_id}/absorb", "/api/runs/{run_id}/promotion", "/api/runs/{run_id}/lock",
     "/api/runs/{run_id}/battle", "/api/runs/{run_id}/next-wave", "/api/runs/{run_id}/core",
-    "/api/runs/{run_id}/item",
+    "/api/runs/{run_id}/item", "/api/runs/{run_id}/event",
 }
 missing_routes = sorted(required_routes - routes)
 if missing_routes:
     raise SystemExit(f"API route contract missing: {missing_routes}")
-for endpoint in ("spin", "nudge", "absorb", "promotion", "lock", "battle", "next-wave", "core", "item"):
+for endpoint in ("spin", "nudge", "absorb", "promotion", "lock", "battle", "next-wave", "core", "item", "event"):
     if f"/{endpoint}" not in client:
         raise SystemExit(f"browser action missing API call suffix: /{endpoint}")
 
 ids = set(re.findall(r'id="([a-z0-9-]+)"', html))
 selectors = set(re.findall(r"\$\('([a-z0-9-]+)'\)", client))
-dynamic_ids = {"next-wave", "restart", "start-battle"}
+dynamic_ids = {"next-wave", "restart", "start-battle", "battlefield"}
 missing_ids = sorted(selectors - ids - dynamic_ids)
 if missing_ids:
     raise SystemExit(f"browser references DOM IDs not present in the shell: {missing_ids}")
