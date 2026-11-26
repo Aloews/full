@@ -16,7 +16,8 @@ The project lives in this directory on the `casino-battle/foundation` branch. It
 ## Current implementation
 
 - `crates/game-core`: deterministic run state, a 4×4 connected-cluster Fate Board, rank-based recruitment, party synergies, duplicate evolution, lane-aware Auto-battle, bosses and relic rewards.
-- `crates/game-server`: Axum API, PostgreSQL JSONB persistence, transactional row-locked state transitions, non-secret public snapshots, configurable CORS and health check.\n- `client/`: reads run state from the API and replays the server-authoritative Auto-battle event log.
+- `crates/game-server`: Axum API, PostgreSQL JSONB persistence, transactional row-locked state transitions, non-secret public snapshots, configurable CORS and health check.
+- `client/`: reads run state from the API and replays the server-authoritative Auto-battle event log.
 - `client/`: strict 2D Godot prototype with original hand-drawn-style vector character studies, a 4×4 Fate Board preview, server-driven party HUD, preparation-only lane changes by clicking a unit and tick-by-tick Auto-battle replay. All six allied sigil families now have distinct 2D prototype silhouettes (Mossguard, Cinderkit, Puddlekin, Pebbleback, Moonmote and Breezeling). These are code-drawn prototypes; authored sprite sheets, hand-painted animation and finished UI art remain release work.
 
 ## Run
@@ -33,7 +34,9 @@ cargo run -p casino-battle-server
 
 Run `docker compose up --build` from this directory to start the API and PostgreSQL locally. Open `http://localhost:3000/healthz` for the server health check. Without `DATABASE_URL`, the server uses an explicitly development-only single-process in-memory store. Set `DATABASE_URL` to a PostgreSQL connection string to enable durable run storage and transactional row-locked transitions. Configure `CORS_ALLOWED_ORIGINS` with comma-separated trusted frontend origins.
 
-Start the API with `docker compose up --build`, then open `client/project.godot` in Godot 4 to run the 2D client. Set `CASINO_BATTLE_API` to the server origin when it is not `http://127.0.0.1:3000`.\n\nThe first verified balance sample (1,000 seeded runs) is in `docs/BALANCE_BASELINE.md`; it records a 93.10% first-wave win rate after five draws. This is a wave-one baseline, not a claim that full-run balance is complete.
+Start the API with `docker compose up --build`, then open `client/project.godot` in Godot 4 to run the 2D client. Set `CASINO_BATTLE_API` to the server origin when it is not `http://127.0.0.1:3000`.
+
+The first verified balance sample (1,000 seeded runs) is in `docs/BALANCE_BASELINE.md`; it records a 93.10% first-wave win rate after five draws. This is a wave-one baseline, not a claim that full-run balance is complete.
 
 ## API
 
