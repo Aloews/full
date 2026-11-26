@@ -22,6 +22,9 @@ var next_status_text := ""
 var draw_button: Button
 var battle_button: Button
 var status_label: Label
+var relic_panel: Panel
+var relic_title: Label
+var relic_buttons: Array[Button] = []
 var battle_frames: Array = []
 var battle_frame_index := 0
 var battle_replay_timer := 0.0
@@ -81,6 +84,27 @@ func _setup_controls() -> void:
     _style_button(battle_button, SAGE)
     battle_button.pressed.connect(_on_battle_pressed)
     root.add_child(battle_button)
+
+    relic_panel = Panel.new()
+    relic_panel.position = Vector2(260, 235)
+    relic_panel.size = Vector2(760, 230)
+    relic_panel.visible = false
+    var relic_style := StyleBoxFlat.new()
+    relic_style.bg_color = Color("#F8F2E7")
+    relic_style.border_color = INK
+    relic_style.set_border_width_all(2)
+    relic_style.set_corner_radius_all(12)
+    relic_panel.add_theme_stylebox_override("panel", relic_style)
+    root.add_child(relic_panel)
+
+    relic_title = Label.new()
+    relic_title.position = Vector2(24, 22)
+    relic_title.size = Vector2(710, 32)
+    relic_title.text = "A NEW CHARM FOR THE JOURNEY"
+    relic_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    relic_title.add_theme_font_size_override("font_size", 17)
+    relic_title.add_theme_color_override("font_color", INK)
+    relic_panel.add_child(relic_title)
 
     _update_controls()
 
@@ -178,6 +202,9 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
         "formation":
             _apply_run_snapshot(payload)
             status_text = "FORMATION UPDATED"
+        "relic":
+            _apply_run_snapshot(payload)
+            status_text = "RELIC EQUIPPED · READY FOR THE NEXT WAVE"
         "refresh":
             _apply_run_snapshot(payload)
             status_text = next_status_text if not next_status_text.is_empty() else "CONNECTED · PREPARATION"
@@ -191,6 +218,7 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
 func _apply_run_snapshot(snapshot: Dictionary) -> void:
     run_snapshot = snapshot
     _apply_board(snapshot.get("board", []))
+    _update_relic_panel()
 
 func _apply_board(board: Array) -> void:
     var indices := {
@@ -224,6 +252,8 @@ func _start_battle_replay(events: Array) -> void:
     for enemy_index in range(enemy_count):
         var enemy_id := 9223372036854775807 - enemy_index
         var enemy_hp := 16 + wave * 4 + enemy_index * 3
+        if wave % 3 == 0 and enemy_index == 0:
+            enemy_hp *= 3
         visual_hp[enemy_id] = enemy_hp
         visual_max_hp[enemy_id] = enemy_hp
 
@@ -329,6 +359,55 @@ func _draw_battle_effects() -> void:
             for angle in range(0, 360, 60):
                 var direction := Vector2.from_angle(deg_to_rad(float(angle)))
                 draw_line(target + direction * 13.0, target + direction * 24.0, HONEY, 2.0, true)
+
+func _update_relic_panel() -> void:
+    if not is_instance_valid(relic_panel):
+        return
+
+    var choices: Array = run_snapshot.get("pending_relics", [])
+    var show_choices := str(run_snapshot.get("phase", "preparation")) == "relic_choice" and not choices.is_empty()
+    relic_panel.visible = show_choices
+
+    for button in relic_buttons:
+        button.queue_free()
+    relic_buttons.clear()
+
+    if not show_choices:
+        return
+
+    relic_title.text = "A NEW CHARM FOR THE JOURNEY"
+    for index in range(choices.size()):
+        var relic := str(choices[index])
+        var button := Button.new()
+        button.text = _relic_label(relic)
+        button.position = Vector2(24 + index * 240, 104)
+        button.size = Vector2(220, 76)
+        _style_button(button, HONEY if index == 0 else (SAGE if index == 1 else BLUE))
+        button.add_theme_font_size_override("font_size", 11)
+        button.pressed.connect(_on_relic_selected.bind(relic))
+        relic_panel.add_child(button)
+        relic_buttons.append(button)
+
+func _relic_label(relic: String) -> String:
+    match relic:
+        "honey_bell":
+            return "HONEY BELL\n+1 ATTACK"
+        "clover_mantle":
+            return "CLOVER MANTLE\n+4 MAX HP"
+        "thorn_badge":
+            return "THORN BADGE\n+1 ARMOR"
+        "swift_feather":
+            return "SWIFT FEATHER\nFASTER ATTACKS"
+        "tidesong_thread":
+            return "TIDESONG THREAD\n+2 SUPPORT HEAL"
+        _:
+            return relic.to_upper()
+
+func _on_relic_selected(relic: String) -> void:
+    if run_id.is_empty() or api_busy:
+        return
+    var body := JSON.stringify({"relic": relic})
+    _send_request("relic", HTTPClient.METHOD_POST, "/api/v1/runs/%s/relic" % run_id, body)
 
 func _on_draw_pressed() -> void:
     if run_id.is_empty():
@@ -462,9 +541,12 @@ func _draw_battlefield(size: Vector2) -> void:
     for enemy_index in range(enemy_count):
         var enemy_id := 9223372036854775807 - enemy_index
         var enemy_position := _unit_position(enemy_id)
-        var enemy_name := "Gloomling" if enemy_index % 2 == 0 else "Murkling"
-        var enemy_color := BERRY if enemy_index % 2 == 0 else Color("#8D8578")
-        var enemy_max_hp := maxi(1, int(visual_max_hp.get(enemy_id, 16 + wave * 4 + enemy_index * 3)))
+        var is_boss := wave % 3 == 0 and enemy_index == 0
+        var enemy_name := "Mosswood Guardian" if is_boss else ("Gloomling" if enemy_index % 2 == 0 else "Murkling")
+        var enemy_color := HONEY if is_boss else (BERRY if enemy_index % 2 == 0 else Color("#8D8578"))
+        var enemy_base_hp := 16 + wave * 4 + enemy_index * 3
+        var enemy_fallback_hp := enemy_base_hp * 3 if is_boss else enemy_base_hp
+        var enemy_max_hp := maxi(1, int(visual_max_hp.get(enemy_id, enemy_fallback_hp)))
         var enemy_hp := int(visual_hp.get(enemy_id, enemy_max_hp))
         _draw_creature(
             enemy_position,
@@ -501,6 +583,8 @@ func _draw_creature(center: Vector2, coat: Color, label: String, friendly: bool,
             _draw_puddlekin(c, s, coat)
         "Gloomling":
             _draw_gloomling(c, s, coat)
+        "Mosswood Guardian":
+            _draw_boss(c, s, coat)
         _:
             _draw_murkling(c, s, coat)
 
@@ -609,6 +693,30 @@ func _draw_gloomling(c: Vector2, s: float, coat: Color) -> void:
     draw_arc(c + Vector2(0, 6) * s, 4.0 * s, 0.2, PI - 0.2, 14, INK, 1.3 * s)
     draw_circle(c + Vector2(-15, 9) * s, 2.5 * s, HONEY)
     draw_circle(c + Vector2(15, 9) * s, 2.5 * s, HONEY)
+
+func _draw_boss(c: Vector2, s: float, coat: Color) -> void:
+    var body := PackedVector2Array([
+        c + Vector2(-34, 18) * s, c + Vector2(-31, -8) * s,
+        c + Vector2(-18, -28) * s, c + Vector2(0, -34) * s,
+        c + Vector2(20, -27) * s, c + Vector2(34, -6) * s,
+        c + Vector2(30, 18) * s, c + Vector2(14, 30) * s,
+        c + Vector2(-15, 30) * s
+    ])
+    _outline(body, coat.lightened(0.06), 3.2 * s)
+    _outline(PackedVector2Array([
+        c + Vector2(-20, -24) * s, c + Vector2(-36, -42) * s,
+        c + Vector2(-14, -36) * s, c + Vector2(-5, -23) * s
+    ]), SAGE.darkened(0.1), 2.4 * s)
+    _outline(PackedVector2Array([
+        c + Vector2(5, -23) * s, c + Vector2(15, -37) * s,
+        c + Vector2(36, -43) * s, c + Vector2(20, -23) * s
+    ]), SAGE.darkened(0.1), 2.4 * s)
+    draw_ellipse_placeholder(c + Vector2(-10, -5) * s, Vector2(4, 5) * s, INK)
+    draw_ellipse_placeholder(c + Vector2(10, -5) * s, Vector2(4, 5) * s, INK)
+    draw_arc(c + Vector2(0, 9) * s, 6.0 * s, 0.1, PI - 0.1, 16, INK, 2.0 * s)
+    draw_circle(c + Vector2(-20, 10) * s, 4.0 * s, Color("#D99583"))
+    draw_circle(c + Vector2(20, 10) * s, 4.0 * s, Color("#D99583"))
+    draw_circle(c + Vector2(0, -31) * s, 5.0 * s, HONEY)
 
 func _draw_murkling(c: Vector2, s: float, coat: Color) -> void:
     var body := PackedVector2Array([
