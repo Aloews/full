@@ -1671,6 +1671,33 @@ mod tests {
         assert_eq!(game.hearts, 4);
     }
 
+
+    #[test]
+    fn failed_event_purchase_keeps_encounter_open_without_partial_mutation() {
+        let mut game = run(507);
+        game.gold = 0;
+        set_journey_event(&mut game, JourneyEventKind::TravellingMerchant);
+        assert_eq!(game.resolve_journey_event(0), Err(GameError::NotEnoughGold));
+        assert_eq!(game.gold, 0);
+        assert!(game.pending_event.is_some());
+        assert!(game.event_history.is_empty());
+    }
+
+    #[test]
+    fn full_roster_cannot_recruit_from_wounded_ranger() {
+        let mut game = run(508);
+        while game.units.len() < game.unit_limit {
+            let donor = game.spawn_unit(UnitClass::Archer);
+            game.units.push(donor);
+        }
+        let gold_before = game.gold;
+        set_journey_event(&mut game, JourneyEventKind::WoundedRanger);
+        assert_eq!(game.resolve_journey_event(0), Err(GameError::UnitCapacityReached));
+        assert_eq!(game.gold, gold_before);
+        assert_eq!(game.units.len(), game.unit_limit);
+        assert!(game.pending_event.is_some());
+    }
+
     #[test]
     fn journey_event_is_seeded_and_reproducible() {
         let mut a = run(411);
