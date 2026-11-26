@@ -76,10 +76,17 @@ jobs:
           PY
 
           pr_state="$(gh pr view "$pr_number" --repo "$GITHUB_REPOSITORY" \
-            --json state,isDraft,baseRefName,headRefOid,mergeable \
-            --jq '[.state, (.isDraft|tostring), .baseRefName, .headRefOid, (.mergeable|tostring)] | @tsv')"
+            --json state,isDraft,baseRefName,headRefOid \
+            --jq '[.state, (.isDraft|tostring), .baseRefName, .headRefOid] | @tsv')"
 
-          IFS=$'\t' read -r state is_draft base head_sha mergeable <<< "$pr_state"
+          IFS=
+          [[ "$state" == "OPEN" ]]
+          [[ "$is_draft" == "false" ]]
+          [[ "$base" == "main" ]]
+          [[ "$head_sha" == "$EXPECTED_SHA" ]]
+          gh pr merge "$pr_number" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
+          gh workflow run slotbound-ci.yml --repo "$GITHUB_REPOSITORY" --ref main
+\t' read -r state is_draft base head_sha <<< "$pr_state"
           [[ "$state" == "OPEN" ]]
           [[ "$is_draft" == "false" ]]
           [[ "$base" == "main" ]]
