@@ -35,6 +35,7 @@ var visual_max_hp: Dictionary = {}
 var visual_hit_flash: Dictionary = {}
 var visual_heal_flash: Dictionary = {}
 var visual_lunge: Dictionary = {}
+var sprite_texture_cache: Dictionary = {}
 
 var fate_pattern := [
     [0, 1, 0, 3],
@@ -45,6 +46,7 @@ var fate_pattern := [
 var fate_colors := [SAGE, CLAY, BLUE, Color("#A99B82"), BERRY, HONEY]
 
 func _ready() -> void:
+    texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     get_window().min_size = Vector2i(640, 360)
     server_url = OS.get_environment("CASINO_BATTLE_API")
     if server_url.is_empty():
@@ -623,23 +625,19 @@ func _draw_creature(
     var lunge_offset := roundf(sin((1.0 - lunge_progress) * PI) * 6.0 / pixel_step) * pixel_step
     var side := 1.0 if friendly else -1.0
     var c := center + Vector2(lunge_offset * side, bob)
-    var rows := _creature_pixels(label)
-    if blink_phase < 0.13:
-        for row_index in range(rows.size()):
-            if rows[row_index].contains("e"):
-                rows[row_index] = rows[row_index].replace("e", "b")
+    var blinking := blink_phase < 0.13
     var sprite_size := 16.0 * pixel_step
     var origin := Vector2(
         roundf(c.x / pixel_step) * pixel_step - sprite_size / 2.0,
         roundf(c.y / pixel_step) * pixel_step - sprite_size / 2.0
     )
-    var palette := _creature_palette(coat, label)
+    var sprite_texture := _get_sprite_texture(label, coat, blinking)
     var hit_timer := float(visual_hit_flash.get(unit_id, 0.0))
     var heal_timer := float(visual_heal_flash.get(unit_id, 0.0))
+    var tint := Color.WHITE
     if hit_timer > 0.0:
         var hit_strength := clampf(hit_timer / 0.18, 0.0, 1.0)
-        palette["b"] = coat.lerp(CREAM, hit_strength * 0.72)
-        palette["s"] = coat.darkened(0.48).lerp(CREAM, hit_strength * 0.38)
+        tint = Color.WHITE.lerp(CREAM, hit_strength * 0.68)
 
     if heal_timer > 0.0:
         var heal_alpha := clampf(heal_timer / 0.24, 0.0, 1.0) * 0.72
@@ -656,18 +654,35 @@ func _draw_creature(
         Rect2(Vector2(c.x - 14.0, c.y + sprite_size / 2.0 - 1.0), Vector2(28.0 * (pixel_step / 2.0), 3.0)),
         Color(INK, 0.28)
     )
+    draw_texture_rect(sprite_texture, Rect2(origin, Vector2(sprite_size, sprite_size)), false, tint)
+    _draw_nameplate(c, label, friendly, scale_factor, health_ratio)
 
-    for row_index in range(rows.size()):
+func _get_sprite_texture(label: String, coat: Color, blinking: bool) -> Texture2D:
+    var cache_key := "%s|%s|%s" % [label, coat.to_html(false), "blink" if blinking else "idle"]
+    if sprite_texture_cache.has(cache_key):
+        return sprite_texture_cache[cache_key] as Texture2D
+
+    var rows := _creature_pixels(label)
+    if blinking:
+        for row_index in range(rows.size()):
+            if rows[row_index].contains("e"):
+                rows[row_index] = rows[row_index].replace("e", "b")
+
+    var palette := _creature_palette(coat, label)
+    var sprite_image := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+    sprite_image.fill(Color.TRANSPARENT)
+    for row_index in range(mini(16, rows.size())):
         var row: String = rows[row_index]
-        for column_index in range(row.length()):
+        for column_index in range(mini(16, row.length())):
             var pixel := row.substr(column_index, 1)
             if pixel == ".":
                 continue
             var color: Color = palette.get(pixel, coat)
-            var pixel_position := origin + Vector2(column_index * pixel_step, row_index * pixel_step)
-            draw_rect(Rect2(pixel_position, Vector2(pixel_step, pixel_step)), color)
+            sprite_image.set_pixel(column_index, row_index, color)
 
-    _draw_nameplate(c, label, friendly, scale_factor, health_ratio)
+    var sprite_texture := ImageTexture.create_from_image(sprite_image)
+    sprite_texture_cache[cache_key] = sprite_texture
+    return sprite_texture
 
 func _creature_pixels(label: String) -> PackedStringArray:
     match label:
