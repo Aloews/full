@@ -61,7 +61,7 @@ jobs:
           grep -q '"persistence":"development_memory_only"' /tmp/casino-battle-health.json
           run_json="$(curl --fail --silent --show-error -X POST \
             -H 'content-type: application/json' \
-            -d '{"seed":42}' http://127.0.0.1:3917/api/v1/runs)"
+            -d '{}' http://127.0.0.1:3917/api/v1/runs)"
           run_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])' <<< "$run_json")"
           curl --fail --silent --show-error "http://127.0.0.1:3917/api/v1/runs/$run_id" > /dev/null
           curl --fail --silent --show-error -X POST "http://127.0.0.1:3917/api/v1/runs/$run_id/draw" > /dev/null
