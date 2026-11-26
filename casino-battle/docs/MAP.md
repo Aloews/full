@@ -25,9 +25,12 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [x] Axum API endpoints for start, state, draw and battle.
 - [x] Optional PostgreSQL JSONB persistence and migration.
 - [x] Health endpoint that distinguishes Postgres from memory-only mode.
-- [x] Godot 2D visual sandbox with original code-drawn character prototypes.\n- [x] Godot client is connected to the API for run state, Fate draws and Auto-battle.\n- [x] Client replays server-authoritative battle events, damage, healing and defeat states.
+- [x] Godot 2D visual sandbox with original code-drawn character prototypes.
+- [x] Godot client is connected to the API for run state, Fate draws and Auto-battle.
+- [x] Client replays server-authoritative battle events, damage, healing and defeat states.
 - [x] Rust CI workflow.
-- [x] Full CI passed on commit `60e5ff6` (Rust format, Clippy, unit tests, 2D audit, Godot 4.3 import, seeded balance sample, formation API smoke tests and PostgreSQL restart-persistence test).\n- [ ] Re-run full CI with boss and relic reward systems on the current candidate commit.
+- [x] Full CI passed on commit `60e5ff6` (Rust format, Clippy, unit tests, 2D audit, Godot 4.3 import, seeded balance sample, formation API smoke tests and PostgreSQL restart-persistence test).
+- [ ] Re-run full CI with boss and relic reward systems on the current candidate commit.
 
 ## Gameplay systems
 
@@ -36,13 +39,17 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [x] Initial unit roles and sigil synergies (two tiers); data-driven content definitions remain open.
 - [x] Duplicate merging and rank-up to three ranks (basic prototype).
 - [ ] Branching evolution, imprints and traits that alter combat behavior.
-- [x] Five first-pass relics with deterministic three-choice rewards after every third boss victory.\n- [ ] Larger build-defining core pool.
+- [x] Five first-pass relics with deterministic three-choice rewards after every third boss victory.
+- [ ] Larger build-defining core pool.
 - [ ] Player-controlled preparation tools: lock, nudge, reroll and pity.
 - [ ] Event, shop and route nodes.
-- [x] Boss encounters every third wave with a dedicated Mosswood Guardian boss prototype.\n- [ ] Elite encounter variety and advanced boss phases.
+- [x] Boss encounters every third wave with a dedicated Mosswood Guardian boss prototype.
+- [ ] Elite encounter variety and advanced boss phases.
 - [ ] Meta progression and unlocks.
-- [x] Server battle event log with tick, source, target, damage, healing and defeat events.\n- [ ] Player-facing run summary and detailed damage breakdown.
-- [x] Deterministic balance simulation harness with seed batches and distribution reports.\n- [x] First 1,000-seed wave-one baseline recorded in `docs/BALANCE_BASELINE.md`.
+- [x] Server battle event log with tick, source, target, damage, healing and defeat events.
+- [ ] Player-facing run summary and detailed damage breakdown.
+- [x] Deterministic balance simulation harness with seed batches and distribution reports.
+- [x] First 1,000-seed wave-one baseline recorded in `docs/BALANCE_BASELINE.md`.
 
 ## Client and art
 
