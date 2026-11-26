@@ -923,11 +923,12 @@ impl GameState {
     }
 
     fn generate_journey_event(&mut self) -> JourneyEvent {
-        let kind = match self.random_u32() % 5 {
-            0 => JourneyEventKind::LostCache,
-            1 => JourneyEventKind::MoonwellShrine,
-            2 => JourneyEventKind::TravellingMerchant,
-            3 => JourneyEventKind::WoundedRanger,
+        let roll = self.random_u32() % 100;
+        let kind = match roll {
+            0..=24 => JourneyEventKind::LostCache,
+            25..=44 => JourneyEventKind::MoonwellShrine,
+            45..=64 => JourneyEventKind::TravellingMerchant,
+            65..=79 => JourneyEventKind::WoundedRanger,
             _ => JourneyEventKind::BanditAmbush,
         };
         let (title, description, choices) = match kind {
@@ -1313,6 +1314,22 @@ mod tests {
         GameState::new(seed, "test-run")
     }
 
+
+    fn set_journey_event(game: &mut GameState, kind: JourneyEventKind) {
+        game.phase = RunPhase::Intermission;
+        game.pending_event = Some(JourneyEvent {
+            id: format!("test-event-{}", game.wave),
+            wave: game.wave,
+            kind,
+            title: "Test encounter".to_string(),
+            description: "A test encounter with two choices.".to_string(),
+            choices: vec![
+                JourneyChoice { label: "Choice A".to_string(), description: "First effect".to_string() },
+                JourneyChoice { label: "Choice B".to_string(), description: "Second effect".to_string() },
+            ],
+        });
+    }
+
     #[test]
     fn board_has_eight_paylines() {
         assert_eq!(LINES.len(), 8);
@@ -1593,6 +1610,65 @@ mod tests {
         unit.current_health = Some(5);
         game.next_wave().unwrap();
         assert_eq!(game.units[0].current_health, Some(7));
+    }
+
+
+    #[test]
+    fn cache_choice_grants_gold_and_persists_the_outcome() {
+        let mut game = run(501);
+        set_journey_event(&mut game, JourneyEventKind::LostCache);
+        game.resolve_journey_event(0).unwrap();
+        assert_eq!(game.gold, 570);
+        assert!(game.pending_event.is_none());
+        assert_eq!(game.event_history.last().unwrap().choice_index, 0);
+    }
+
+    #[test]
+    fn shrine_choice_heals_survivors_and_charges_the_declared_cost() {
+        let mut game = run(502);
+        game.units[0].health = 20;
+        game.units[0].current_health = Some(4);
+        set_journey_event(&mut game, JourneyEventKind::MoonwellShrine);
+        game.resolve_journey_event(0).unwrap();
+        assert_eq!(game.gold, 440);
+        assert_eq!(game.units[0].current_health, Some(8));
+    }
+
+    #[test]
+    fn shrine_blessing_increases_every_survivors_attack() {
+        let mut game = run(503);
+        let before = game.units[0].attack;
+        set_journey_event(&mut game, JourneyEventKind::MoonwellShrine);
+        game.resolve_journey_event(1).unwrap();
+        assert_eq!(game.units[0].attack, before + 2);
+    }
+
+    #[test]
+    fn merchant_purchase_spends_gold_and_adds_the_item() {
+        let mut game = run(504);
+        set_journey_event(&mut game, JourneyEventKind::TravellingMerchant);
+        game.resolve_journey_event(0).unwrap();
+        assert_eq!(game.gold, 420);
+        assert!(game.items.contains(&ItemKind::SharpeningStone));
+    }
+
+    #[test]
+    fn wounded_ranger_can_join_when_capacity_allows() {
+        let mut game = run(505);
+        let count = game.units.len();
+        set_journey_event(&mut game, JourneyEventKind::WoundedRanger);
+        game.resolve_journey_event(0).unwrap();
+        assert_eq!(game.units.len(), count + 1);
+        assert_eq!(game.gold, 450);
+    }
+
+    #[test]
+    fn bandit_standoff_trades_one_heart_for_gold() {
+        let mut game = run(506);
+        set_journey_event(&mut game, JourneyEventKind::BanditAmbush);
+        game.resolve_journey_event(1).unwrap();
+        assert_eq!(game.gold, 590);
+        assert_eq!(game.hearts, 4);
     }
 
     #[test]
