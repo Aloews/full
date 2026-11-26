@@ -816,7 +816,7 @@ mod tests {
         let migrated: GameState =
             serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
                 .unwrap();
-        assert_eq!(migrated.ruleset_version, 3);
+        assert_eq!(migrated.ruleset_version, 4);
         assert!(migrated.pending_event.is_some());
         assert!(migrated.units.iter().all(|unit| unit.traits.len() == 1));
         assert_eq!(
