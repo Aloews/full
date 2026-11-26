@@ -47,12 +47,27 @@ pub enum RunPhase {
     RunOver,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SynergyTier {
+    Budding,
+    Flourishing,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct SynergyStatus {
+    pub sigil: Sigil,
+    pub unit_count: usize,
+    pub tier: SynergyTier,
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Unit {
     pub id: u64,
     pub name: String,
     pub sigil: Sigil,
     pub role: Role,
+    pub lane: u8,
     pub hp: i32,
     pub max_hp: i32,
     pub attack: i32,
@@ -105,6 +120,10 @@ pub enum GameError {
     NotEnoughEssence,
     #[error("a battle cannot be started with an empty party")]
     EmptyParty,
+    #[error("one or both selected units were not found")]
+    UnitNotFound,
+    #[error("units must share a sigil and rank, and the keeper must be below rank 3")]
+    InvalidMerge,
 }
 
 impl RunState {
@@ -125,6 +144,62 @@ impl RunState {
         let starter = state.make_unit(Sigil::Leaf, 1);
         state.party.push(starter);
         state
+    }
+
+    pub fn synergies(&self) -> Vec<SynergyStatus> {
+        Sigil::ALL
+            .iter()
+            .filter_map(|sigil| {
+                let unit_count = self
+                    .party
+                    .iter()
+                    .filter(|unit| unit.hp > 0 && unit.sigil == *sigil)
+                    .count();
+                (unit_count >= 2).then_some(SynergyStatus {
+                    sigil: *sigil,
+                    unit_count,
+                    tier: if unit_count >= 4 {
+                        SynergyTier::Flourishing
+                    } else {
+                        SynergyTier::Budding
+                    },
+                })
+            })
+            .collect()
+    }
+
+    pub fn merge_units(&mut self, keeper_id: u64, donor_id: u64) -> Result<(), GameError> {
+        self.ensure_preparation()?;
+        if keeper_id == donor_id {
+            return Err(GameError::InvalidMerge);
+        }
+
+        let keeper_index = self.party.iter().position(|unit| unit.id == keeper_id)
+            .ok_or(GameError::UnitNotFound)?;
+        let donor_index = self.party.iter().position(|unit| unit.id == donor_id)
+            .ok_or(GameError::UnitNotFound)?;
+
+        let keeper = &self.party[keeper_index];
+        let donor = &self.party[donor_index];
+        if keeper.sigil != donor.sigil || keeper.rank != donor.rank || keeper.rank >= 3 {
+            return Err(GameError::InvalidMerge);
+        }
+
+        let donor = self.party.remove(donor_index);
+        let adjusted_keeper_index = if donor_index < keeper_index {
+            keeper_index - 1
+        } else {
+            keeper_index
+        };
+        let keeper = &mut self.party[adjusted_keeper_index];
+        keeper.rank += 1;
+        keeper.max_hp += 5;
+        keeper.hp = (keeper.hp + 5).min(keeper.max_hp);
+        keeper.attack += 2;
+        keeper.armor += 1;
+        keeper.cooldown_left = 0;
+        drop(donor);
+        Ok(())
     }
 
     pub fn draw(&mut self) -> Result<DrawOutcome, GameError> {
@@ -260,11 +335,13 @@ impl RunState {
             Sigil::Wing => ("Breezeling", Role::Striker, 17, 6, 1, 2),
         };
         let multiplier = i32::from(rank.saturating_sub(1));
+        let lane = (self.party.len() % 3) as u8;
         let unit = Unit {
             id: self.next_unit_id,
             name: name.to_owned(),
             sigil,
             role,
+            lane,
             hp: hp + multiplier * 5,
             max_hp: hp + multiplier * 5,
             attack: attack + multiplier * 2,
@@ -288,6 +365,7 @@ impl RunState {
                     name: format!("Gloomling {}", index + 1),
                     sigil,
                     role: Role::Striker,
+                    lane: (index % 3) as u8,
                     hp: base_hp,
                     max_hp: base_hp,
                     attack: 2 + self.wave as i32,
@@ -307,7 +385,14 @@ impl RunState {
                 attacker.cooldown_left -= 1;
                 continue;
             }
-            if let Some(target) = defenders.iter_mut().find(|unit| unit.hp > 0) {
+            let target_index = defenders
+                .iter()
+                .enumerate()
+                .filter(|(_, unit)| unit.hp > 0)
+                .min_by_key(|(_, unit)| attacker.lane.abs_diff(unit.lane))
+                .map(|(index, _)| index);
+            if let Some(target_index) = target_index {
+                let target = &mut defenders[target_index];
                 let damage = (attacker.attack - target.armor).max(1);
                 target.hp = (target.hp - damage).max(0);
                 attacker.cooldown_left = attacker.attack_cooldown;
