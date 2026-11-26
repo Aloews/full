@@ -87,6 +87,8 @@ impl ApiError {
             GameError::NotEnoughEssence => StatusCode::CONFLICT,
             GameError::RunOver => StatusCode::CONFLICT,
             GameError::EmptyParty => StatusCode::UNPROCESSABLE_ENTITY,
+            GameError::UnitNotFound => StatusCode::NOT_FOUND,
+            GameError::InvalidMerge => StatusCode::CONFLICT,
         };
         Self::new(status, "invalid_game_action")
     }
