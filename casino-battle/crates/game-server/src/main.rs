@@ -16,7 +16,7 @@ use axum::{
 use casino_battle_core::{DrawOutcome, GameError, RunState};
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use uuid::Uuid;
 
@@ -24,11 +24,11 @@ use uuid::Uuid;
 struct AppState {
     runs: Arc<RwLock<HashMap<Uuid, RunState>>>,
     database: Option<PgPool>,
+    transition_guard: Arc<Mutex<()>>,
 }
 
 impl AppState {
     async fn save(&self, id: Uuid, run: &RunState) -> Result<(), ApiError> {
-        self.runs.write().await.insert(id, run.clone());
         if let Some(database) = &self.database {
             let state = sqlx::types::Json(run.clone());
             sqlx::query(
@@ -42,6 +42,7 @@ impl AppState {
             .await
             .map_err(ApiError::database)?;
         }
+        self.runs.write().await.insert(id, run.clone());
         Ok(())
     }
 
@@ -107,6 +108,12 @@ struct CreateRunRequest {
     seed: Option<u64>,
 }
 
+#[derive(Deserialize)]
+struct MergeRequest {
+    keeper_id: u64,
+    donor_id: u64,
+}
+
 #[derive(Serialize)]
 struct CreateRunResponse {
     run_id: Uuid,
@@ -160,6 +167,7 @@ async fn draw(
     State(state): State<AppState>,
     Path(run_id): Path<Uuid>,
 ) -> Result<Json<DrawOutcome>, ApiError> {
+    let _guard = state.transition_guard.lock().await;
     let mut run = state.load(run_id).await?;
     let outcome = run.draw().map_err(ApiError::game)?;
     state.save(run_id, &run).await?;
@@ -170,10 +178,24 @@ async fn battle(
     State(state): State<AppState>,
     Path(run_id): Path<Uuid>,
 ) -> Result<Json<casino_battle_core::BattleReport>, ApiError> {
+    let _guard = state.transition_guard.lock().await;
     let mut run = state.load(run_id).await?;
     let report = run.resolve_auto_battle().map_err(ApiError::game)?;
     state.save(run_id, &run).await?;
     Ok(Json(report))
+}
+
+async fn merge(
+    State(state): State<AppState>,
+    Path(run_id): Path<Uuid>,
+    Json(request): Json<MergeRequest>,
+) -> Result<Json<RunState>, ApiError> {
+    let _guard = state.transition_guard.lock().await;
+    let mut run = state.load(run_id).await?;
+    run.merge_units(request.keeper_id, request.donor_id)
+        .map_err(ApiError::game)?;
+    state.save(run_id, &run).await?;
+    Ok(Json(run))
 }
 
 fn random_seed() -> u64 {
@@ -205,6 +227,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         runs: Arc::new(RwLock::new(HashMap::new())),
         database,
+        transition_guard: Arc::new(Mutex::new(())),
     };
     let app = Router::new()
         .route("/healthz", get(health))
@@ -212,6 +235,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/runs/:run_id", get(get_run))
         .route("/api/v1/runs/:run_id/draw", post(draw))
         .route("/api/v1/runs/:run_id/battle", post(battle))
+        .route("/api/v1/runs/:run_id/merge", post(merge))
         .with_state(state)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http());
