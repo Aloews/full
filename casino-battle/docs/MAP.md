@@ -1,6 +1,6 @@
 # Casino Battle development map
 
-**Current gate: Foundation branch — Rust domain, server API and strict 2D visual sandbox.**
+**Current gate: Foundation branch — Rust domain, server API and strict 2D pixel-art sandbox.**
 
 The map is the source of truth for autonomous coding agents. Update status only when a file, test, CI run or deployment proves the state.
 
@@ -8,9 +8,11 @@ The map is the source of truth for autonomous coding agents. Update status only 
 
 - [x] Strict 2D presentation contract documented.
 - [x] Auto-battle is the only battle mode.
-- [x] Art direction locked to warm, hand-crafted, character-led fantasy.
+- [x] Art direction locked to cozy retro 16-bit pixel art: Slotbound battle readability + Zelda world charm + Mario-like character clarity.
 - [x] Casino logic represented as sigils / probability / combinations, not a casino setting.
 - [x] Flat side-on 2D battlefield layout selected for the first prototype.
+- [x] 640×360 internal canvas with 2× nearest-neighbour output scaling specified and implemented.
+- [x] Pixel snapping and non-antialiased pixel-cluster contours specified and implemented.
 - [ ] Original character bible and visual asset library.
 - [ ] Final UI style guide, typography and icon set.
 
@@ -53,11 +55,11 @@ The map is the source of truth for autonomous coding agents. Update status only 
 
 ## Client and art
 
-- [ ] Final 2D camera and scale grid.
-- [ ] Original hero and enemy sprite sheets.
+- [ ] Final sprite grid audit and tile-size consistency check.
+- [ ] Production-quality original hero and enemy sprite sheets (code-drawn pixel prototypes are not final art).
 - [ ] Idle / anticipation / attack / hit / defeat / victory animation sets.
 - [ ] Background biome kits with multiple layers.
-- [ ] Hand-painted VFX library.
+- [ ] Pixel-art VFX library with attack, hit, healing, defeat and reward frame strips.
 - [ ] UI components with readable text at 1280×720 and Steam Deck scale.
 - [ ] Reduced motion and color-accessibility checks.
 - [ ] Asset license provenance and source files tracked.
