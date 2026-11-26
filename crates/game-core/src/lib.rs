@@ -1363,6 +1363,11 @@ mod tests {
         game.wave = 5;
         let report = game.battle().unwrap();
         assert!(report.boss);
-        assert!(report.events.iter().any(|event| event.kind == BattleEventKind::BossTelegraph));
+        assert!(
+            report
+                .events
+                .iter()
+                .any(|event| event.kind == BattleEventKind::BossTelegraph)
+        );
     }
 }
