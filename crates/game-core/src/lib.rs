@@ -490,10 +490,7 @@ impl GameState {
         } else {
             (1 + (enemy_power - army_power) / 28).min(3)
         };
-        let has_vitality = self
-            .items
-            .iter()
-            .any(|item| *item == ItemKind::VitalityCharm);
+        let has_vitality = self.items.contains(&ItemKind::VitalityCharm);
         let damage_taken = if has_vitality && raw_damage > 0 {
             raw_damage.saturating_sub(1)
         } else {
