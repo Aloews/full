@@ -227,6 +227,40 @@ pub fn item_prices() -> [u32; 3] {
     ]
 }
 
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum JourneyEventKind {
+    LostCache,
+    MoonwellShrine,
+    TravellingMerchant,
+    WoundedRanger,
+    BanditAmbush,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct JourneyChoice {
+    pub label: String,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct JourneyEvent {
+    pub id: String,
+    pub wave: u32,
+    pub kind: JourneyEventKind,
+    pub title: String,
+    pub description: String,
+    pub choices: Vec<JourneyChoice>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct JourneyEventResolution {
+    pub event_id: String,
+    pub choice_index: usize,
+    pub outcome: String,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GameState {
     pub run_id: String,
@@ -248,6 +282,10 @@ pub struct GameState {
     pub items: Vec<ItemKind>,
     pub last_spin: Option<SpinReport>,
     pub last_battle: Option<BattleReport>,
+    #[serde(default)]
+    pub pending_event: Option<JourneyEvent>,
+    #[serde(default)]
+    pub event_history: Vec<JourneyEventResolution>,
     pub core_offer: Option<[CoreKind; 3]>,
     next_unit_id: u64,
     rng_state: u64,
@@ -283,6 +321,12 @@ pub enum GameError {
     InvalidCoreChoice,
     #[error("choose an offered Core before starting the next wave")]
     CoreChoiceRequired,
+    #[error("resolve the journey event before starting the next wave")]
+    JourneyEventRequired,
+    #[error("there is no pending journey event")]
+    NoJourneyEvent,
+    #[error("journey event choice is invalid")]
+    InvalidJourneyChoice,
     #[error("item is not available or the selected item is invalid")]
     InvalidItem,
 }
@@ -309,6 +353,8 @@ impl GameState {
             items: Vec::new(),
             last_spin: None,
             last_battle: None,
+            pending_event: None,
+            event_history: Vec::new(),
             core_offer: None,
             next_unit_id: 1,
             rng_state: if seed == 0 {
@@ -846,8 +892,10 @@ impl GameState {
         }
         if self.hearts == 0 {
             self.phase = RunPhase::Lost;
+            self.pending_event = None;
         } else {
             self.phase = RunPhase::Intermission;
+            self.pending_event = Some(self.generate_journey_event());
         }
         events.push(BattleEvent {
             tick: rounds,
@@ -872,6 +920,129 @@ impl GameState {
         };
         self.last_battle = Some(report.clone());
         Ok(report)
+    }
+
+
+    fn generate_journey_event(&mut self) -> JourneyEvent {
+        let kind = match self.random_u32() % 5 {
+            0 => JourneyEventKind::LostCache,
+            1 => JourneyEventKind::MoonwellShrine,
+            2 => JourneyEventKind::TravellingMerchant,
+            3 => JourneyEventKind::WoundedRanger,
+            _ => JourneyEventKind::BanditAmbush,
+        };
+        let (title, description, choices) = match kind {
+            JourneyEventKind::LostCache => ("A cache beneath the roots", "A moss-covered chest lies half-buried beside the old road. Something valuable remains inside.", vec![
+                ("Take the gold", "Gain 70 gold.").to_string(),
+                ("Drink the tonic", "Restore one heart, up to the run limit.").to_string(),
+            ]),
+            JourneyEventKind::MoonwellShrine => ("The moonwell shrine", "Silver water circles a cracked stone altar. The shrine answers only one offering.", vec![
+                ("Offer 60 gold", "Restore up to 4 health to every surviving unit.").to_string(),
+                ("Take the blessing", "Every surviving unit gains 2 attack.").to_string(),
+            ]),
+            JourneyEventKind::TravellingMerchant => ("A travelling merchant", "A lantern-lit cart blocks the narrow forest path. Its owner has one rare supply.", vec![
+                ("Buy a sharpening stone · 80 gold", "Gain a permanent battle attack item.").to_string(),
+                ("Trade stories", "Leave peacefully and gain 25 gold.").to_string(),
+            ]),
+            JourneyEventKind::WoundedRanger => ("A wounded ranger", "A scout from the northern trail offers to join, if you can spare supplies.", vec![
+                ("Recruit · 50 gold", "Recruit a random class if your formation has room.").to_string(),
+                ("Share provisions", "Gain 35 gold from the ranger's recovered map.").to_string(),
+            ]),
+            JourneyEventKind::BanditAmbush => ("Bandits on the old road", "Masked bandits demand payment. You can surrender your purse or fight through.", vec![
+                ("Pay the toll", "Lose 40 gold and avoid injury.").to_string(),
+                ("Stand your ground", "Gain 90 gold, but lose one heart.").to_string(),
+            ]),
+        };
+        JourneyEvent {
+            id: format!("wave-{}-event", self.wave),
+            wave: self.wave,
+            kind,
+            title: title.to_string(),
+            description: description.to_string(),
+            choices: choices.into_iter().map(|value| {
+                let (label, description) = value.split_once(" · ").unwrap_or((&value, ""));
+                JourneyChoice { label: label.to_string(), description: description.to_string() }
+            }).collect(),
+        }
+    }
+
+    pub fn resolve_journey_event(&mut self, choice_index: usize) -> Result<(), GameError> {
+        if self.phase != RunPhase::Intermission {
+            return Err(GameError::WrongPhase);
+        }
+        let event = self.pending_event.clone().ok_or(GameError::NoJourneyEvent)?;
+        if choice_index >= event.choices.len() {
+            return Err(GameError::InvalidJourneyChoice);
+        }
+        let outcome = match event.kind {
+            JourneyEventKind::LostCache => {
+                if choice_index == 0 {
+                    self.gold = self.gold.saturating_add(70);
+                    "Recovered 70 gold.".to_string()
+                } else {
+                    self.hearts = self.hearts.saturating_add(1).min(5);
+                    "The tonic restored one heart.".to_string()
+                }
+            }
+            JourneyEventKind::MoonwellShrine => {
+                if choice_index == 0 {
+                    if self.gold < 60 { return Err(GameError::NotEnoughGold); }
+                    self.gold -= 60;
+                    for unit in &mut self.units {
+                        unit.current_health = Some(unit.current_health.unwrap_or(unit.health).saturating_add(4).min(unit.health));
+                        if unit.current_health == Some(unit.health) { unit.current_health = None; }
+                    }
+                    "The moonwell restored up to 4 health to every survivor.".to_string()
+                } else {
+                    for unit in &mut self.units { unit.attack = unit.attack.saturating_add(2); }
+                    "The moonwell blessed the army: +2 attack to every survivor.".to_string()
+                }
+            }
+            JourneyEventKind::TravellingMerchant => {
+                if choice_index == 0 {
+                    if self.gold < 80 { return Err(GameError::NotEnoughGold); }
+                    self.gold -= 80;
+                    self.items.push(ItemKind::SharpeningStone);
+                    "Purchased a sharpening stone.".to_string()
+                } else {
+                    self.gold = self.gold.saturating_add(25);
+                    "The merchant shared a useful map: +25 gold.".to_string()
+                }
+            }
+            JourneyEventKind::WoundedRanger => {
+                if choice_index == 0 {
+                    if self.gold < 50 { return Err(GameError::NotEnoughGold); }
+                    if self.units.len() >= self.unit_limit { return Err(GameError::UnitCapacityReached); }
+                    self.gold -= 50;
+                    let class = self.random_class();
+                    let recruit = self.spawn_unit(class);
+                    self.units.push(recruit);
+                    format!("A {:?} ranger joined the formation.", class)
+                } else {
+                    self.gold = self.gold.saturating_add(35);
+                    "The ranger shared a recovered map: +35 gold.".to_string()
+                }
+            }
+            JourneyEventKind::BanditAmbush => {
+                if choice_index == 0 {
+                    if self.gold < 40 { return Err(GameError::NotEnoughGold); }
+                    self.gold -= 40;
+                    "Paid the toll. The army escaped without injury.".to_string()
+                } else {
+                    self.gold = self.gold.saturating_add(90);
+                    self.hearts = self.hearts.saturating_sub(1);
+                    if self.hearts == 0 { self.phase = RunPhase::Lost; }
+                    "The bandits fled. Recovered 90 gold, but lost one heart.".to_string()
+                }
+            }
+        };
+        self.event_history.push(JourneyEventResolution {
+            event_id: event.id,
+            choice_index,
+            outcome,
+        });
+        self.pending_event = None;
+        Ok(())
     }
 
     pub fn choose_core(&mut self, index: usize) -> Result<(), GameError> {
@@ -919,6 +1090,9 @@ impl GameState {
         if self.core_offer.is_some() {
             return Err(GameError::CoreChoiceRequired);
         }
+        if self.pending_event.is_some() {
+            return Err(GameError::JourneyEventRequired);
+        }
         self.wave = self.wave.saturating_add(1);
         self.spins_remaining = 6;
         self.spins_used = 0;
@@ -926,6 +1100,7 @@ impl GameState {
         self.nudge_available = true;
         self.last_spin = None;
         self.last_battle = None;
+        self.pending_event = None;
         for unit in &mut self.units {
             let restored = unit
                 .current_health
