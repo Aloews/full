@@ -427,6 +427,35 @@ impl GameState {
         100 + u32::from(self.spins_used) * 50
     }
 
+    pub fn migrate_legacy_state(&mut self) -> bool {
+        if self.ruleset_version >= 2 {
+            return false;
+        }
+
+        if self.phase == RunPhase::Intermission
+            && self.last_battle.is_some()
+            && self.pending_event.is_none()
+            && self.pending_route.is_none()
+            && self.current_route.is_none()
+        {
+            let current_event_id = format!("wave-{}-event", self.wave);
+            let current_event_was_resolved = self
+                .event_history
+                .iter()
+                .any(|resolution| resolution.event_id == current_event_id);
+
+            if current_event_was_resolved {
+                self.pending_route =
+                    Some(self.generate_route_options(self.wave.saturating_add(1)));
+            } else {
+                self.pending_event = Some(self.generate_journey_event());
+            }
+        }
+
+        self.ruleset_version = 2;
+        true
+    }
+
     pub fn spin(&mut self) -> Result<SpinReport, GameError> {
         self.ensure_preparation()?;
         if self.units.len() > self.unit_limit {
@@ -1954,6 +1983,65 @@ mod tests {
         assert_eq!(game.gold, gold_before);
         assert_eq!(game.units.len(), game.unit_limit);
         assert!(game.pending_event.is_some());
+    }
+
+
+    #[test]
+    fn legacy_intermission_save_migrates_to_a_pending_event_once() {
+        let mut game = run(701);
+        game.battle().unwrap();
+        assert_eq!(game.phase, RunPhase::Intermission);
+
+        let mut value = serde_json::to_value(game).unwrap();
+        let object = value.as_object_mut().unwrap();
+        object.insert("ruleset_version".to_string(), serde_json::json!(1));
+        for key in ["pending_event", "pending_route", "current_route", "route_history"] {
+            object.remove(key);
+        }
+        let mut restored: GameState = serde_json::from_value(value).unwrap();
+        assert!(restored.pending_event.is_none());
+        assert!(restored.pending_route.is_none());
+
+        assert!(restored.migrate_legacy_state());
+        let migrated_event = restored.pending_event.clone().unwrap();
+        assert_eq!(restored.ruleset_version, 2);
+        assert!(restored.pending_route.is_none());
+        assert!(!restored.migrate_legacy_state());
+        assert_eq!(restored.pending_event, Some(migrated_event));
+    }
+
+    #[test]
+    fn legacy_intermission_with_resolved_event_migrates_to_route_choice() {
+        let mut game = run(702);
+        game.battle().unwrap();
+        game.resolve_journey_event(0).unwrap();
+        let mut value = serde_json::to_value(game).unwrap();
+        let object = value.as_object_mut().unwrap();
+        object.insert("ruleset_version".to_string(), serde_json::json!(1));
+        for key in ["pending_event", "pending_route", "current_route", "route_history"] {
+            object.remove(key);
+        }
+        let mut restored: GameState = serde_json::from_value(value).unwrap();
+        assert!(restored.pending_event.is_none());
+        assert!(restored.pending_route.is_none());
+
+        assert!(restored.migrate_legacy_state());
+        assert!(restored.pending_event.is_none());
+        assert_eq!(restored.ruleset_version, 2);
+        let options = restored.pending_route.as_ref().unwrap();
+        assert_eq!(options.len(), 3);
+        assert!(!restored.migrate_legacy_state());
+    }
+
+    #[test]
+    fn legacy_preparation_save_migrates_without_inventing_an_event_or_route() {
+        let mut game = run(703);
+        game.ruleset_version = 1;
+        assert!(game.migrate_legacy_state());
+        assert_eq!(game.ruleset_version, 2);
+        assert!(game.pending_event.is_none());
+        assert!(game.pending_route.is_none());
+        assert!(!game.migrate_legacy_state());
     }
 
     #[test]
