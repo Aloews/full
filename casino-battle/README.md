@@ -1,6 +1,6 @@
 # Casino Battle
 
-Casino Battle is a standalone 2D roguelite auto-battler prototype. Its visual language is warm, hand-crafted, readable and character-first. Combat is fully automated; the player's skill is expressed through drafting, formation, combinations, equipment and run decisions.
+Casino Battle is a standalone 2D roguelite auto-battler prototype. Its visual language is cozy retro 16-bit pixel art: warm, readable, character-first and inspired by classic Nintendo-era adventures without copying their assets. Combat is fully automated; the player's skill is expressed through drafting, formation, combinations, equipment and run decisions.
 
 The project lives in this directory on the `casino-battle/foundation` branch. It does not replace Slotbound files or change the default branch.
 
@@ -8,7 +8,7 @@ The project lives in this directory on the `casino-battle/foundation` branch. It
 
 - **2D only.** No 3D scenes, meshes, perspective cameras or pseudo-3D presentation.
 - **Auto-battle only.** The player prepares the party and formation; the simulation resolves combat.
-- **Warm, charming, collectible visual identity.** Hand-drawn contours, soft paper-like surfaces, gentle colors and distinct silhouettes.
+- **Warm, charming, collectible pixel-art identity.** Deliberate pixel clusters, stepped silhouettes, limited color ramps, expressive sprites and nearest-neighbour scaling.
 - Casino mechanics are a probability-and-combination system, not a casino setting. No slot-machine cabinet, roulette wheel, poker table, chips or casino room.
 - No real-money wagering, cash-out, paid chance mechanics or purchasable random outcomes.
 - The combat/domain rules live in Rust, never in UI event handlers.
@@ -18,7 +18,7 @@ The project lives in this directory on the `casino-battle/foundation` branch. It
 - `crates/game-core`: deterministic run state, a 4×4 connected-cluster Fate Board, rank-based recruitment, party synergies, duplicate evolution, lane-aware Auto-battle, bosses and relic rewards.
 - `crates/game-server`: Axum API, PostgreSQL JSONB persistence, transactional row-locked state transitions, non-secret public snapshots, configurable CORS and health check.
 - `client/`: reads run state from the API and replays the server-authoritative Auto-battle event log.
-- `client/`: strict 2D Godot prototype with original hand-drawn-style vector character studies, a 4×4 Fate Board preview, server-driven party HUD, preparation-only lane changes by clicking a unit and tick-by-tick Auto-battle replay. All six allied sigil families now have distinct 2D prototype silhouettes (Mossguard, Cinderkit, Puddlekin, Pebbleback, Moonmote and Breezeling). These are code-drawn prototypes; authored sprite sheets, hand-painted animation and finished UI art remain release work.
+- `client/`: strict 2D Godot prototype with original code-drawn pixel-cluster character studies, a 4×4 Fate Board preview, server-driven party HUD, preparation-only lane changes by clicking a unit and tick-by-tick Auto-battle replay. All six allied sigil families now have distinct 2D prototype silhouettes (Mossguard, Cinderkit, Puddlekin, Pebbleback, Moonmote and Breezeling). These are code-drawn prototypes; production sprite sheets, authored frame-by-frame animation and finished pixel UI art remain release work.
 
 ## Run
 
