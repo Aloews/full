@@ -50,7 +50,7 @@ The baseline source candidate commit `680ec889595b4defaa590f1721f000630d3c7ab4` 
 - push run [45849594472](https://github.com/Aloews/full/actions/runs/45849594472);
 - pull-request run [45849612291](https://github.com/Aloews/full/actions/runs/45849612291).
 
-The complete CI run [45896564769](https://github.com/Aloews/full/actions/runs/45896564769) passed on exact candidate `cea19ed2c8de5731790fbc87999562b0c0b6e739` (GitHub Actions run 116). Every step succeeded: Rust format, Clippy, unit/integration tests, release API build, Vercel container build, browser JavaScript syntax, API/browser contract and autonomous patch-policy tests. The branch HEAD remains this exact tested SHA.
+The complete CI run [45896564769](https://github.com/Aloews/full/actions/runs/45896564769) passed on exact code candidate `cea19ed2c8de5731790fbc87999562b0c0b6e739` (GitHub Actions run 116). Every step succeeded: Rust format, Clippy, unit/integration tests, release API build, Vercel container build, browser JavaScript syntax, API/browser contract and autonomous patch-policy tests. A follow-up documentation-only commit `1b4083af1bfe43190d5b3fe9105c548e2d4be96f` updated the visual status and MAP; no gameplay or browser code changed after run 116. The final docs commit is being rechecked by CI.
 
 ## Product and art direction
 
