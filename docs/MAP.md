@@ -85,6 +85,23 @@ The complete CI run [45896564769](https://github.com/Aloews/full/actions/runs/45
 - [x] Remove player-facing casino/reel terminology: the recruitment device is labelled Fate Board and sigil draws in the UI.
 - [ ] Battle outcome properties: empty army, simultaneous defeat, stalemate/turn cap, tie-break order and terminal state.
 
+
+### S1.5 — Journey events and visible battles (required core loop)
+
+- [x] Army recruitment through the 3×3 sigil board, roster management, keeper/donor absorption, growth and promotions exist in the Rust domain.
+- [x] Deterministic automatic battle simulation emits typed combat events and a combat report.
+- [ ] Add a seeded, weighted event director with event pools by biome, wave, run state and prior choices.
+- [ ] Implement event families: travelling merchant, treasure/cache, shrine/blessing, wounded traveller/recruit, ambush, elite challenge, hazard, bargain/curse and branching story choice.
+- [ ] Give every event explicit eligibility, weight, choice requirements, costs, state effects, rewards, consequences and once-per-run/once-per-biome rules.
+- [ ] Persist event history and resolved choices in GameState; deterministic replay must reproduce the same event sequence for the same seed and command history.
+- [ ] Add an event phase/state machine so events cannot be skipped, duplicated, replayed for rewards or resolved outside their eligible phase.
+- [ ] Show the journey as a branching route with event nodes, battle nodes, elite encounters, shops and boss gates; choices alter the available future.
+- [ ] Replace the battle result-only presentation with a visible 2D battlefield: allied formation, enemy formation, HP bars, telegraphs, projectiles, impact frames, healing, defeats and boss phases.
+- [ ] Animate the Rust-authoritative BattleEvent stream in the browser; animation timing must not change combat outcomes and must support pause/fast-forward/reduced motion.
+- [ ] Add browser E2E tests for event choice effects, save/restore mid-run, event determinism, battle playback ordering and replay protection.
+
+**Acceptance:** a fresh run must demonstrate recruitment → army composition/development → a meaningful non-battle event with at least two consequential choices → an animated battle that visibly corresponds to the authoritative event stream → rewards and a route choice. A screenshot of the battle report alone does not satisfy visible-battle acceptance.
+
 ### S2 — Make runs strategic
 - [ ] Versioned Ruleset containing symbol weights, costs, unit data, enemy scaling, rewards and stage rules.
 - [ ] Deterministic command history and replay with canonical state hashes.
