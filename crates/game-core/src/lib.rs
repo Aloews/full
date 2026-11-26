@@ -743,6 +743,12 @@ impl GameState {
         }
         for inherited_trait in donor.traits {
             if target.traits.len() < 3 && !target.traits.contains(&inherited_trait) {
+                if inherited_trait == UnitTrait::Stout {
+                    target.health = target.health.saturating_add(3);
+                    if let Some(current) = target.current_health.as_mut() {
+                        *current = current.saturating_add(3).min(target.health);
+                    }
+                }
                 target.traits.push(inherited_trait);
             }
         }
@@ -959,13 +965,17 @@ impl GameState {
                     enemies.remove(target_index);
                 }
 
-                if actor.class == Some(UnitClass::Mage) && tick % 2 == 0 && !enemies.is_empty() {
+                let class_splash = if actor.class == Some(UnitClass::Mage) { 2 } else { 0 };
+                let imprint_splash =
+                    imprint_rank_bonus(&actor.imprints, UnitImprint::Spellpower, 2);
+                if class_splash.saturating_add(imprint_splash) > 0
+                    && tick % 2 == 0
+                    && !enemies.is_empty()
+                {
                     let splash_index = select_target_index(&enemies, &actor, false)
                         .expect("enemy list is checked as non-empty");
                     let splash_target = enemies[splash_index].clone();
-                    let imprint_splash =
-                        imprint_rank_bonus(&actor.imprints, UnitImprint::Spellpower, 2);
-                    let splash_base_damage = 2u32
+                    let splash_base_damage = class_splash
                         .saturating_add(imprint_splash)
                         .saturating_mul(core_percent)
                         / 100;
@@ -999,7 +1009,10 @@ impl GameState {
                     }
                 }
 
-                if actor.class == Some(UnitClass::Cleric) && tick % 2 == 0 {
+                let class_healing = if actor.class == Some(UnitClass::Cleric) { 2 } else { 0 };
+                let imprint_healing =
+                    imprint_rank_bonus(&actor.imprints, UnitImprint::Mending, 1);
+                if class_healing.saturating_add(imprint_healing) > 0 && tick % 2 == 0 {
                     if let Some((ally_index, _)) = allies
                         .iter()
                         .enumerate()
@@ -1013,7 +1026,8 @@ impl GameState {
                             )
                         })
                     {
-                        let healed = 2u32
+                        let healing = class_healing.saturating_add(imprint_healing);
+                        let healed = healing
                             .min(allies[ally_index].max_health - allies[ally_index].current_health);
                         allies[ally_index].current_health =
                             allies[ally_index].current_health.saturating_add(healed);
