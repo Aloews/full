@@ -21,6 +21,14 @@ for endpoint in ("spin", "nudge", "absorb", "promotion", "lock", "battle", "next
     if f"/{endpoint}" not in client:
         raise SystemExit(f"browser action missing API call suffix: /{endpoint}")
 
+
+if "function playBattleReplay(report)" not in client:
+    raise SystemExit("battle replay renderer is missing")
+if 'data-action="journey-choice"' not in client or "resolve_event" not in api:
+    raise SystemExit("journey event choice flow is not connected")
+if "resolve_journey_event" not in api or "JourneyEventRequired" not in api:
+    raise SystemExit("journey event persistence or next-wave gate is missing")
+
 ids = set(re.findall(r'id="([a-z0-9-]+)"', html))
 selectors = set(re.findall(r"\$\('([a-z0-9-]+)'\)", client))
 dynamic_ids = {"next-wave", "restart", "start-battle", "battlefield"}
