@@ -356,7 +356,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .power-row strong { font: 900 25px Georgia, serif; color: #6f5128; }
 .versus { font: italic 13px Georgia, serif; color: #74694e; }
 .enemy-line { display: flex; justify-content: space-between; margin: 11px 2px; color: #69624e; font-size: 9px; letter-spacing: .08em; }
-.battle-actions { display: flex; justify-content: flex-end; margin-top: 13px; }
+.battle-actions { display: flex; justify-content: flex-end; align-items:center; flex-wrap:wrap; gap:8px; margin-top: 13px; }
 .battle-result {
   display: grid;
   gap: 6px;
