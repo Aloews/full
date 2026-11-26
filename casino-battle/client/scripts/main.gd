@@ -220,7 +220,7 @@ func _start_battle_replay(events: Array) -> void:
     var enemy_count := mini(3 + int(maxi(0, wave - 1) / 2), 8)
     for enemy_index in range(enemy_count):
         var enemy_id := 9223372036854775807 - enemy_index
-        var enemy_hp := 10 + wave * 3 + enemy_index * 2
+        var enemy_hp := 16 + wave * 4 + enemy_index * 3
         visual_hp[enemy_id] = enemy_hp
         visual_max_hp[enemy_id] = enemy_hp
 
@@ -421,7 +421,7 @@ func _draw_battlefield(size: Vector2) -> void:
         var enemy_position := _unit_position(enemy_id)
         var enemy_name := "Gloomling" if enemy_index % 2 == 0 else "Murkling"
         var enemy_color := BERRY if enemy_index % 2 == 0 else Color("#8D8578")
-        var enemy_max_hp := maxi(1, int(visual_max_hp.get(enemy_id, 10 + wave * 3 + enemy_index * 2)))
+        var enemy_max_hp := maxi(1, int(visual_max_hp.get(enemy_id, 16 + wave * 4 + enemy_index * 3)))
         var enemy_hp := int(visual_hp.get(enemy_id, enemy_max_hp))
         _draw_creature(
             enemy_position,
