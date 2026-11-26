@@ -32,6 +32,9 @@ var battle_replay_active := false
 var battle_frame_events: Array = []
 var visual_hp: Dictionary = {}
 var visual_max_hp: Dictionary = {}
+var visual_hit_flash: Dictionary = {}
+var visual_heal_flash: Dictionary = {}
+var visual_lunge: Dictionary = {}
 
 var fate_pattern := [
     [0, 1, 0, 3],
@@ -245,6 +248,9 @@ func _start_battle_replay(events: Array) -> void:
     battle_frame_events.clear()
     visual_hp.clear()
     visual_max_hp.clear()
+    visual_hit_flash.clear()
+    visual_heal_flash.clear()
+    visual_lunge.clear()
 
     for unit in run_snapshot.get("party", []):
         var unit_id := int(unit.get("id", 0))
@@ -302,14 +308,18 @@ func _advance_battle_replay() -> void:
 
     for event in battle_frame_events:
         var kind := str(event.get("kind", "attack"))
+        var source_id := int(event.get("source_unit_id", 0))
         var target_id := int(event.get("target_unit_id", 0))
         var amount := int(event.get("amount", 0))
         if not visual_hp.has(target_id):
             continue
 
         if kind == "attack":
+            visual_lunge[source_id] = 0.15
+            visual_hit_flash[target_id] = 0.18
             visual_hp[target_id] = maxi(0, int(visual_hp[target_id]) - amount)
         elif kind == "heal":
+            visual_heal_flash[target_id] = 0.24
             visual_hp[target_id] = mini(
                 int(visual_max_hp.get(target_id, visual_hp[target_id])),
                 int(visual_hp[target_id]) + amount
@@ -466,8 +476,19 @@ func _update_controls() -> void:
     battle_button.disabled = api_busy or battle_replay_active or run_id.is_empty() or not active or run_snapshot.get("party", []).is_empty()
     status_label.text = status_text
 
+func _decay_visual_timers(timers: Dictionary, delta: float) -> void:
+    for unit_id in timers.keys():
+        var remaining := float(timers[unit_id]) - delta
+        if remaining <= 0.0:
+            timers.erase(unit_id)
+        else:
+            timers[unit_id] = remaining
+
 func _process(delta: float) -> void:
     elapsed += delta
+    _decay_visual_timers(visual_hit_flash, delta)
+    _decay_visual_timers(visual_heal_flash, delta)
+    _decay_visual_timers(visual_lunge, delta)
     if battle_replay_active:
         battle_replay_timer -= delta
         if battle_replay_timer <= 0.0:
@@ -552,7 +573,8 @@ func _draw_battlefield(size: Vector2) -> void:
             name,
             true,
             1.0,
-            health_ratio
+            health_ratio,
+            unit_id
         )
 
     var wave := int(run_snapshot.get("wave", 1))
@@ -573,7 +595,8 @@ func _draw_battlefield(size: Vector2) -> void:
             enemy_name,
             false,
             1.5 if is_boss else 1.0,
-            clampf(float(enemy_hp) / float(enemy_max_hp), 0.0, 1.0)
+            clampf(float(enemy_hp) / float(enemy_max_hp), 0.0, 1.0),
+            enemy_id
         )
 
     var bob := roundf(sin(elapsed * 2.1) * 2.0)
@@ -589,18 +612,45 @@ func _draw_creature(
     label: String,
     friendly: bool,
     scale_factor: float,
-    health_ratio: float = 1.0
+    health_ratio: float = 1.0,
+    unit_id: int = 0
 ) -> void:
-    var bob := roundf(sin(elapsed * 2.5 + center.x * 0.01) * 2.0) * 2.0
-    var c := center + Vector2(0, bob)
     var pixel_step := 4.0 if label == "Mosswood Guardian" else 2.0
+    var blink_phase := fposmod(elapsed + float(unit_id % 7) * 0.43, 3.8)
+    var bob := roundf(sin(elapsed * 2.5 + center.x * 0.01) * 2.0) * 2.0
+    var lunge_timer := float(visual_lunge.get(unit_id, 0.0))
+    var lunge_progress := clampf(lunge_timer / 0.15, 0.0, 1.0)
+    var lunge_offset := roundf(sin((1.0 - lunge_progress) * PI) * 6.0 / pixel_step) * pixel_step
+    var side := 1.0 if friendly else -1.0
+    var c := center + Vector2(lunge_offset * side, bob)
     var rows := _creature_pixels(label)
+    if blink_phase < 0.13:
+        for row_index in range(rows.size()):
+            if rows[row_index].contains("e"):
+                rows[row_index] = rows[row_index].replace("e", "b")
     var sprite_size := 16.0 * pixel_step
     var origin := Vector2(
         roundf(c.x / pixel_step) * pixel_step - sprite_size / 2.0,
         roundf(c.y / pixel_step) * pixel_step - sprite_size / 2.0
     )
     var palette := _creature_palette(coat, label)
+    var hit_timer := float(visual_hit_flash.get(unit_id, 0.0))
+    var heal_timer := float(visual_heal_flash.get(unit_id, 0.0))
+    if hit_timer > 0.0:
+        var hit_strength := clampf(hit_timer / 0.18, 0.0, 1.0)
+        palette["b"] = coat.lerp(CREAM, hit_strength * 0.72)
+        palette["s"] = coat.darkened(0.48).lerp(CREAM, hit_strength * 0.38)
+
+    if heal_timer > 0.0:
+        var heal_alpha := clampf(heal_timer / 0.24, 0.0, 1.0) * 0.72
+        draw_rect(Rect2(origin + Vector2(-4, -4), Vector2(sprite_size + 8, 2)), Color(SAGE, heal_alpha))
+        draw_rect(Rect2(origin + Vector2(-4, sprite_size + 2), Vector2(sprite_size + 8, 2)), Color(SAGE, heal_alpha))
+        draw_rect(Rect2(origin + Vector2(-4, -2), Vector2(2, sprite_size + 4)), Color(SAGE, heal_alpha))
+        draw_rect(Rect2(origin + Vector2(sprite_size + 2, -2), Vector2(2, sprite_size + 4)), Color(SAGE, heal_alpha))
+
+    if hit_timer > 0.0:
+        var flash_alpha := clampf(hit_timer / 0.18, 0.0, 1.0) * 0.78
+        draw_rect(Rect2(origin + Vector2(-4, -4), Vector2(sprite_size + 8, 2)), Color(HONEY, flash_alpha))
 
     draw_rect(
         Rect2(Vector2(c.x - 14.0, c.y + sprite_size / 2.0 - 1.0), Vector2(28.0 * (pixel_step / 2.0), 3.0)),
