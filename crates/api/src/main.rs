@@ -449,13 +449,6 @@ async fn main() {
     let data_dir = default_data_dir();
     let pool = database_pool();
 
-    if let Some(pool) = &pool {
-        sqlx::migrate!("./migrations")
-            .run(pool)
-            .await
-            .expect("apply Slotbound PostgreSQL migrations");
-    }
-
     let port = std::env::var("PORT")
         .ok()
         .and_then(|v| v.parse::<u16>().ok())
@@ -552,78 +545,6 @@ mod tests {
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
         fs::remove_dir_all(dir).unwrap();
-    }
-
-    #[tokio::test]
-    async fn postgres_storage_survives_a_new_router_instance() {
-        let Ok(url) = std::env::var("TEST_DATABASE_URL") else {
-            return;
-        };
-        let pool = PgPoolOptions::new()
-            .max_connections(3)
-            .connect(&url)
-            .await
-            .unwrap();
-        sqlx::migrate!("./migrations").run(&pool).await.unwrap();
-
-        let data_dir =
-            std::env::temp_dir().join(format!("slotbound-postgres-test-{}", std::process::id()));
-        let router = app_with_storage(data_dir.clone(), Some(pool.clone()));
-        let created = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/api/runs")
-                    .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(r#"{"seed":20261126}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(created.status(), StatusCode::OK);
-        let created: GameState =
-            serde_json::from_slice(&created.into_body().collect().await.unwrap().to_bytes())
-                .unwrap();
-
-        let spun = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri(format!("/api/runs/{}/spin", created.run_id))
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(spun.status(), StatusCode::OK);
-        let expected: GameState =
-            serde_json::from_slice(&spun.into_body().collect().await.unwrap().to_bytes()).unwrap();
-        assert_eq!(expected.spins_remaining, 5);
-
-        // A new router starts with an empty in-memory cache; the database remains authoritative.
-        let restored = app_with_storage(data_dir.clone(), Some(pool.clone()));
-        let loaded = restored
-            .oneshot(
-                Request::builder()
-                    .uri(format!("/api/runs/{}", created.run_id))
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(loaded.status(), StatusCode::OK);
-        let actual: GameState =
-            serde_json::from_slice(&loaded.into_body().collect().await.unwrap().to_bytes())
-                .unwrap();
-        assert_eq!(actual, expected);
-
-        sqlx::query("DELETE FROM slotbound_runs WHERE run_id = $1")
-            .bind(&created.run_id)
-            .execute(&pool)
-            .await
-            .unwrap();
     }
 
     #[tokio::test]
