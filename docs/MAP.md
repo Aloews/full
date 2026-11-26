@@ -25,7 +25,7 @@ The source candidate contains:
 - Lock/unlock, donor absorption, stat growth, one imprint, promotion choices at absorb levels 5 and 12.
 - Deterministic wave/boss power resolution, hearts, gold rewards, three Core choices after a boss win, and a between-wave item cache.
 - Axum endpoints for create/read run, spin, nudge, absorb, promotion, lock, battle, next wave, Core selection and item purchase.
-- Atomic JSON snapshot writes and load-on-start for a single API process. Persistence can be placed on a volume with `SLOTBOUND_DATA_DIR`.
+- Transactional PostgreSQL save/load via `DATABASE_URL`, including row-level locking for each game command; local JSON snapshots remain the development fallback.
 - Browser client with local run-ID recovery, responsive panels, machine, roster, shop, cores, battle results, and action feedback.
 
 These are code-level statements. Runtime/CI status must be added only after GitHub Actions completes on the exact commit.
@@ -37,7 +37,7 @@ These are code-level statements. Runtime/CI status must be added only after GitH
 - Nudge is a simplified vertical column rotation; Blast and other reel tools are not implemented.
 - Imprints are represented by one string; inheritance and multiple skill slots are incomplete.
 - Factions, traits, rarity tiers, awakening, stage selection, campaign map, enemy abilities, equipment slots, and endless mode are not implemented.
-- The file store is safe for one process only. Multi-instance deployment requires transactional shared storage, migrations, ownership and concurrent command handling.
+- Local JSON fallback is single-process only. Vercel deployment must use `DATABASE_URL`; PostgreSQL transactions and row-level locks are required for shared serverless instances.
 - Authentication, online multiplayer, analytics, crash telemetry and production backup/restore are not implemented.
 - Browser UI has static contract checks; automated real-browser end-to-end coverage remains a release gate.
 
@@ -66,7 +66,8 @@ These are code-level statements. Runtime/CI status must be added only after GitH
 
 ### S3 — Persistence and product hardening
 - [ ] Versioned save migrations, backup/restore, checksums and corrupted-save recovery.
-- [ ] PostgreSQL adapter with transactions/idempotency and multi-instance safety.
+- [x] PostgreSQL adapter with transactions and row-level locking for multi-instance safety.
+- [ ] Idempotency keys and schema migration rehearsals on a disposable branch.
 - [ ] Auth, player ownership, rate limits and abuse protection.
 - [ ] Playwright end-to-end journeys and accessibility audit.
 - [ ] Build artifacts, signed desktop packaging, crash reporting and release checklist.
