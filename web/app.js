@@ -6,38 +6,6 @@ const CLASS_META = {
   mage: ['🔮', 'Mage', 'Arcane'], cleric: ['✨', 'Cleric', 'Support'],
   rogue: ['🗡️', 'Rogue', 'Skirmisher'], beast: ['🐺', 'Beast', 'Bruiser'],
 };
-
-const PIXEL_SPRITES = {
-  guardian: ["..1111..","..1221..",".122221.","12222221","12244221",".122221.","..1221..","...11..."],
-  archer:   ["....11..","...1221.","..12.221.","..12..21.","..12.221.","...1221.","....11..","...22..."],
-  mage:     ["...111..","..12221."," .122221.".trim(),"..122221.","...1331..","....31..","...221..","..1111.."],
-  cleric:   ["...22...","...22...","..2222..","22222222","..2222..","...22...","...22...","...11..."],
-  rogue:    ["......1.",".....121.","....1221.","...12221.","..122221.","...1221..","....21...","...11...."],
-  beast:    ["1.1..1.1.","121..121.","12222221.","12244221.","12222221."," .122221.".trim(),"..1..1..","..1..1.."]
-};
-const PIXEL_PALETTE = {
-  "1":"#172b2a","2":"#8fb46b","3":"#dce7a1","4":"#f0bf58"
-};
-function paintPixelSprites(root=document) {
-  root.querySelectorAll("canvas[data-sprite]").forEach((canvas) => {
-    const rows = PIXEL_SPRITES[canvas.dataset.sprite];
-    if (!rows) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const width = Math.max(...rows.map((row) => row.length));
-    canvas.width = width * 12;
-    canvas.height = rows.length * 12;
-    ctx.imageSmoothingEnabled = false;
-    rows.forEach((row, y) => {
-      [...row].forEach((cell, x) => {
-        if (cell === "." || cell === " ") return;
-        ctx.fillStyle = PIXEL_PALETTE[cell] || PIXEL_PALETTE["2"];
-        ctx.fillRect(x * 12, y * 12, 12, 12);
-      });
-    });
-  });
-}
-
 const ITEM_META = {
   sharpening_stone: ['Sharpening Stone', 'Permanent army attack bonus'],
   vitality_charm: ['Vitality Charm', 'Reduce damage taken in a lost battle'],
@@ -142,9 +110,8 @@ function render() {
   $('reels').innerHTML = game.board.flatMap((row, r) => row.map((symbol, c) => {
     const meta = CLASS_META[symbol] || ['?', symbol, ''];
     const wins = game.last_spin?.wins?.some((win) => win.class === symbol && game.last_spin.board[r][c] === symbol);
-    return `<div class="reel-cell ${wins ? 'reel-win' : ''}"><span><canvas class="pixel-sprite" data-sprite="${esc(symbol)}" role="img" aria-label="${esc(meta[1])}"></canvas></span><small>${meta[1]}</small></div>`;
+    return `<div class="reel-cell ${wins ? 'reel-win' : ''}"><span>${meta[0]}</span><small>${meta[1]}</small></div>`;
   })).join('');
-  paintPixelSprites($('reels'));
   $('last-spin').textContent = game.last_spin
     ? `${game.last_spin.wins.length} winning line${game.last_spin.wins.length === 1 ? '' : 's'}${game.last_spin.jackpot ? ' · JACKPOT' : ''}`
     : 'Match three symbols along a line';
@@ -153,7 +120,6 @@ function render() {
   ).join('');
   $('unit-count').textContent = `${game.units.length} / ${game.unit_limit} SLOTS`;
   $('units').innerHTML = game.units.length ? game.units.map((unit) => renderUnit(unit)).join('') : '<div class="empty-state">No units in the formation.</div>';
-  paintPixelSprites($('units'));
   $('target-label').textContent = keepId ? `KEEPER #${keepId}` : 'NO KEEPER SELECTED';
   $('phase').textContent = game.phase.toUpperCase();
   $('battle-title').textContent = game.wave % 5 === 0 ? `Judgment wave ${game.wave}` : `Wave ${game.wave}`;
@@ -168,7 +134,7 @@ function renderUnit(unit) {
   const keeper = keepId === unit.id;
   const canAct = ['preparation', 'intermission'].includes(game.phase) && !busy;
   return `<article class="unit-card ${keeper ? 'is-keeper' : ''}">
-    <div class="unit-top"><span class="unit-symbol"><canvas class="pixel-sprite" data-sprite="${esc(unit.class)}" role="img" aria-label="${esc(meta[1])}"></canvas></span><span class="unit-type">${esc(meta[2])}</span><button class="lock-button" data-action="lock" data-id="${unit.id}" aria-label="${unit.locked ? 'Unlock' : 'Lock'} ${esc(meta[1])}" ${!canAct ? 'disabled' : ''}>${unit.locked ? '🔒' : '⌑'}</button></div>
+    <div class="unit-top"><span class="unit-symbol">${meta[0]}</span><span class="unit-type">${esc(meta[2])}</span><button class="lock-button" data-action="lock" data-id="${unit.id}" aria-label="${unit.locked ? 'Unlock' : 'Lock'} ${esc(meta[1])}" ${!canAct ? 'disabled' : ''}>${unit.locked ? '🔒' : '⌑'}</button></div>
     <h3>${esc(unit.promotion || meta[1])}</h3><div class="unit-level">LV ${unit.level} · ABSORB ${unit.absorb_level}</div>
     <div class="unit-stats"><span>⚔ ${unit.attack}</span><span>♥ ${unit.health}</span></div>
     <div class="unit-imprint">${unit.imprint ? `✦ ${esc(unit.imprint)}` : 'No imprint'}</div>
