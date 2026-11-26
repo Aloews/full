@@ -424,7 +424,8 @@ function renderStatus() {
     <div class="status-row"><span>Army capacity</span><strong>${game.units.length} / ${game.unit_limit}</strong></div>
     <div class="status-row"><span>Draws remaining</span><strong>${game.spins_remaining} / 6</strong></div>
     <div class="status-row"><span>Sigil shift</span><strong>${game.nudge_available ? 'READY' : 'USED'}</strong></div>
-    <div class="status-row"><span>Items carried</span><strong>${game.items.length}</strong></div>`;
+    <div class="status-row"><span>Items carried</span><strong>${game.items.length}</strong></div>
+    <div class="status-row"><span>Journey events</span><strong>${game.event_history?.length || 0}</strong></div>`;
   if (game.last_battle) {
     const b = game.last_battle;
     $('field-report').textContent = `${b.victory ? 'Victory' : 'Defeat'} on wave ${b.wave} after ${b.rounds || 0} rounds. ${game.units.length} allies remain. ${b.victory ? `Earned ${b.gold_awarded} gold.` : `Lost ${b.damage_taken} hearts.`}`;
