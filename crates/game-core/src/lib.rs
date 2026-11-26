@@ -77,66 +77,134 @@ impl UnitClass {
     }
 }
 
-
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum PromotionNode {
-    Warden, Bulwark, Crossbowman, Pathfinder, Stormcaller, Arcanist,
-    Templar, Oracle, Duelist, Trickster, Ravager, DireBeast,
-    Vanguard, Sentinel, Aegis, Stonewall, Deadeye, Ballista,
-    Windrunner, Trailblazer, Tempest, Starcaller, Runesmith, Spellweaver,
-    Paladin, Lifebinder, Seer, Prophet, Assassin, Shadowstep,
-    Phantom, Saboteur, Behemoth, Packlord, Stalker, Alpha,
+    Warden,
+    Bulwark,
+    Crossbowman,
+    Pathfinder,
+    Stormcaller,
+    Arcanist,
+    Templar,
+    Oracle,
+    Duelist,
+    Trickster,
+    Ravager,
+    DireBeast,
+    Vanguard,
+    Sentinel,
+    Aegis,
+    Stonewall,
+    Deadeye,
+    Ballista,
+    Windrunner,
+    Trailblazer,
+    Tempest,
+    Starcaller,
+    Runesmith,
+    Spellweaver,
+    Paladin,
+    Lifebinder,
+    Seer,
+    Prophet,
+    Assassin,
+    Shadowstep,
+    Phantom,
+    Saboteur,
+    Behemoth,
+    Packlord,
+    Stalker,
+    Alpha,
 }
 
 impl PromotionNode {
     pub fn label(self) -> &'static str {
         match self {
-            Self::Warden => "Warden", Self::Bulwark => "Bulwark",
-            Self::Crossbowman => "Crossbowman", Self::Pathfinder => "Pathfinder",
-            Self::Stormcaller => "Stormcaller", Self::Arcanist => "Arcanist",
-            Self::Templar => "Templar", Self::Oracle => "Oracle",
-            Self::Duelist => "Duelist", Self::Trickster => "Trickster",
-            Self::Ravager => "Ravager", Self::DireBeast => "Dire Beast",
-            Self::Vanguard => "Vanguard", Self::Sentinel => "Sentinel",
-            Self::Aegis => "Aegis", Self::Stonewall => "Stonewall",
-            Self::Deadeye => "Deadeye", Self::Ballista => "Ballista",
-            Self::Windrunner => "Windrunner", Self::Trailblazer => "Trailblazer",
-            Self::Tempest => "Tempest", Self::Starcaller => "Starcaller",
-            Self::Runesmith => "Runesmith", Self::Spellweaver => "Spellweaver",
-            Self::Paladin => "Paladin", Self::Lifebinder => "Lifebinder",
-            Self::Seer => "Seer", Self::Prophet => "Prophet",
-            Self::Assassin => "Assassin", Self::Shadowstep => "Shadowstep",
-            Self::Phantom => "Phantom", Self::Saboteur => "Saboteur",
-            Self::Behemoth => "Behemoth", Self::Packlord => "Packlord",
-            Self::Stalker => "Stalker", Self::Alpha => "Alpha",
+            Self::Warden => "Warden",
+            Self::Bulwark => "Bulwark",
+            Self::Crossbowman => "Crossbowman",
+            Self::Pathfinder => "Pathfinder",
+            Self::Stormcaller => "Stormcaller",
+            Self::Arcanist => "Arcanist",
+            Self::Templar => "Templar",
+            Self::Oracle => "Oracle",
+            Self::Duelist => "Duelist",
+            Self::Trickster => "Trickster",
+            Self::Ravager => "Ravager",
+            Self::DireBeast => "Dire Beast",
+            Self::Vanguard => "Vanguard",
+            Self::Sentinel => "Sentinel",
+            Self::Aegis => "Aegis",
+            Self::Stonewall => "Stonewall",
+            Self::Deadeye => "Deadeye",
+            Self::Ballista => "Ballista",
+            Self::Windrunner => "Windrunner",
+            Self::Trailblazer => "Trailblazer",
+            Self::Tempest => "Tempest",
+            Self::Starcaller => "Starcaller",
+            Self::Runesmith => "Runesmith",
+            Self::Spellweaver => "Spellweaver",
+            Self::Paladin => "Paladin",
+            Self::Lifebinder => "Lifebinder",
+            Self::Seer => "Seer",
+            Self::Prophet => "Prophet",
+            Self::Assassin => "Assassin",
+            Self::Shadowstep => "Shadowstep",
+            Self::Phantom => "Phantom",
+            Self::Saboteur => "Saboteur",
+            Self::Behemoth => "Behemoth",
+            Self::Packlord => "Packlord",
+            Self::Stalker => "Stalker",
+            Self::Alpha => "Alpha",
         }
     }
 
     fn from_label(label: &str) -> Option<Self> {
-        ALL_PROMOTION_NODES.iter().copied().find(|node| node.label() == label)
+        ALL_PROMOTION_NODES
+            .iter()
+            .copied()
+            .find(|node| node.label() == label)
     }
 }
 
 const ALL_PROMOTION_NODES: [PromotionNode; 36] = [
-    PromotionNode::Warden, PromotionNode::Bulwark,
-    PromotionNode::Crossbowman, PromotionNode::Pathfinder,
-    PromotionNode::Stormcaller, PromotionNode::Arcanist,
-    PromotionNode::Templar, PromotionNode::Oracle,
-    PromotionNode::Duelist, PromotionNode::Trickster,
-    PromotionNode::Ravager, PromotionNode::DireBeast,
-    PromotionNode::Vanguard, PromotionNode::Sentinel,
-    PromotionNode::Aegis, PromotionNode::Stonewall,
-    PromotionNode::Deadeye, PromotionNode::Ballista,
-    PromotionNode::Windrunner, PromotionNode::Trailblazer,
-    PromotionNode::Tempest, PromotionNode::Starcaller,
-    PromotionNode::Runesmith, PromotionNode::Spellweaver,
-    PromotionNode::Paladin, PromotionNode::Lifebinder,
-    PromotionNode::Seer, PromotionNode::Prophet,
-    PromotionNode::Assassin, PromotionNode::Shadowstep,
-    PromotionNode::Phantom, PromotionNode::Saboteur,
-    PromotionNode::Behemoth, PromotionNode::Packlord,
-    PromotionNode::Stalker, PromotionNode::Alpha,
+    PromotionNode::Warden,
+    PromotionNode::Bulwark,
+    PromotionNode::Crossbowman,
+    PromotionNode::Pathfinder,
+    PromotionNode::Stormcaller,
+    PromotionNode::Arcanist,
+    PromotionNode::Templar,
+    PromotionNode::Oracle,
+    PromotionNode::Duelist,
+    PromotionNode::Trickster,
+    PromotionNode::Ravager,
+    PromotionNode::DireBeast,
+    PromotionNode::Vanguard,
+    PromotionNode::Sentinel,
+    PromotionNode::Aegis,
+    PromotionNode::Stonewall,
+    PromotionNode::Deadeye,
+    PromotionNode::Ballista,
+    PromotionNode::Windrunner,
+    PromotionNode::Trailblazer,
+    PromotionNode::Tempest,
+    PromotionNode::Starcaller,
+    PromotionNode::Runesmith,
+    PromotionNode::Spellweaver,
+    PromotionNode::Paladin,
+    PromotionNode::Lifebinder,
+    PromotionNode::Seer,
+    PromotionNode::Prophet,
+    PromotionNode::Assassin,
+    PromotionNode::Shadowstep,
+    PromotionNode::Phantom,
+    PromotionNode::Saboteur,
+    PromotionNode::Behemoth,
+    PromotionNode::Packlord,
+    PromotionNode::Stalker,
+    PromotionNode::Alpha,
 ];
 
 fn first_promotion_choices(class: UnitClass) -> [PromotionNode; 2] {
@@ -670,7 +738,8 @@ impl GameState {
                     .any(|resolution| resolution.event_id == current_event_id);
 
                 if current_event_was_resolved {
-                    self.pending_route = Some(self.generate_route_options(self.wave.saturating_add(1)));
+                    self.pending_route =
+                        Some(self.generate_route_options(self.wave.saturating_add(1)));
                 } else {
                     self.pending_event = Some(self.generate_journey_event());
                 }
@@ -715,7 +784,10 @@ impl GameState {
                 }
                 if unit.pending_promotion {
                     if let Some(options) = promotion_options_for(unit) {
-                        unit.promotion_options = [options[0].label().to_string(), options[1].label().to_string()];
+                        unit.promotion_options = [
+                            options[0].label().to_string(),
+                            options[1].label().to_string(),
+                        ];
                     }
                 }
             }
