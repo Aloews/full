@@ -15,7 +15,7 @@ The project lives in this directory on the `casino-battle/foundation` branch. It
 
 ## Current implementation
 
-- `crates/game-core`: deterministic run state, a 4×4 connected-cluster Fate Board, rank-based recruitment, party synergies, duplicate evolution and lane-aware automatic battle simulation.
+- `crates/game-core`: deterministic run state, a 4×4 connected-cluster Fate Board, rank-based recruitment, party synergies, duplicate evolution, lane-aware Auto-battle, bosses and relic rewards.
 - `crates/game-server`: Axum API, PostgreSQL JSONB persistence, transactional row-locked state transitions, non-secret public snapshots, configurable CORS and health check.\n- `client/`: reads run state from the API and replays the server-authoritative Auto-battle event log.
 - `client/`: strict 2D Godot prototype with original hand-drawn-style vector character studies, a 4×4 Fate Board preview, server-driven party HUD, preparation-only lane changes by clicking a unit and tick-by-tick Auto-battle replay. The code-drawn characters are still prototypes; final sprite sheets, hand-painted animation and finished UI art remain release work.
 
@@ -43,6 +43,7 @@ Start the API with `docker compose up --build`, then open `client/project.godot`
 - `POST /api/v1/runs/{run_id}/draw`
 - `POST /api/v1/runs/{run_id}/formation` with `{"unit_id": 1, "lane": 2}` (lanes are `0`, `1`, `2`; preparation phase only)
 - `POST /api/v1/runs/{run_id}/merge` with `{"keeper_id": 1, "donor_id": 2}`
+- `POST /api/v1/runs/{run_id}/relic` with `{"relic": "honey_bell"}` after a boss victory while a relic choice is pending
 - `POST /api/v1/runs/{run_id}/battle`
 
 The initial API is a local development foundation, not a production-hardened public service. Authentication, per-player ownership, migrations-as-a-release-step, rate limits, observability and deployment secrets are release gates.
