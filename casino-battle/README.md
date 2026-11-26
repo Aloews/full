@@ -16,7 +16,7 @@ The project lives in this directory on the `casino-battle/foundation` branch. It
 ## Current implementation
 
 - `crates/game-core`: deterministic run state, a 4×4 connected-cluster Fate Board, rank-based recruitment, party synergies, duplicate evolution and lane-aware automatic battle simulation.
-- `crates/game-server`: Axum API, optional PostgreSQL persistence, health check and run endpoints.
+- `crates/game-server`: Axum API, PostgreSQL JSONB persistence, row-locked state transitions, non-secret public run snapshots, configurable CORS and health check.
 - `client/`: strict 2D Godot presentation prototype. The current geometric actors are layout placeholders, not final production art.
 
 ## Run
@@ -30,7 +30,7 @@ cargo test --workspace --all-targets
 cargo run -p casino-battle-server
 ```
 
-Open `http://localhost:3000/healthz` for the server health check. Without `DATABASE_URL`, the server uses an explicitly development-only in-memory store. Set `DATABASE_URL` to a PostgreSQL connection string to enable durable run storage and migrations.
+Run `docker compose up --build` from this directory to start the API and PostgreSQL locally. Open `http://localhost:3000/healthz` for the server health check. Without `DATABASE_URL`, the server uses an explicitly development-only single-process in-memory store. Set `DATABASE_URL` to a PostgreSQL connection string to enable durable run storage and transactional row-locked transitions. Configure `CORS_ALLOWED_ORIGINS` with comma-separated trusted frontend origins.
 
 Open `client/project.godot` in Godot 4 to run the 2D visual sandbox.
 
