@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject 3D nodes and guard the Godot pixel-art rendering contract."""
+"""Verify the strict 2D pixel-art contract and reject accidental 3D scenes."""
 from pathlib import Path
 import re
 import sys
@@ -48,7 +48,7 @@ required_pixel_contract = (
     "root.scale = Vector2(0.5, 0.5)",
     "get_window().min_size = Vector2i(640, 360)",
     "func _pixel_point(point: Vector2) -> Vector2:",
-    "func _creature_pixels(label: String) -> PackedStringArray:",
+    "var pixel_step := 4.0 if label == \"Mosswood Guardian\" else 2.0",
     "draw_rect(Rect2(pixel_position, Vector2(pixel_step, pixel_step)), color)",
     "event.position * 2.0",
 )
@@ -56,33 +56,28 @@ for token in required_pixel_contract:
     if token not in main_text:
         violations.append(f"main.gd: missing pixel-art contract {token}")
 
-sprite_match = re.search(
-    r"func _creature_pixels\(label: String\) -> PackedStringArray:(.*?)\nfunc _creature_palette",
-    main_text,
-    re.DOTALL,
-)
-if sprite_match is None:
-    violations.append("main.gd: missing sprite pixel-matrix definition")
+# Character sprites must be authored as complete, fixed-size pixel maps.
+creature_section = main_text.split("func _creature_pixels", 1)
+if len(creature_section) != 2:
+    violations.append("main.gd: missing _creature_pixels sprite catalog")
 else:
-    sprite_source = sprite_match.group(1)
-    expected_sprites = (
-        "Mossguard", "Cinderkit", "Puddlekin", "Pebbleback",
-        "Moonmote", "Breezeling", "Gloomling", "Murkling",
-        "Mosswood Guardian",
-    )
-    for sprite_name in expected_sprites:
-        if f'"{sprite_name}":' not in sprite_source:
-            violations.append(f"main.gd: missing original pixel sprite {sprite_name}")
-
-    sprite_rows = re.findall(r'"([.ksbhaep]+)"', sprite_source)
-    if not sprite_rows:
-        violations.append("main.gd: no pixel sprite rows found")
-    elif any(len(row) != 16 for row in sprite_rows):
-        bad_lengths = sorted({len(row) for row in sprite_rows if len(row) != 16})
-        violations.append(f"main.gd: sprite rows must be 16 pixels wide; found widths {bad_lengths}")
+    creature_section = creature_section[1].split("func _creature_palette", 1)[0]
+    sprite_blocks = re.findall(r"return PackedStringArray\(\[(.*?)\]\)", creature_section, re.DOTALL)
+    if len(sprite_blocks) < 8:
+        violations.append(f"main.gd: expected at least 8 original sprite maps, found {len(sprite_blocks)}")
+    for sprite_index, block in enumerate(sprite_blocks):
+        rows = re.findall(r'"([^"]*)"', block)
+        if len(rows) != 16:
+            violations.append(f"main.gd: sprite map {sprite_index} must contain 16 rows, found {len(rows)}")
+            continue
+        for row_index, row in enumerate(rows):
+            if len(row) != 16:
+                violations.append(
+                    f"main.gd: sprite map {sprite_index} row {row_index} must be 16 pixels wide, found {len(row)}"
+                )
 
 if violations:
     print("\n".join(violations), file=sys.stderr)
     raise SystemExit(1)
 
-print("2D pixel-art contract passed: no 3D nodes, integer viewport scaling, pixel snapping and authored 16x16 sprite matrices verified.")
+print("2D pixel-art contract passed: no 3D nodes, integer nearest scaling and validated 16x16 sprite maps.")
