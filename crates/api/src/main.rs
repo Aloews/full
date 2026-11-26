@@ -167,11 +167,22 @@ fn app_state(data_dir: PathBuf, pool: Option<PgPool>) -> AppState {
 }
 
 fn database_pool() -> Option<PgPool> {
-    let url = std::env::var("DATABASE_URL").ok()?;
+    let url = std::env::var("SLOTBOUND_DATABASE_URL")
+        .or_else(|_| std::env::var("DATABASE_URL"))
+        .ok()
+        .filter(|value| !value.trim().is_empty());
+
+    let Some(url) = url else {
+        if std::env::var("VERCEL").is_ok() {
+            panic!("SLOTBOUND_DATABASE_URL is required on Vercel; refusing ephemeral run storage");
+        }
+        return None;
+    };
+
     let pool = PgPoolOptions::new()
         .max_connections(4)
         .connect_lazy(&url)
-        .expect("DATABASE_URL is invalid");
+        .expect("Slotbound PostgreSQL connection URL is invalid");
     Some(pool)
 }
 
