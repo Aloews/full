@@ -1,51 +1,81 @@
 # Visual and genre references
 
-Research captured 2026-11-26. These are comparison references, not asset sources. Do not copy their characters, sprites, logos, sound or UI.
+Research captured 2026-11-26. These are comparison references, not asset sources. Do not copy their characters, sprites, logos, sound, UI or proprietary assets.
 
-## Primary visual reference: Slotbound
+## Primary product reference: Slotbound
 
-The public Slotbound screenshot shows a compact battlefield presented in a calm, sandy, paper-like palette. Units are small and immediately readable, with hand-crafted silhouettes and restrained outlines. The scene keeps the tactical action central and uses cards and labels to communicate the build. Its public game description emphasizes a 3×3 summon board, automated wave combat, unit combinations, items, imprints and cores.
+Slotbound remains the main reference for the combination of small readable fighters, formation, build synergies, preparation decisions and automatic wave combat. Casino Battle should preserve that clarity and collectibility while using a different game structure and an original pixel-art world.
 
-**What Casino Battle takes:** warm illustrated ground, readable small fighters, clear formations, tactile surfaces, approachable fantasy tone, preparation followed by auto-battle.
+**Take:** compact unit presentation, clean tactical focus, clear cause-and-effect feedback and preparation before automatic combat.
 
-**What Casino Battle changes:** original setting, original characters, original interface, original probability object and its own gameplay progression. No Slotbound files or assets are reused.
+**Do not take:** source code, sprites, icons, audio, exact UI, copied progression data or a pixel-perfect recreation.
 
-## Secondary 2D auto-battler references
+## Retro pixel-art language
+
+### The Legend of Zelda (classic 8/16-bit era)
+
+Use as a broad reference for readable tile maps, cozy fantasy environments, strong scene composition, simple but memorable props and a sense of adventure.
+
+**Take:** tile grammar, environmental storytelling, world charm and clear top-down readability. The first Casino Battle combat arena remains side-on 2D.
+
+### Super Mario (classic 8/16-bit era)
+
+Use as a broad reference for silhouette clarity, playful enemy shapes, friendly character expressions, readable animation timing and strong color separation.
+
+**Take:** character personality and immediate recognition. Do not imitate Nintendo characters, sprites, level layouts or exact palettes.
+
+## Current Steam genre comparisons
+
+### Despot's Game: Dystopian Battle Simulator
+
+Steam tags it as Auto Battler, Roguelike, Pixel Graphics and 2D. Its description explicitly describes indirect combat: prepare the team and let it fight on its own. Steam's current page snapshot shows 82% Very Positive from 1,297 English reviews (the page also has a broader all-language review count).
+
+**Take:** readable pre-battle preparation, unit roles, team combinations and an automatic-combat feedback loop. Its dystopian tone is not the target aesthetic.
+
+### Rogue Battler
+
+Released 7 May 2026. Its Steam page identifies it as a 2D, pixel-graphics auto-battler roguelike with fully automated combat and pre-fight build decisions. The page snapshot shows 93% positive from 16 reviews, a small sample that demonstrates genre overlap, not broad market demand.
+
+**Take:** focused retro presentation, room/reward decisions and clear automated combat rules.
+
+### Idle Pixel Battle Demo
+
+Released as a demo on 1 September 2026. The Steam listing describes a fantasy pixel-art auto-battler built around team composition, equipment, monsters and automatic wave combat. Its listing snapshot shows 93% positive from 30 reviews. This is demo feedback and must not be presented as a full commercial launch result.
+
+**Take:** clear hero identities, collectible party building and retro battle presentation.
 
 ### The Swashbugglers
-Steam describes it as a cartoon-style 2D roguelike autochess with insect heroes, team building and progression. It demonstrates that a warm character-driven 2D tone can sit beside tactical auto-battle depth.
 
-**Take:** personality in the unit silhouettes, cartoon staging, readable team roles.
+A secondary reference for a 2D cartoon autochess structure, distinctive insect heroes and team progression.
 
-### Castle Away
-The publisher's press material describes vibrant, hand-drawn 2D graphics and a strategic roguelite autobattler. The Steam listing also uses the Hand-drawn and 2D tags.
+**Take:** character silhouette personality and readable unit roles. Casino Battle should lean into pixel craft rather than imitate its cartoon rendering.
 
-**Take:** coherent hand-made art across battle and world, visual clarity, handcrafted environmental identity.
+### Sparklite
 
-### Auto Rogue
-Steam describes automated combat, combining skills and conditions, relic-driven builds and a 2D pixel-art roguelike presentation.
+A Zelda-inspired action-adventure with a retro pixel-art aesthetic, procedural biomes and a welcoming fantasy world.
 
-**Take:** clear cause-and-effect feedback and build readability during automated combat.
-
-### Backpack Battles
-Useful only as a reference for tactile item presentation and parchment-like UI surfaces. It is not the target battlefield layout and should not pull Casino Battle into inventory-duel presentation.
+**Take:** biome identity, warm world colors and a sense of discovery. It is not an auto-battler reference.
 
 ## Casino Battle synthesis
 
-The intended art is not a generic chibi mobile game and not a pixel-perfect clone. The target is a **warm 2D illustrated strategy RPG**:
-- soft, slightly uneven silhouettes and ink-like outlines;
-- compact characters with memorable costume or creature features;
-- muted botanical colors, warm paper background and carefully placed accent hues;
-- clear team formation, readable enemy silhouettes and short, charming battle effects;
-- small UI cards with subtle paper/cloth texture and strong typography hierarchy.
+The intended result is a **cozy premium 16-bit pixel-art roguelite auto-battler**:
+
+- Slotbound's compact battlefield composition and readable team building;
+- Zelda's tile-based fantasy atmosphere and sense of place;
+- Mario's playful character clarity and immediate silhouettes;
+- deliberate pixel clusters, stepped edges and nearest-neighbour rendering;
+- warm botanical colors, memorable enemies and satisfying short animations;
+- all randomness expressed as sigils, charms and magical combinations, never a casino venue.
 
 ## Visual review checklist
 
-- [ ] Every scene is 2D; no 3D nodes, meshes, camera or 2.5D asset tricks.
-- [ ] A unit silhouette is recognizable at 48 px height.
-- [ ] Allies / enemies are distinguishable without relying only on color.
-- [ ] The scene remains readable at 1280×720 and 1280×800.
-- [ ] No effect obscures the unit that created it or the target.
-- [ ] The background supports the characters rather than competing with them.
+- [ ] Every scene is 2D; no 3D nodes, meshes, cameras or pseudo-3D assets.
+- [ ] Native render canvas is 640×360 and displayed at 1280×720 with 2× nearest-neighbour scaling.
+- [ ] No blurry or bilinear-scaled sprites.
+- [ ] Each unit silhouette is recognizable at 24–32 source pixels high.
+- [ ] Allies / enemies are distinguishable by silhouette and value, not only color.
+- [ ] The scene remains readable at 1280×720 and Steam Deck scale.
+- [ ] Pixel effects do not obscure the unit or target.
+- [ ] Biome tile sets use consistent tile size and palette ramps.
 - [ ] The visual has a warm, collectible, premium indie-game character.
 - [ ] Randomness is expressed with runes, charms or sigils — never casino furniture.
