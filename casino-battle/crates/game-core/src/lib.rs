@@ -122,7 +122,8 @@ impl RunState {
             total_draws: 0,
             battle_wins: 0,
         };
-        state.party.push(state.make_unit(Sigil::Leaf, 1));
+        let starter = state.make_unit(Sigil::Leaf, 1);
+        state.party.push(starter);
         state
     }
 
