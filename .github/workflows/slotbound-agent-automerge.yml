@@ -1,0 +1,86 @@
+name: Slotbound Agent Auto Merge
+
+on:
+  workflow_run:
+    workflows: ["Slotbound CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: slotbound-agent-automerge
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_branch == 'agents/slotbound-autonomy' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Verify the exact successful candidate and merge its PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_BRANCH: agents/slotbound-autonomy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pr_number="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --head "$EXPECTED_BRANCH" \
+            --base main \
+            --json number,headRefOid,isDraft \
+            --jq ".[] | select(.headRefOid == \"$EXPECTED_SHA\" and .isDraft == false) | .number" | head -n 1)"
+
+          if [[ -z "$pr_number" ]]; then
+            echo "No non-draft agent PR matches the exact successful SHA; refusing to merge."
+            exit 1
+          fi
+
+          gh api "repos/$GITHUB_REPOSITORY/commits/$EXPECTED_SHA/check-runs" > "$RUNNER_TEMP/check-runs.json"
+          python3 - "$RUNNER_TEMP/check-runs.json" <<'PY'
+          import json
+          import sys
+
+          payload = json.load(open(sys.argv[1], encoding="utf-8"))
+          checks = payload.get("check_runs", [])
+          quality = [
+              check for check in checks
+              if check.get("name") == "Rust domain, API and browser checks"
+          ]
+          if not quality or not any(
+              check.get("status") == "completed" and check.get("conclusion") == "success"
+              for check in quality
+          ):
+              raise SystemExit("Exact-head Slotbound CI is not green; refusing to merge.")
+
+          blocking = [
+              check for check in checks
+              if check.get("status") == "completed"
+              and check.get("conclusion") in {"failure", "cancelled", "timed_out", "action_required"}
+          ]
+          if blocking:
+              names = ", ".join(check.get("name", "unnamed check") for check in blocking)
+              raise SystemExit(f"Blocking check result(s) detected: {names}")
+          PY
+
+          pr_state="$(gh pr view "$pr_number" --repo "$GITHUB_REPOSITORY" \
+            --json state,isDraft,baseRefName,headRefOid,mergeable \
+            --jq '[.state, (.isDraft|tostring), .baseRefName, .headRefOid, (.mergeable|tostring)] | @tsv')"
+
+          IFS=$'\t' read -r state is_draft base head_sha mergeable <<< "$pr_state"
+          [[ "$state" == "OPEN" ]]
+          [[ "$is_draft" == "false" ]]
+          [[ "$base" == "main" ]]
+          [[ "$head_sha" == "$EXPECTED_SHA" ]]
+          [[ "$mergeable" == "true" ]]
+
+          gh pr merge "$pr_number" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
