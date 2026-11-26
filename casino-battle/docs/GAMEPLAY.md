@@ -9,7 +9,7 @@
 1. **Camp / preparation:** inspect the next encounter, party, formation, equipment and current synergies.
 2. **Fate draw:** spend a run resource to reveal a 4×4 sigil pattern on an ancient charm tapestry. The board resolves orthogonally connected groups of three or more matching symbols; it has no paylines and is never a casino machine.
 3. **Interpret combinations:** connected clusters create one recruit per cluster. Cluster size determines recruit rank: 3–4 symbols create rank I, 5–7 create rank II, and 8+ create rank III. Oversized or overflow results convert to essence. Players can later unlock controlled nudges, locks and rerolls.
-4. **Build:** position up to six units across three tactical lanes, merge identical units to evolve them, equip charms, select a relic and commit to a sigil synergy.
+4. **Build:** position up to six units across three tactical lanes (click a unit during preparation to cycle its lane), merge identical units to evolve them, equip charms, select a relic and commit to a sigil synergy.
 5. **Auto-battle:** formations engage automatically. Units automatically select targets using lane proximity and resolve attacks from role, armor and cooldown rules.
 6. **Reward:** gain essence, relics, unit growth and route choices. Every few encounters introduce an elite or boss.
 7. **Meta-progression:** unlock new unit families, relic pools, starting charms and challenge modifiers. Persistent upgrades should expand choice, not invalidate balance.
