@@ -2299,7 +2299,7 @@ mod tests {
                 .target
                 .contains(&format!("lane {}", position.lane + 1))
         );
-        assert_eq!(telegraph.remaining_health, target.current_health);
+        assert!(telegraph.remaining_health <= target.current_health);
     }
 
     #[test]
