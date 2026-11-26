@@ -50,18 +50,18 @@ The baseline source candidate commit `680ec889595b4defaa590f1721f000630d3c7ab4` 
 - push run [45849594472](https://github.com/Aloews/full/actions/runs/45849594472);
 - pull-request run [45849612291](https://github.com/Aloews/full/actions/runs/45849612291).
 
-The complete CI run [45895453002](https://github.com/Aloews/full/actions/runs/45895453002) passed on candidate `34703fa20df7221c7d5e7bdde3ea3a378076c566`. All steps were green: Rust formatting, Clippy, all Rust unit/integration tests, release API build, Vercel container build, Node syntax, API/browser contract and autonomous patch-policy tests. GitHub Actions then created formatting/lockfile commit `a6762bd2efa076c813a4568705b22e8bec00023a` from the exact tested workspace state. The workflow run is recorded against its triggering parent SHA; the bot commit contains only rustfmt output and the generated dependency lockfile.
+The complete CI run [45896564769](https://github.com/Aloews/full/actions/runs/45896564769) passed on exact candidate `cea19ed2c8de5731790fbc87999562b0c0b6e739` (GitHub Actions run 116). Every step succeeded: Rust format, Clippy, unit/integration tests, release API build, Vercel container build, browser JavaScript syntax, API/browser contract and autonomous patch-policy tests. The branch HEAD remains this exact tested SHA.
 
 ## Product and art direction
 
 - [x] Product direction defined: 2D roguelite auto-battler with symbolic recruitment, army development and wave defence.
 - [x] Cozy 16-bit Fantasy Pixel Art direction documented in `docs/VISUAL_STYLE_GUIDE.md`.
+- [x] Six original 16×16 canvas class-sprite prototypes and the first procedural woodland-frontier scene are rendered by the browser.
 - [x] Originality, rendering grid, palette, silhouette, animation, biome, interface and asset QA rules documented.
 - [x] Replace the six class emoji placeholders with original coded 16×16 pixel-sprite prototypes and pixel-style UI treatment.
 - [ ] Replace the prototype drawing code with a validated, versioned external pixel-asset and sprite-sheet pipeline.
 - [ ] Add bitmap font and asset provenance/atlas manifest.
-- [x] Add a first procedural woodland-frontier Canvas scene with a rune shrine, stepped mountains, tree silhouettes and path tiles (composition prototype; not a production tilemap).
-- [x] Add a first procedural woodland-frontier Canvas scene with a rune shrine, stepped mountains, tree silhouettes and path tiles (composition prototype; not a production tilemap).
+- [x] Add a procedural woodland-frontier Canvas scene with a rune shrine, stepped mountains, tree silhouettes and path tiles (composition prototype; not a production tilemap).
 - [ ] Create first full biome tile set and parallax/ambient layers.
 - [ ] Author animation strips for all common units, enemies and bosses.
 
@@ -72,10 +72,9 @@ The complete CI run [45895453002](https://github.com/Aloews/full/actions/runs/45
 - [x] 3×3 board, eight paylines and six recruit classes.
 - [x] Spin economy, one column nudge and basic roster/absorption.
 - [x] Basic promotions, boss/Core reward and item cache.
-- [x] Run persistence adapter and exact-head CI on commit above.
+- [x] Run persistence adapter and exact-head CI on commit `cea19ed2c8de5731790fbc87999562b0c0b6e739` (run 116).
 - [ ] Real-browser Playwright first-wave journey and reload/restore verification.
 - [ ] Verify the woodland scene and six class sprites at desktop/mobile sizes; add visual regression coverage.
-- [ ] Verify the new woodland scene and six class sprites at desktop/mobile sizes; add visual regression coverage.
 
 ### S1 — Make battles real and readable
 - [x] Deterministic tick-based combat timeline with stable initiative and target selection.
@@ -107,11 +106,12 @@ The complete CI run [45895453002](https://github.com/Aloews/full/actions/runs/45
 
 ## AI agent delivery system
 
-- [x] Specialist role contracts exist for architect, game designer, Rust engineer, persistence engineer, frontend integrator, simulation QA and product integrator.
+- [x] Specialist role contracts exist for architect, game designer, Rust engineer, persistence engineer, frontend integrator, simulation QA, product integrator and Pixel Art Director.
 - [x] Scoped backlog, agent task state and patch-policy tests exist.
 - [x] Local Qwen/Ollama agent runner and GitHub Actions workflow are defined in source.
 - [ ] Verify a real successful agent cycle run before claiming autonomous delivery is active.
 - [x] Add task-specific implementing-agent metadata to the task backlog and a pixel-art specialist role contract.
+- [x] Validate role-to-contract resolution for pixel-art and unknown role cases in controller unit tests.
 - [ ] Adapt workflow branch/base conditions and merge policy to this isolated feature branch before enabling the agent cycle. The controller currently opens agent PRs against `main` and uses an `agents/slotbound-autonomy` branch. Do not enable it until the exact base and PR target are corrected and reviewed.
 - [ ] Human review of workflow permissions and exact merge target.
 

@@ -93,14 +93,14 @@ The UI should look like a handcrafted field journal mixed with a small fantasy w
 - square or subtly stepped corners rather than large modern rounded cards;
 - clear selected, unavailable, locked, dangerous and rewarded states;
 - large, tactile primary actions with unambiguous disabled states;
-- compact status chips for gold, hearts, wave, spins and roster capacity;
+- compact status chips for gold, hearts, wave, sigil draws and roster capacity;
 - no casino furniture, poker chips, roulette wheels, slot cabinets, casino carpets or casino-room staging.
 
-The 3×3 symbol board is a magical recruitment device, not a realistic gambling machine. Symbols are rune tiles and class sigils. Winning lines animate as connected magical traces, then the summoned unit appears in the roster. A line should never flash so intensely that the player cannot identify which symbols matched.
+The 3×3 symbol board is a magical recruitment device, not a realistic gambling machine. Symbols are rune tiles and class sigils. Winning lines animate as connected magical traces, then the summoned unit appears in the roster. A line should never flash so intensely that the player cannot identify which symbols matched. The board is called the Fate Board in player-facing copy; its action is a sigil draw, and the once-per-wave column action is a sigil shift.
 
 ## Sound direction
 
-Original, restrained chiptune-inspired music with warm acoustic timbres layered over simple synth tones. Distinct short cues for spin, match, recruit, absorb, promotion, battle start, hit, heal, boss telegraph, victory and defeat. Avoid recreating recognizable Nintendo melodies or sound effects. Provide volume controls and mute.
+Original, restrained chiptune-inspired music with warm acoustic timbres layered over simple synth tones. Distinct short cues for sigil draw, line match, recruit, absorb, promotion, battle start, hit, heal, boss telegraph, victory and defeat. Avoid recreating recognizable Nintendo melodies or sound effects. Provide volume controls and mute.
 
 ## Quality gates for art
 
@@ -115,4 +115,4 @@ A new asset is accepted only when:
 
 ## Current asset status
 
-The current web prototype still uses emoji glyphs for unit and reel symbols and uses a CSS interface rather than a finished sprite/tile production pipeline. The first pixel-art pass must replace those placeholders with original sprite sheets, tile sets, bitmap typography and in-game animation strips. A CSS restyle or a sprite drawn by code is a prototype, not a finished art set.
+The current web prototype has six original 16×16 class sprite prototypes drawn into canvas at runtime and a procedural 320×64 woodland-frontier scene with stepped mountains, tree silhouettes, a rune shrine, path stones and small party silhouettes. The interface uses a custom parchment/forest pixel-style CSS treatment, crisp scaling and responsive layout. These are composition prototypes, not a production asset library. Still missing: external sprite sheets and atlas/manifest, frame-by-frame character and combat animations, a real 16×16 biome tilemap with edge/corner transitions, original bitmap typography, authored enemy art, provenance metadata and visual regression tests at desktop/mobile sizes. A CSS restyle or a sprite drawn by code is not a finished art set.
