@@ -901,7 +901,7 @@ impl GameState {
         if self.units[donor_index].locked {
             return Err(GameError::DonorLocked);
         }
-        if self.units[target_index].pending_promotion {
+        if self.units[target_index].pending_promotion || self.units[donor_index].pending_promotion {
             return Err(GameError::PromotionChoiceRequired);
         }
         let donor = self.units.remove(donor_index);
@@ -975,6 +975,15 @@ impl GameState {
         unit.promotion = Some(selected.label().to_string());
         unit.pending_promotion = false;
         apply_promotion_effect(unit, selected);
+        if unit.absorb_level >= 12 && unit.promotion_path.len() == 1 {
+            if let Some(next_options) = promotion_options_for(unit) {
+                unit.pending_promotion = true;
+                unit.promotion_options = [
+                    next_options[0].label().to_string(),
+                    next_options[1].label().to_string(),
+                ];
+            }
+        }
         Ok(())
     }
 
@@ -1755,11 +1764,11 @@ impl GameState {
     }
 
     pub fn next_wave(&mut self) -> Result<(), GameError> {
-        if self.units.iter().any(|unit| unit.pending_promotion) {
-            return Err(GameError::PromotionChoiceRequired);
-        }
         if self.phase != RunPhase::Intermission {
             return Err(GameError::WrongPhase);
+        }
+        if self.units.iter().any(|unit| unit.pending_promotion) {
+            return Err(GameError::PromotionChoiceRequired);
         }
         if self.core_offer.is_some() {
             return Err(GameError::CoreChoiceRequired);
