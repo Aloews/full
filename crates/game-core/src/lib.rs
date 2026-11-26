@@ -1314,7 +1314,6 @@ mod tests {
         GameState::new(seed, "test-run")
     }
 
-
     fn set_journey_event(game: &mut GameState, kind: JourneyEventKind) {
         game.phase = RunPhase::Intermission;
         game.pending_event = Some(JourneyEvent {
@@ -1324,8 +1323,14 @@ mod tests {
             title: "Test encounter".to_string(),
             description: "A test encounter with two choices.".to_string(),
             choices: vec![
-                JourneyChoice { label: "Choice A".to_string(), description: "First effect".to_string() },
-                JourneyChoice { label: "Choice B".to_string(), description: "Second effect".to_string() },
+                JourneyChoice {
+                    label: "Choice A".to_string(),
+                    description: "First effect".to_string(),
+                },
+                JourneyChoice {
+                    label: "Choice B".to_string(),
+                    description: "Second effect".to_string(),
+                },
             ],
         });
     }
@@ -1612,7 +1617,6 @@ mod tests {
         assert_eq!(game.units[0].current_health, Some(7));
     }
 
-
     #[test]
     fn cache_choice_grants_gold_and_persists_the_outcome() {
         let mut game = run(501);
@@ -1671,7 +1675,6 @@ mod tests {
         assert_eq!(game.hearts, 4);
     }
 
-
     #[test]
     fn failed_event_purchase_keeps_encounter_open_without_partial_mutation() {
         let mut game = run(507);
@@ -1692,7 +1695,10 @@ mod tests {
         }
         let gold_before = game.gold;
         set_journey_event(&mut game, JourneyEventKind::WoundedRanger);
-        assert_eq!(game.resolve_journey_event(0), Err(GameError::UnitCapacityReached));
+        assert_eq!(
+            game.resolve_journey_event(0),
+            Err(GameError::UnitCapacityReached)
+        );
         assert_eq!(game.gold, gold_before);
         assert_eq!(game.units.len(), game.unit_limit);
         assert!(game.pending_event.is_some());
