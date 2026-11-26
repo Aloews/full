@@ -63,7 +63,9 @@ impl ApiError {
             | GameError::WrongPhase
             | GameError::NoSpins
             | GameError::NudgeSpent
-            | GameError::CoreChoiceRequired => StatusCode::CONFLICT,
+            | GameError::CoreChoiceRequired
+            | GameError::JourneyEventRequired
+            | GameError::NoJourneyEvent => StatusCode::CONFLICT,
             GameError::NotEnoughGold | GameError::UnitCapacityReached | GameError::InvalidNudge => {
                 StatusCode::UNPROCESSABLE_ENTITY
             }
@@ -85,6 +87,9 @@ impl ApiError {
             GameError::InvalidPromotion => "invalid_promotion",
             GameError::InvalidCoreChoice => "invalid_core_choice",
             GameError::CoreChoiceRequired => "core_choice_required",
+            GameError::JourneyEventRequired => "journey_event_required",
+            GameError::NoJourneyEvent => "no_journey_event",
+            GameError::InvalidJourneyChoice => "invalid_journey_choice",
             GameError::InvalidItem => "invalid_item",
         };
         Self {
@@ -131,6 +136,8 @@ struct IndexRequest {
 struct ItemRequest {
     item: ItemKind,
 }
+#[derive(Deserialize)]
+struct JourneyChoiceRequest { index: usize }
 #[derive(Deserialize)]
 struct UnitRequest {
     unit_id: u64,
@@ -216,6 +223,7 @@ fn app_with_storage(data_dir: PathBuf, pool: Option<PgPool>) -> Router {
         .route("/api/runs/{run_id}/promotion", post(promotion))
         .route("/api/runs/{run_id}/lock", post(toggle_lock))
         .route("/api/runs/{run_id}/battle", post(battle))
+        .route("/api/runs/{run_id}/event", post(resolve_event))
         .route("/api/runs/{run_id}/next-wave", post(next_wave))
         .route("/api/runs/{run_id}/core", post(choose_core))
         .route("/api/runs/{run_id}/item", post(buy_item))
@@ -433,6 +441,14 @@ async fn battle(
     Path(run_id): Path<String>,
 ) -> Result<Json<GameState>, ApiError> {
     mutate_run(state, run_id, |game| game.battle().map(|_| ())).await
+}
+
+async fn resolve_event(
+    State(state): State<AppState>,
+    Path(run_id): Path<String>,
+    Json(body): Json<JourneyChoiceRequest>,
+) -> Result<Json<GameState>, ApiError> {
+    mutate_run(state, run_id, |game| game.resolve_journey_event(body.index)).await
 }
 
 async fn next_wave(
