@@ -59,6 +59,14 @@ class AgentPatchPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             MODULE.patch_paths(value)
 
+    def test_patch_size_limit_is_small_enough_for_local_qa_context(self):
+        self.assertEqual(MODULE.MAX_PATCH_BYTES, 16_000)
+
+    def test_lockfiles_and_agent_workflows_are_not_writable(self):
+        for path in ("Cargo.lock", ".github/workflows/slotbound-ci.yml", ".github/agent-state.json"):
+            with self.subTest(path=path):
+                self.assertFalse(MODULE.allowed_path(path))
+
 
 if __name__ == "__main__":
     unittest.main()
