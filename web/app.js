@@ -289,7 +289,8 @@ function paintBattlefield(report, eventLimit) {
   }
   px(154, 0, 2, 128, '#f3c969');
   px(156, 0, 1, 128, '#f5e9bd');
-  const events = (report.events || []).slice(0, eventLimit === undefined ? undefined : eventLimit);
+  const allEvents = report.events || [];
+  const events = eventLimit === undefined ? allEvents : allEvents.slice(0, eventLimit);
   const actors = new Map();
   const add = (name, team, health, amount) => {
     if (!name || name === 'Squad') return;
