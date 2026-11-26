@@ -57,7 +57,7 @@ pub enum SynergyTier {
     Flourishing,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Relic {
     HoneyBell,
@@ -1040,7 +1040,15 @@ mod tests {
         let before = run.clone();
 
         assert_eq!(run.draw(), Err(GameError::RewardPending));
-        assert_eq!(run.choose_relic(Relic::HoneyBell), Err(GameError::InvalidRelicChoice));
+        let invalid_choice = Relic::ALL
+            .iter()
+            .copied()
+            .find(|relic| !report.relic_choices.contains(relic))
+            .unwrap();
+        assert_eq!(
+            run.choose_relic(invalid_choice),
+            Err(GameError::InvalidRelicChoice)
+        );
         assert_eq!(run.relics, before.relics);
         assert_eq!(run.phase, RunPhase::RelicChoice);
 
