@@ -756,3 +756,36 @@ button:focus-visible, a:focus-visible {
 .trait-guarded { border-color:#7e769a;background:#dbd4e9;color:#50476f; }
 .unit-imprint-chip { border-color:#9b7850;background:#ead4a6;color:#60472e; }
 .build-empty { border-style:dashed;background:transparent;color:#887f68; }
+
+.promotion-path {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:7px;
+  padding:6px 7px;
+  border:1px dashed #9b7850;
+  background:#e9dcae;
+  color:#60472e;
+  font:700 8px "Courier New",monospace;
+  text-transform:uppercase;
+}
+.promotion-path .build-label { padding:0;margin-right:2px; }
+.path-arrow { color:#b36f4a;font-size:12px; }
+.promotion-options {
+  padding:8px;
+  border:2px solid #9a7a48;
+  background:#f0e2b9;
+  box-shadow:2px 2px 0 #b8a47a;
+}
+.promotion-options > span {
+  display:block;
+  color:#77542d;
+  font:900 8px "Courier New",monospace;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.promotion-options .button {
+  margin:4px 4px 0 0;
+  min-height:26px;
+}
