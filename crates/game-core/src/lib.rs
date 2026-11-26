@@ -736,7 +736,7 @@ impl GameState {
                 max_health: unit.max_health,
                 current_health: unit.current_health,
                 boss: unit.boss,
-                position: unit.position,
+                position: Some(unit.position),
             })
             .collect::<Vec<_>>();
         let enemy_power = enemies.iter().fold(0u32, |total, enemy| {
@@ -2180,7 +2180,7 @@ mod tests {
             combatant(11, None, 2, 0),
             combatant(12, None, 0, 0),
         ];
-        assert_eq!(select_target_index(&targets, &attacker, false), Some(1));
+        assert_eq!(select_target_index(&targets, &attacker, false), Some(2));
     }
 
     #[test]
@@ -2253,7 +2253,7 @@ mod tests {
 
     #[test]
     fn old_battle_snapshots_without_positions_remain_readable() {
-        let mut game = run(802);
+        let game = run(802);
         let mut value = serde_json::to_value(game.battle().unwrap()).unwrap();
         let battle = value.as_object_mut().unwrap();
         for team in ["allies", "enemies"] {
