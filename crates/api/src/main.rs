@@ -817,7 +817,10 @@ mod tests {
         assert_eq!(migrated.ruleset_version, 3);
         assert!(migrated.pending_event.is_some());
         assert!(migrated.units.iter().all(|unit| unit.traits.len() == 1));
-        assert_eq!(migrated.units[0].imprints[0].kind, slotbound_core::UnitImprint::Pierce);
+        assert_eq!(
+            migrated.units[0].imprints[0].kind,
+            slotbound_core::UnitImprint::Pierce
+        );
 
         let resolved = router
             .clone()

@@ -965,7 +965,11 @@ impl GameState {
                     enemies.remove(target_index);
                 }
 
-                let class_splash = if actor.class == Some(UnitClass::Mage) { 2 } else { 0 };
+                let class_splash = if actor.class == Some(UnitClass::Mage) {
+                    2
+                } else {
+                    0
+                };
                 let imprint_splash =
                     imprint_rank_bonus(&actor.imprints, UnitImprint::Spellpower, 2);
                 if class_splash.saturating_add(imprint_splash) > 0
@@ -1009,9 +1013,12 @@ impl GameState {
                     }
                 }
 
-                let class_healing = if actor.class == Some(UnitClass::Cleric) { 2 } else { 0 };
-                let imprint_healing =
-                    imprint_rank_bonus(&actor.imprints, UnitImprint::Mending, 1);
+                let class_healing = if actor.class == Some(UnitClass::Cleric) {
+                    2
+                } else {
+                    0
+                };
+                let imprint_healing = imprint_rank_bonus(&actor.imprints, UnitImprint::Mending, 1);
                 if class_healing.saturating_add(imprint_healing) > 0 && tick % 2 == 0 {
                     if let Some((ally_index, _)) = allies
                         .iter()
@@ -2548,7 +2555,11 @@ mod tests {
                 .any(|slot| slot.kind == UnitImprint::Mending && slot.rank == 1)
         );
 
-        game.units.iter_mut().find(|unit| unit.id == target_id).unwrap().absorb_level = 11;
+        game.units
+            .iter_mut()
+            .find(|unit| unit.id == target_id)
+            .unwrap()
+            .absorb_level = 11;
         let third = game.spawn_unit(UnitClass::Rogue);
         let third_id = third.id;
         game.units.push(third);
@@ -2556,7 +2567,12 @@ mod tests {
         let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
         assert_eq!(target.absorb_level, 12);
         assert_eq!(imprint_slot_capacity(target.absorb_level), 3);
-        assert!(target.imprints.iter().any(|slot| slot.kind == UnitImprint::Critical));
+        assert!(
+            target
+                .imprints
+                .iter()
+                .any(|slot| slot.kind == UnitImprint::Critical)
+        );
     }
 
     #[test]
@@ -2604,7 +2620,6 @@ mod tests {
         );
     }
 
-
     #[test]
     fn inheriting_stout_adds_health_to_the_existing_keeper() {
         let mut game = run(905);
@@ -2636,7 +2651,10 @@ mod tests {
         unit.attack = 1;
         unit.health = 100;
         unit.current_health = None;
-        unit.imprints = vec![UnitImprintSlot { kind: UnitImprint::Spellpower, rank: 1 }];
+        unit.imprints = vec![UnitImprintSlot {
+            kind: UnitImprint::Spellpower,
+            rank: 1,
+        }];
         let report = game.battle().unwrap();
         assert!(report.events.iter().any(|event| {
             event.kind == BattleEventKind::AllyAttack
@@ -2652,7 +2670,10 @@ mod tests {
         unit.attack = 1;
         unit.health = 40;
         unit.current_health = Some(12);
-        unit.imprints = vec![UnitImprintSlot { kind: UnitImprint::Mending, rank: 2 }];
+        unit.imprints = vec![UnitImprintSlot {
+            kind: UnitImprint::Mending,
+            rank: 2,
+        }];
         let unit_id = unit.id;
         let report = game.battle().unwrap();
         assert!(report.events.iter().any(|event| {
