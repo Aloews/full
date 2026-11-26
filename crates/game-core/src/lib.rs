@@ -610,9 +610,7 @@ impl GameState {
                 let damage = attack
                     .saturating_mul(core_percent)
                     .saturating_mul(synergy_percent)
-                    .checked_div(10_000)
-                    .unwrap_or(1)
-                    .max(1);
+                    / 10_000u32;
                 let target_health = &mut enemies[target_index].current_health;
                 *target_health = target_health.saturating_sub(damage);
                 let remaining = *target_health;
@@ -817,10 +815,7 @@ impl GameState {
         let raw_damage = if victory {
             0
         } else {
-            1 + (enemies.len() as u32)
-                .saturating_sub(1)
-                .saturating_div(2)
-                .min(2)
+            1 + ((enemies.len() as u32).saturating_sub(1) / 2).min(2)
         };
         let has_vitality = self.items.contains(&ItemKind::VitalityCharm);
         let damage_taken = if has_vitality && raw_damage > 0 {
@@ -1367,12 +1362,7 @@ mod tests {
         let mut game = run(306);
         game.wave = 5;
         let report = game.battle().unwrap();
-        if report
-            .events
-            .iter()
-            .any(|event| event.kind == BattleEventKind::BossTelegraph)
-        {
-            assert!(report.boss);
-        }
+        assert!(report.boss);
+        assert!(report.events.iter().any(|event| event.kind == BattleEventKind::BossTelegraph));
     }
 }
