@@ -882,23 +882,23 @@ impl GameState {
                 {
                     continue;
                 }
-                if enemy.boss && tick % 3 == 0 {
-                    events.push(BattleEvent {
-                        tick,
-                        kind: BattleEventKind::BossTelegraph,
-                        actor_id: enemy.id,
-                        target_id: 0,
-                        actor: enemy.name.clone(),
-                        target: "front line".to_string(),
-                        amount: 0,
-                        remaining_health: 0,
-                    });
-                }
                 let target_index = select_target_index(&allies, &enemy, true);
                 let Some(target_index) = target_index else {
                     break;
                 };
                 let target = allies[target_index].clone();
+                if enemy.boss && tick % 3 == 0 {
+                    events.push(BattleEvent {
+                        tick,
+                        kind: BattleEventKind::BossTelegraph,
+                        actor_id: enemy.id,
+                        target_id: target.id,
+                        actor: enemy.name.clone(),
+                        target: target.name.clone(),
+                        amount: u32::from(target.position.lane) + 1,
+                        remaining_health: target.current_health,
+                    });
+                }
                 let telegraph_bonus = if enemy.boss && tick % 3 == 0 { 2 } else { 0 };
                 let guard_reduction = if target.class == Some(UnitClass::Guardian) {
                     1
@@ -1646,6 +1646,20 @@ mod tests {
         GameState::new(seed, "test-run")
     }
 
+    fn combatant(id: u64, class: Option<UnitClass>, row: u8, lane: u8) -> Combatant {
+        Combatant {
+            id,
+            name: format!("Test {id}"),
+            class,
+            position: FormationPosition { row, lane },
+            attack: 4,
+            max_health: 10,
+            current_health: 10,
+            initiative: 5,
+            boss: false,
+        }
+    }
+
     fn set_route(game: &mut GameState, kind: RouteNodeKind) {
         game.phase = RunPhase::Intermission;
         game.pending_event = None;
@@ -2117,6 +2131,65 @@ mod tests {
         assert!(game.pending_event.is_none());
         assert!(game.pending_route.is_none());
         assert!(!game.migrate_legacy_state());
+    }
+
+
+    #[test]
+    fn formation_places_roles_in_distinct_front_middle_and_back_slots() {
+        let mut game = run(801);
+        for class in [
+            UnitClass::Beast,
+            UnitClass::Rogue,
+            UnitClass::Archer,
+            UnitClass::Mage,
+            UnitClass::Cleric,
+        ] {
+            let unit = game.spawn_unit(class);
+            game.units.push(unit);
+        }
+        let report = game.battle().unwrap();
+        let position_for = |class| {
+            report
+                .allies
+                .iter()
+                .find(|snapshot| snapshot.class == Some(class))
+                .unwrap()
+                .position
+        };
+        assert_eq!(position_for(UnitClass::Guardian), FormationPosition { row: 0, lane: 1 });
+        assert_eq!(position_for(UnitClass::Beast), FormationPosition { row: 0, lane: 0 });
+        assert_eq!(position_for(UnitClass::Rogue), FormationPosition { row: 1, lane: 2 });
+        assert_eq!(position_for(UnitClass::Archer), FormationPosition { row: 2, lane: 0 });
+        assert_eq!(position_for(UnitClass::Mage), FormationPosition { row: 2, lane: 1 });
+        assert_eq!(position_for(UnitClass::Cleric), FormationPosition { row: 2, lane: 2 });
+        let unique: std::collections::HashSet<(u8, u8)> = report
+            .allies
+            .iter()
+            .map(|snapshot| (snapshot.position.row, snapshot.position.lane))
+            .collect();
+        assert_eq!(unique.len(), report.allies.len());
+    }
+
+    #[test]
+    fn target_selection_prefers_same_lane_then_the_frontmost_enemy() {
+        let attacker = combatant(1, Some(UnitClass::Archer), 2, 0);
+        let targets = vec![
+            combatant(10, None, 0, 2),
+            combatant(11, None, 2, 0),
+            combatant(12, None, 0, 0),
+        ];
+        assert_eq!(select_target_index(&targets, &attacker, false), Some(1));
+    }
+
+    #[test]
+    fn guardian_taunt_overrides_lane_distance_and_row() {
+        let attacker = combatant(1, None, 0, 2);
+        let targets = vec![
+            combatant(10, Some(UnitClass::Archer), 0, 2),
+            combatant(11, Some(UnitClass::Guardian), 2, 0),
+        ];
+        assert_eq!(select_target_index(&targets, &attacker, true), Some(1));
+        assert_eq!(select_target_index(&targets, &attacker, false), Some(0));
     }
 
     #[test]
