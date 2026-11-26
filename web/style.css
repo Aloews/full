@@ -624,3 +624,100 @@ button:focus-visible, a:focus-visible {
 }
 
 .journey-choice:disabled { opacity:.45;cursor:not-allowed;filter:grayscale(.45); }
+
+.route-fork {
+  position:relative;
+  margin:16px 0;
+  padding:13px;
+  border:3px solid #6d7955;
+  background:#263b35;
+  box-shadow:4px 4px 0 #172823,inset 0 0 0 2px #f5e9bd15;
+}
+.route-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:12px;
+  color:#f3c969;
+}
+.route-heading strong { font:900 11px "Courier New",monospace;letter-spacing:.08em; }
+.route-branches {
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+}
+.route-option {
+  position:relative;
+  z-index:1;
+  display:flex;
+  min-width:0;
+  min-height:142px;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:7px;
+  padding:10px;
+  border:2px solid #8da36b;
+  border-radius:0;
+  background:#192d2e;
+  color:#f5e9bd;
+  text-align:left;
+  font:inherit;
+  cursor:pointer;
+  box-shadow:3px 3px 0 #172823;
+  transition:transform .12s,background .12s,border-color .12s;
+}
+.route-option::before {
+  content:"";
+  position:absolute;
+  top:20px;
+  right:100%;
+  width:10px;
+  border-top:2px dashed #8da36b;
+}
+.route-option:first-child::before { display:none; }
+.route-option:hover:not(:disabled) {
+  transform:translateY(-3px);
+  border-color:#f3c969;
+  background:#344c3b;
+}
+.route-option .route-node {
+  display:grid;
+  width:26px;
+  height:26px;
+  place-items:center;
+  border:2px solid #c49a4d;
+  background:#344c3b;
+  color:#f3c969;
+  font-size:14px;
+}
+.route-option strong {
+  color:#f3c969;
+  font:900 10px "Courier New",monospace;
+  text-transform:uppercase;
+  line-height:1.35;
+}
+.route-option small {
+  color:#c6c9a7;
+  font-size:10px;
+  line-height:1.5;
+}
+.route-rest { border-color:#9bc477; }
+.route-merchant { border-color:#d5b66e; }
+.route-elite { border-color:#d77b59; }
+.route-boss_gate { border-color:#bd6d63; }
+.route-option:disabled { opacity:.45;cursor:not-allowed; }
+@media(max-width:680px) {
+  .route-branches { grid-template-columns:1fr; }
+  .route-option { min-height:unset;display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:9px; }
+  .route-option .route-node { grid-row:span 2; }
+  .route-option small { grid-column:2; }
+  .route-option::before { top:auto;bottom:100%;right:auto;left:12px;width:0;height:10px;border-top:0;border-left:2px dashed #8da36b; }
+  .route-option:first-child::before { display:none; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .route-option { transition:none; }
+  .route-option:hover:not(:disabled) { transform:none; }
+}
