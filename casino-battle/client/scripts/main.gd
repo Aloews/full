@@ -22,6 +22,13 @@ var next_status_text := ""
 var draw_button: Button
 var battle_button: Button
 var status_label: Label
+var battle_frames: Array = []
+var battle_frame_index := 0
+var battle_replay_timer := 0.0
+var battle_replay_active := false
+var battle_frame_events: Array = []
+var visual_hp: Dictionary = {}
+var visual_max_hp: Dictionary = {}
 
 var fate_pattern := [
     [0, 1, 0, 3],
@@ -167,7 +174,7 @@ func _on_request_completed(result: int, response_code: int, _headers: PackedStri
             var won := bool(payload.get("victory", false))
             var next_wave := int(payload.get("wave", 1))
             next_status_text = ("VICTORY · WAVE %02d" % next_wave) if won else "THE PARTY NEEDS REST"
-            _refresh_run()
+            _start_battle_replay(payload.get("events", []))
         "refresh":
             _apply_run_snapshot(payload)
             status_text = next_status_text if not next_status_text.is_empty() else "CONNECTED · PREPARATION"
@@ -197,6 +204,129 @@ func _apply_board(board: Array) -> void:
         for col in range(mini(4, board[row].size())):
             fate_pattern[row][col] = int(indices.get(str(board[row][col]), 0))
 
+func _start_battle_replay(events: Array) -> void:
+    battle_frames.clear()
+    battle_frame_index = 0
+    battle_frame_events.clear()
+    visual_hp.clear()
+    visual_max_hp.clear()
+
+    for unit in run_snapshot.get("party", []):
+        var unit_id := int(unit.get("id", 0))
+        visual_hp[unit_id] = int(unit.get("hp", 1))
+        visual_max_hp[unit_id] = int(unit.get("max_hp", 1))
+
+    var wave := int(run_snapshot.get("wave", 1))
+    var enemy_count := mini(1 + int(wave / 2), 5)
+    for enemy_index in range(enemy_count):
+        var enemy_id := 9223372036854775807 - enemy_index
+        var enemy_hp := 10 + wave * 3 + enemy_index * 2
+        visual_hp[enemy_id] = enemy_hp
+        visual_max_hp[enemy_id] = enemy_hp
+
+    var frames_by_tick: Dictionary = {}
+    for event in events:
+        var tick := int(event.get("tick", 0))
+        if not frames_by_tick.has(tick):
+            frames_by_tick[tick] = []
+        frames_by_tick[tick].append(event)
+
+    var ticks: Array = frames_by_tick.keys()
+    ticks.sort()
+    for tick in ticks:
+        battle_frames.append({
+            "tick": int(tick),
+            "events": frames_by_tick[tick]
+        })
+
+    if battle_frames.is_empty():
+        battle_replay_active = false
+        _refresh_run()
+        return
+
+    battle_replay_active = true
+    battle_replay_timer = 0.01
+    status_text = "AUTO-BATTLE · TICK 00"
+    _update_controls()
+    queue_redraw()
+
+func _advance_battle_replay() -> void:
+    if battle_frame_index >= battle_frames.size():
+        battle_replay_active = false
+        battle_frame_events.clear()
+        _update_controls()
+        _refresh_run()
+        return
+
+    var frame: Dictionary = battle_frames[battle_frame_index]
+    battle_frame_index += 1
+    battle_frame_events = frame.get("events", [])
+    status_text = "AUTO-BATTLE · TICK %02d" % int(frame.get("tick", 0))
+
+    for event in battle_frame_events:
+        var kind := str(event.get("kind", "attack"))
+        var target_id := int(event.get("target_unit_id", 0))
+        var amount := int(event.get("amount", 0))
+        if not visual_hp.has(target_id):
+            continue
+
+        if kind == "attack":
+            visual_hp[target_id] = maxi(0, int(visual_hp[target_id]) - amount)
+        elif kind == "heal":
+            visual_hp[target_id] = mini(
+                int(visual_max_hp.get(target_id, visual_hp[target_id])),
+                int(visual_hp[target_id]) + amount
+            )
+        elif kind == "defeat":
+            visual_hp[target_id] = 0
+
+    battle_replay_timer = 0.115
+    _update_controls()
+    queue_redraw()
+
+func _unit_position(unit_id: int) -> Vector2:
+    var party: Array = run_snapshot.get("party", [])
+    var lane_counts := [0, 0, 0]
+
+    for unit in party:
+        var lane := clampi(int(unit.get("lane", 0)), 0, 2)
+        var stack := int(lane_counts[lane])
+        var position := Vector2(300.0 + stack * 60.0, 258.0 + lane * 88.0)
+        if int(unit.get("id", 0)) == unit_id:
+            return position
+        lane_counts[lane] = stack + 1
+
+    var largest_enemy_id := 9223372036854775807
+    if unit_id >= largest_enemy_id - 4:
+        var enemy_index := largest_enemy_id - unit_id
+        return Vector2(850.0 + float(enemy_index / 3) * 62.0, 258.0 + float(enemy_index % 3) * 88.0)
+
+    return Vector2(0, 0)
+
+func _draw_battle_effects() -> void:
+    for event in battle_frame_events:
+        var source_id := int(event.get("source_unit_id", 0))
+        var target_id := int(event.get("target_unit_id", 0))
+        var source := _unit_position(source_id)
+        var target := _unit_position(target_id)
+        if source == Vector2.ZERO or target == Vector2.ZERO:
+            continue
+
+        var kind := str(event.get("kind", "attack"))
+        var amount := int(event.get("amount", 0))
+        if kind == "attack":
+            draw_line(source + Vector2(24, 0), target - Vector2(22, 0), CLAY, 3.0, true)
+            draw_circle(target, 18.0, Color(CLAY, 0.22))
+            draw_string(ThemeDB.fallback_font, target + Vector2(-14, -25), "-%d" % amount, HORIZONTAL_ALIGNMENT_CENTER, 32, 16, CLAY)
+        elif kind == "heal":
+            draw_line(source + Vector2(18, 0), target - Vector2(18, 0), SAGE.lightened(0.18), 3.0, true)
+            draw_circle(target, 19.0, Color(SAGE, 0.24))
+            draw_string(ThemeDB.fallback_font, target + Vector2(-14, -25), "+%d" % amount, HORIZONTAL_ALIGNMENT_CENTER, 32, 16, SAGE.darkened(0.2))
+        elif kind == "defeat":
+            for angle in range(0, 360, 60):
+                var direction := Vector2.from_angle(deg_to_rad(float(angle)))
+                draw_line(target + direction * 13.0, target + direction * 24.0, HONEY, 2.0, true)
+
 func _on_draw_pressed() -> void:
     if run_id.is_empty():
         return
@@ -213,11 +343,15 @@ func _update_controls() -> void:
     var active := str(run_snapshot.get("phase", "preparation")) == "preparation"
     var essence := int(run_snapshot.get("essence", 0))
     draw_button.disabled = api_busy or run_id.is_empty() or not active or essence <= 0
-    battle_button.disabled = api_busy or run_id.is_empty() or not active or run_snapshot.get("party", []).is_empty()
+    battle_button.disabled = api_busy or battle_replay_active or run_id.is_empty() or not active or run_snapshot.get("party", []).is_empty()
     status_label.text = status_text
 
 func _process(delta: float) -> void:
     elapsed += delta
+    if battle_replay_active:
+        battle_replay_timer -= delta
+        if battle_replay_timer <= 0.0:
+            _advance_battle_replay()
     queue_redraw()
 
 func _draw() -> void:
@@ -260,27 +394,53 @@ func _draw_battlefield(size: Vector2) -> void:
     _draw_plant(Vector2(720, 470), 0.55)
 
     var party: Array = run_snapshot.get("party", [])
-    var ally_positions := [Vector2(330, 330), Vector2(470, 285), Vector2(560, 380)]
-    for i in range(mini(3, party.size())):
-        var unit: Dictionary = party[i]
+    var lane_counts := [0, 0, 0]
+    for unit in party:
+        var unit_id := int(unit.get("id", 0))
+        var lane := clampi(int(unit.get("lane", 0)), 0, 2)
+        var stack := int(lane_counts[lane])
+        lane_counts[lane] = stack + 1
+        var position := _unit_position(unit_id)
+        var name := str(unit.get("name", "Mossguard"))
+        var max_hp := maxi(1, int(unit.get("max_hp", 1)))
+        var current_hp := int(visual_hp.get(unit_id, unit.get("hp", max_hp)))
+        var health_ratio := clampf(float(current_hp) / float(max_hp), 0.0, 1.0)
         _draw_creature(
-            ally_positions[i],
+            position,
             _sigil_color(str(unit.get("sigil", "leaf"))),
-            str(unit.get("name", "Mossguard")),
+            name,
             true,
-            1.0 if i == 0 else 0.9
+            0.92 if stack > 0 else 1.0,
+            health_ratio
         )
 
-    _draw_creature(Vector2(860, 310), BERRY, "Gloomling", false, 1.0)
-    _draw_creature(Vector2(990, 390), Color("#8D8578"), "Murkling", false, 0.88)
+    var wave := int(run_snapshot.get("wave", 1))
+    var enemy_count := mini(1 + int(wave / 2), 5)
+    for enemy_index in range(enemy_count):
+        var enemy_id := 9223372036854775807 - enemy_index
+        var enemy_position := _unit_position(enemy_id)
+        var enemy_name := "Gloomling" if enemy_index % 2 == 0 else "Murkling"
+        var enemy_color := BERRY if enemy_index % 2 == 0 else Color("#8D8578")
+        var enemy_max_hp := maxi(1, int(visual_max_hp.get(enemy_id, 10 + wave * 3 + enemy_index * 2)))
+        var enemy_hp := int(visual_hp.get(enemy_id, enemy_max_hp))
+        _draw_creature(
+            enemy_position,
+            enemy_color,
+            enemy_name,
+            false,
+            0.88,
+            clampf(float(enemy_hp) / float(enemy_max_hp), 0.0, 1.0)
+        )
 
     var bob := sin(elapsed * 2.1) * 3.0
-    draw_arc(Vector2(330, 360 + bob), 37.0, 0.0, TAU, 48, Color(HONEY, 0.48), 2.0)
-    draw_circle(Vector2(860, 345), 34.0, Color(CLAY, 0.07))
+    draw_arc(Vector2(310, 288 + bob), 34.0, 0.0, TAU, 48, Color(HONEY, 0.48), 2.0)
+    draw_circle(Vector2(850, 345), 34.0, Color(CLAY, 0.07))
     _draw_leaf_sprinkle(Vector2(250, 210), 0.7)
     _draw_leaf_sprinkle(Vector2(1060, 465), 0.55)
+    if battle_replay_active:
+        _draw_battle_effects()
 
-func _draw_creature(center: Vector2, coat: Color, label: String, friendly: bool, scale_factor: float) -> void:
+func _draw_creature(center: Vector2, coat: Color, label: String, friendly: bool, scale_factor: float, health_ratio: float = 1.0) -> void:
     var bob := sin(elapsed * 2.5 + center.x * 0.01) * 2.5
     var c := center + Vector2(0, bob)
     var s := scale_factor
@@ -301,7 +461,7 @@ func _draw_creature(center: Vector2, coat: Color, label: String, friendly: bool,
         _:
             _draw_murkling(c, s, coat)
 
-    _draw_nameplate(c, label, friendly, s)
+    _draw_nameplate(c, label, friendly, s, health_ratio)
 
 func _draw_mossguard(c: Vector2, s: float, coat: Color) -> void:
     var shell := PackedVector2Array([
@@ -431,12 +591,12 @@ func _draw_eyes(center: Vector2, s: float, gap: float) -> void:
         draw_ellipse_placeholder(eye, Vector2(3.2, 4.3) * s, INK)
         draw_circle(eye + Vector2(-0.9, -1.6) * s, 1.0 * s, CREAM)
 
-func _draw_nameplate(center: Vector2, label: String, friendly: bool, s: float) -> void:
+func _draw_nameplate(center: Vector2, label: String, friendly: bool, s: float, health_ratio: float) -> void:
     var baseline := center.y + 48.0 * s
     draw_string(ThemeDB.fallback_font, Vector2(center.x - 54.0 * s, baseline), label, HORIZONTAL_ALIGNMENT_CENTER, 108.0 * s, 12, INK)
     var bar := Rect2(Vector2(center.x - 21.0 * s, baseline + 7.0), Vector2(42.0 * s, 4.0))
     draw_rect(bar, Color(INK, 0.18))
-    draw_rect(Rect2(bar.position, Vector2(bar.size.x * (0.82 if friendly else 0.58), bar.size.y)), SAGE if friendly else CLAY)
+    draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(health_ratio, 0.0, 1.0), bar.size.y)), SAGE if friendly else CLAY)
 
 func _draw_plant(position: Vector2, scale_factor: float) -> void:
     var s := scale_factor
