@@ -641,7 +641,7 @@ impl RunState {
                     let heal_amount = 3
                         + u32::from(attackers[attacker_index].rank)
                         + synergy_bonus
-                        + attackers[attacker_index].support_heal_bonus as u32;
+                        + attackers[attacker_index].support_heal_bonus.max(0) as u32;
                     let target = &mut attackers[target_index];
                     let healed = (target.max_hp - target.hp).min(heal_amount as i32);
                     target.hp += healed;
@@ -993,6 +993,28 @@ mod tests {
         assert_eq!(events[0].kind, BattleEventKind::Heal);
         assert_eq!(events[0].amount, 5);
         assert_eq!(events[0].target_unit_id, 2);
+    }
+
+    #[test]
+    fn negative_support_heal_bonus_never_becomes_a_huge_unsigned_heal() {
+        let mut support = RunState::new(33).party[0].clone();
+        support.id = 1;
+        support.role = Role::Support;
+        support.support_heal_bonus = -100;
+
+        let mut wounded = support.clone();
+        wounded.id = 2;
+        wounded.role = Role::Striker;
+        wounded.hp = 5;
+        wounded.max_hp = 20;
+
+        let mut allies = vec![support, wounded];
+        let mut enemies = vec![];
+        let events = RunState::advance_side(&mut allies, &mut enemies, 1);
+
+        assert_eq!(allies[1].hp, 9);
+        assert_eq!(events[0].kind, BattleEventKind::Heal);
+        assert_eq!(events[0].amount, 4);
     }
 
     #[test]
