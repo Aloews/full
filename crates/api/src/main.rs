@@ -186,6 +186,7 @@ pub fn app() -> Router {
 }
 
 #[cfg(test)]
+#[cfg(test)]
 fn app_with_data_dir(data_dir: PathBuf) -> Router {
     app_with_storage(data_dir, None)
 }
