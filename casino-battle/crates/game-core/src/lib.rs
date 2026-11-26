@@ -185,7 +185,7 @@ impl RunState {
             return Err(GameError::InvalidMerge);
         }
 
-        let donor = self.party.remove(donor_index);
+        let _donor = self.party.remove(donor_index);
         let adjusted_keeper_index = if donor_index < keeper_index {
             keeper_index - 1
         } else {
@@ -198,7 +198,6 @@ impl RunState {
         keeper.attack += 2;
         keeper.armor += 1;
         keeper.cooldown_left = 0;
-        drop(donor);
         Ok(())
     }
 
@@ -450,11 +449,87 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_units_merge_into_a_stronger_rank() {
+        let mut run = RunState::new(5);
+        let keeper_id = run.party[0].id;
+        let mut donor = run.party[0].clone();
+        donor.id = 900;
+        run.party.push(donor);
+
+        assert_eq!(run.synergies()[0].tier, SynergyTier::Budding);
+        run.merge_units(keeper_id, 900).unwrap();
+
+        assert_eq!(run.party.len(), 1);
+        assert_eq!(run.party[0].rank, 2);
+        assert_eq!(run.party[0].max_hp, 31);
+        assert_eq!(run.party[0].attack, 6);
+    }
+
+    #[test]
+    fn invalid_merge_does_not_change_the_party() {
+        let mut run = RunState::new(6);
+        let before = run.party.clone();
+        assert_eq!(run.merge_units(1, 999), Err(GameError::UnitNotFound));
+        assert_eq!(run.party, before);
+
+        let mut other = run.party[0].clone();
+        other.id = 2;
+        other.sigil = Sigil::Ember;
+        run.party.push(other);
+        let before = run.party.clone();
+        assert_eq!(run.merge_units(1, 2), Err(GameError::InvalidMerge));
+        assert_eq!(run.party, before);
+    }
+
+    #[test]
+    fn four_matching_units_unlock_a_higher_synergy_tier() {
+        let mut run = RunState::new(7);
+        for id in 10..13 {
+            let mut unit = run.party[0].clone();
+            unit.id = id;
+            run.party.push(unit);
+        }
+        let synergies = run.synergies();
+        assert_eq!(synergies.len(), 1);
+        assert_eq!(synergies[0].unit_count, 4);
+        assert_eq!(synergies[0].tier, SynergyTier::Flourishing);
+    }
+
+    #[test]
+    fn auto_battle_targets_the_nearest_lane() {
+        let run = RunState::new(8);
+        let mut attacker = run.party[0].clone();
+        attacker.lane = 1;
+        attacker.attack = 5;
+        attacker.cooldown_left = 0;
+
+        let mut far_target = attacker.clone();
+        far_target.id = 100;
+        far_target.lane = 2;
+        far_target.hp = 20;
+        far_target.armor = 0;
+
+        let mut near_target = attacker.clone();
+        near_target.id = 101;
+        near_target.lane = 1;
+        near_target.hp = 20;
+        near_target.armor = 0;
+
+        let mut attackers = vec![attacker];
+        let mut defenders = vec![far_target, near_target];
+        RunState::advance_side(&mut attackers, &mut defenders);
+
+        assert_eq!(defenders[0].hp, 20);
+        assert_eq!(defenders[1].hp, 15);
+    }
+
+    #[test]
     fn defeated_run_rejects_future_actions() {
         let mut run = RunState::new(1);
         run.hearts = 0;
         run.phase = RunPhase::RunOver;
         assert_eq!(run.draw(), Err(GameError::RunOver));
         assert_eq!(run.resolve_auto_battle(), Err(GameError::RunOver));
+        assert_eq!(run.merge_units(1, 2), Err(GameError::RunOver));
     }
 }
