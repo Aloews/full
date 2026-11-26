@@ -2251,6 +2251,28 @@ mod tests {
     }
 
 
+
+    #[test]
+    fn boss_telegraph_identifies_the_actual_target_and_lane() {
+        let mut game = run(803);
+        game.wave = 5;
+        let report = game.battle().unwrap();
+        let telegraph = report
+            .events
+            .iter()
+            .find(|event| event.kind == BattleEventKind::BossTelegraph)
+            .expect("boss timeline must telegraph a target");
+        assert_ne!(telegraph.target_id, 0);
+        let target = report
+            .allies
+            .iter()
+            .find(|unit| unit.id == telegraph.target_id)
+            .unwrap();
+        let position = target.position.unwrap();
+        assert!(telegraph.target.contains(&format!("lane {}", position.lane + 1)));
+        assert_eq!(telegraph.remaining_health, target.current_health);
+    }
+
     #[test]
     fn old_battle_snapshots_without_positions_remain_readable() {
         let game = run(802);
