@@ -502,46 +502,69 @@ impl GameState {
             .items
             .iter()
             .filter(|item| **item == ItemKind::SharpeningStone)
-            .count() as u32 * 3;
-        let core_percent = 100 + self.cores.iter().filter(|core| **core == CoreKind::Might).count() as u32 * 12;
-        let class_synergy = self.units.iter().fold([0u8; 6], |mut counts, unit| {
-            let index = match unit.class {
-                UnitClass::Guardian => 0,
-                UnitClass::Archer => 1,
-                UnitClass::Mage => 2,
-                UnitClass::Cleric => 3,
-                UnitClass::Rogue => 4,
-                UnitClass::Beast => 5,
-            };
-            counts[index] = counts[index].saturating_add(1);
-            counts
-        }).iter().any(|count| *count >= 3);
+            .count() as u32
+            * 3;
+        let core_percent = 100
+            + self
+                .cores
+                .iter()
+                .filter(|core| **core == CoreKind::Might)
+                .count() as u32
+                * 12;
+        let class_synergy = self
+            .units
+            .iter()
+            .fold([0u8; 6], |mut counts, unit| {
+                let index = match unit.class {
+                    UnitClass::Guardian => 0,
+                    UnitClass::Archer => 1,
+                    UnitClass::Mage => 2,
+                    UnitClass::Cleric => 3,
+                    UnitClass::Rogue => 4,
+                    UnitClass::Beast => 5,
+                };
+                counts[index] = counts[index].saturating_add(1);
+                counts
+            })
+            .iter()
+            .any(|count| *count >= 3);
         let synergy_percent = if class_synergy { 110 } else { 100 };
         let army_power = army_base
             .saturating_add(item_bonus)
             .saturating_mul(core_percent)
-            .saturating_mul(synergy_percent) / 10_000;
+            .saturating_mul(synergy_percent)
+            / 10_000;
 
-        let mut allies: Vec<Combatant> = self.units.iter().map(|unit| Combatant {
-            id: unit.id,
-            name: format!("{} #{}", unit.class.label(), unit.id),
-            class: Some(unit.class),
-            attack: unit.attack,
-            max_health: unit.health.max(1),
-            current_health: unit.current_health.unwrap_or(unit.health).min(unit.health).max(1),
-            initiative: match unit.class {
-                UnitClass::Rogue => 10,
-                UnitClass::Archer => 9,
-                UnitClass::Mage => 8,
-                UnitClass::Beast => 7,
-                UnitClass::Guardian => 6,
-                UnitClass::Cleric => 5,
-            },
-            boss: false,
-        }).collect();
+        let mut allies: Vec<Combatant> = self
+            .units
+            .iter()
+            .map(|unit| Combatant {
+                id: unit.id,
+                name: format!("{} #{}", unit.class.label(), unit.id),
+                class: Some(unit.class),
+                attack: unit.attack,
+                max_health: unit.health.max(1),
+                current_health: unit
+                    .current_health
+                    .unwrap_or(unit.health)
+                    .min(unit.health)
+                    .max(1),
+                initiative: match unit.class {
+                    UnitClass::Rogue => 10,
+                    UnitClass::Archer => 9,
+                    UnitClass::Mage => 8,
+                    UnitClass::Beast => 7,
+                    UnitClass::Guardian => 6,
+                    UnitClass::Cleric => 5,
+                },
+                boss: false,
+            })
+            .collect();
         let mut enemies = build_enemy_party(self.wave, boss);
         let enemy_power = enemies.iter().fold(0u32, |total, enemy| {
-            total.saturating_add(enemy.attack).saturating_add(enemy.max_health / 4)
+            total
+                .saturating_add(enemy.attack)
+                .saturating_add(enemy.max_health / 4)
         });
         let mut events = Vec::new();
         let mut rounds = 0u32;
@@ -558,23 +581,38 @@ impl GameState {
                     continue;
                 }
                 let actor = allies[actor_index].clone();
-                let target_index = enemies.iter().enumerate()
-                    .min_by_key(|(_, enemy)| (
-                        enemy.current_health.saturating_mul(100) / enemy.max_health.max(1),
-                        enemy.id,
-                    ))
+                let target_index = enemies
+                    .iter()
+                    .enumerate()
+                    .min_by_key(|(_, enemy)| {
+                        (
+                            enemy.current_health.saturating_mul(100) / enemy.max_health.max(1),
+                            enemy.id,
+                        )
+                    })
                     .map(|(index, _)| index)
                     .expect("enemy list is checked as non-empty");
                 let target = enemies[target_index].clone();
                 let class_bonus = match actor.class {
                     Some(UnitClass::Rogue) => 2,
                     Some(UnitClass::Archer) if tick % 2 == 0 => 2,
-                    Some(UnitClass::Beast) if target.current_health.saturating_mul(2) > target.max_health => 1,
+                    Some(UnitClass::Beast)
+                        if target.current_health.saturating_mul(2) > target.max_health =>
+                    {
+                        1
+                    }
                     _ => 0,
                 };
-                let attack = actor.attack.saturating_add(class_bonus).saturating_add(item_bonus / 3);
-                let damage = attack.saturating_mul(core_percent).saturating_mul(synergy_percent)
-                    .checked_div(10_000).unwrap_or(1).max(1);
+                let attack = actor
+                    .attack
+                    .saturating_add(class_bonus)
+                    .saturating_add(item_bonus / 3);
+                let damage = attack
+                    .saturating_mul(core_percent)
+                    .saturating_mul(synergy_percent)
+                    .checked_div(10_000)
+                    .unwrap_or(1)
+                    .max(1);
                 let target_health = &mut enemies[target_index].current_health;
                 *target_health = target_health.saturating_sub(damage);
                 let remaining = *target_health;
@@ -603,16 +641,21 @@ impl GameState {
                 }
 
                 if actor.class == Some(UnitClass::Mage) && tick % 2 == 0 && !enemies.is_empty() {
-                    let splash_index = enemies.iter().enumerate()
-                        .min_by_key(|(_, enemy)| (
-                            enemy.current_health.saturating_mul(100) / enemy.max_health.max(1),
-                            enemy.id,
-                        ))
+                    let splash_index = enemies
+                        .iter()
+                        .enumerate()
+                        .min_by_key(|(_, enemy)| {
+                            (
+                                enemy.current_health.saturating_mul(100) / enemy.max_health.max(1),
+                                enemy.id,
+                            )
+                        })
                         .map(|(index, _)| index)
                         .expect("enemy list is checked as non-empty");
                     let splash_target = enemies[splash_index].clone();
                     let splash_damage = 2u32.saturating_mul(core_percent) / 100;
-                    enemies[splash_index].current_health = enemies[splash_index].current_health
+                    enemies[splash_index].current_health = enemies[splash_index]
+                        .current_health
                         .saturating_sub(splash_damage.max(1));
                     let splash_remaining = enemies[splash_index].current_health;
                     events.push(BattleEvent {
@@ -641,15 +684,23 @@ impl GameState {
                 }
 
                 if actor.class == Some(UnitClass::Cleric) && tick % 2 == 0 {
-                    if let Some((ally_index, _)) = allies.iter().enumerate()
-                        .filter(|(_, ally)| ally.current_health > 0 && ally.current_health < ally.max_health)
-                        .min_by_key(|(_, ally)| (
-                            ally.current_health.saturating_mul(100) / ally.max_health.max(1),
-                            ally.id,
-                        ))
+                    if let Some((ally_index, _)) = allies
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, ally)| {
+                            ally.current_health > 0 && ally.current_health < ally.max_health
+                        })
+                        .min_by_key(|(_, ally)| {
+                            (
+                                ally.current_health.saturating_mul(100) / ally.max_health.max(1),
+                                ally.id,
+                            )
+                        })
                     {
-                        let healed = 2u32.min(allies[ally_index].max_health - allies[ally_index].current_health);
-                        allies[ally_index].current_health = allies[ally_index].current_health.saturating_add(healed);
+                        let healed = 2u32
+                            .min(allies[ally_index].max_health - allies[ally_index].current_health);
+                        allies[ally_index].current_health =
+                            allies[ally_index].current_health.saturating_add(healed);
                         events.push(BattleEvent {
                             tick,
                             kind: BattleEventKind::UnitHealed,
@@ -666,7 +717,10 @@ impl GameState {
 
             let enemy_turn: Vec<Combatant> = enemies.clone();
             for enemy in enemy_turn {
-                if !enemies.iter().any(|current| current.id == enemy.id && current.current_health > 0) {
+                if !enemies
+                    .iter()
+                    .any(|current| current.id == enemy.id && current.current_health > 0)
+                {
                     continue;
                 }
                 if enemy.boss && tick % 3 == 0 {
@@ -681,20 +735,39 @@ impl GameState {
                         remaining_health: 0,
                     });
                 }
-                let target_index = allies.iter().enumerate()
+                let target_index = allies
+                    .iter()
+                    .enumerate()
                     .filter(|(_, ally)| ally.current_health > 0)
-                    .min_by_key(|(_, ally)| (
-                        if ally.class == Some(UnitClass::Guardian) { 0u8 } else { 1u8 },
-                        ally.current_health.saturating_mul(100) / ally.max_health.max(1),
-                        ally.id,
-                    ))
+                    .min_by_key(|(_, ally)| {
+                        (
+                            if ally.class == Some(UnitClass::Guardian) {
+                                0u8
+                            } else {
+                                1u8
+                            },
+                            ally.current_health.saturating_mul(100) / ally.max_health.max(1),
+                            ally.id,
+                        )
+                    })
                     .map(|(index, _)| index);
-                let Some(target_index) = target_index else { break; };
+                let Some(target_index) = target_index else {
+                    break;
+                };
                 let target = allies[target_index].clone();
                 let telegraph_bonus = if enemy.boss && tick % 3 == 0 { 2 } else { 0 };
-                let guard_reduction = if target.class == Some(UnitClass::Guardian) { 1 } else { 0 };
-                let damage = enemy.attack.saturating_add(telegraph_bonus).saturating_sub(guard_reduction).max(1);
-                allies[target_index].current_health = allies[target_index].current_health.saturating_sub(damage);
+                let guard_reduction = if target.class == Some(UnitClass::Guardian) {
+                    1
+                } else {
+                    0
+                };
+                let damage = enemy
+                    .attack
+                    .saturating_add(telegraph_bonus)
+                    .saturating_sub(guard_reduction)
+                    .max(1);
+                allies[target_index].current_health =
+                    allies[target_index].current_health.saturating_sub(damage);
                 let remaining = allies[target_index].current_health;
                 events.push(BattleEvent {
                     tick,
@@ -744,7 +817,10 @@ impl GameState {
         let raw_damage = if victory {
             0
         } else {
-            1 + (enemies.len() as u32).saturating_sub(1).saturating_div(2).min(2)
+            1 + (enemies.len() as u32)
+                .saturating_sub(1)
+                .saturating_div(2)
+                .min(2)
         };
         let has_vitality = self.items.contains(&ItemKind::VitalityCharm);
         let damage_taken = if has_vitality && raw_damage > 0 {
@@ -752,14 +828,22 @@ impl GameState {
         } else {
             raw_damage
         };
-        self.hearts = self.hearts.saturating_sub(damage_taken.min(u32::from(u8::MAX)) as u8);
+        self.hearts = self
+            .hearts
+            .saturating_sub(damage_taken.min(u32::from(u8::MAX)) as u8);
 
         let mut gold_awarded = if victory {
-            35u32.saturating_add(self.wave.saturating_mul(9)).saturating_add(if boss { 50 } else { 0 })
+            35u32
+                .saturating_add(self.wave.saturating_mul(9))
+                .saturating_add(if boss { 50 } else { 0 })
         } else {
             10
         };
-        let fortune = self.cores.iter().filter(|core| **core == CoreKind::Fortune).count() as u32;
+        let fortune = self
+            .cores
+            .iter()
+            .filter(|core| **core == CoreKind::Fortune)
+            .count() as u32;
         gold_awarded = gold_awarded.saturating_mul(100 + fortune * 15) / 100;
         self.gold = self.gold.saturating_add(gold_awarded);
         if boss && victory && self.cores.len() < 8 {
@@ -848,7 +932,9 @@ impl GameState {
         self.last_spin = None;
         self.last_battle = None;
         for unit in &mut self.units {
-            let restored = unit.current_health.map(|current| current.saturating_add(2).min(unit.health));
+            let restored = unit
+                .current_health
+                .map(|current| current.saturating_add(2).min(unit.health));
             unit.current_health = restored.filter(|current| *current < unit.health);
         }
         self.phase = RunPhase::Preparation;
@@ -949,30 +1035,42 @@ impl GameState {
 fn build_enemy_party(wave: u32, boss_wave: bool) -> Vec<Combatant> {
     let extra = ((wave.saturating_sub(1) / 3).min(3)) as usize;
     let count = 2 + extra;
-    let names = ["Thicket Slime", "Bramble Bat", "Glow Wisp", "Rootling", "Mossling"];
-    (0..count).map(|index| {
-        let boss = boss_wave && index == 0;
-        let base_health = if boss {
-            30u32.saturating_add(wave.saturating_mul(3))
-        } else {
-            8u32.saturating_add(wave.saturating_mul(2))
-        };
-        let attack = if boss {
-            4u32.saturating_add(wave / 3)
-        } else {
-            2u32.saturating_add(wave / 5)
-        };
-        Combatant {
-            id: u64::MAX.saturating_sub(index as u64),
-            name: if boss { "Mosswood Sentinel".to_string() } else { names[index % names.len()].to_string() },
-            class: None,
-            attack,
-            max_health: base_health,
-            current_health: base_health,
-            initiative: if boss { 7 } else { 4 + (index % 2) as u8 },
-            boss,
-        }
-    }).collect()
+    let names = [
+        "Thicket Slime",
+        "Bramble Bat",
+        "Glow Wisp",
+        "Rootling",
+        "Mossling",
+    ];
+    (0..count)
+        .map(|index| {
+            let boss = boss_wave && index == 0;
+            let base_health = if boss {
+                30u32.saturating_add(wave.saturating_mul(3))
+            } else {
+                8u32.saturating_add(wave.saturating_mul(2))
+            };
+            let attack = if boss {
+                4u32.saturating_add(wave / 3)
+            } else {
+                2u32.saturating_add(wave / 5)
+            };
+            Combatant {
+                id: u64::MAX.saturating_sub(index as u64),
+                name: if boss {
+                    "Mosswood Sentinel".to_string()
+                } else {
+                    names[index % names.len()].to_string()
+                },
+                class: None,
+                attack,
+                max_health: base_health,
+                current_health: base_health,
+                initiative: if boss { 7 } else { 4 + (index % 2) as u8 },
+                boss,
+            }
+        })
+        .collect()
 }
 
 fn is_jackpot(board: &[[UnitClass; BOARD_SIZE]; BOARD_SIZE]) -> bool {
@@ -1179,7 +1277,7 @@ mod tests {
         assert_eq!(game.next_wave(), Err(GameError::CoreChoiceRequired));
         game.choose_core(0).unwrap();
         assert!(game.next_wave().is_ok());
-    } 
+    }
     #[test]
     fn battle_generates_deterministic_timeline_for_same_seed() {
         let mut a = run(301);
@@ -1187,8 +1285,15 @@ mod tests {
         let left = a.battle().unwrap();
         let right = b.battle().unwrap();
         assert_eq!(left, right);
-        assert!(left.events.iter().any(|event| event.kind == BattleEventKind::AllyAttack));
-        assert_eq!(left.events.last().unwrap().kind, BattleEventKind::BattleEnded);
+        assert!(
+            left.events
+                .iter()
+                .any(|event| event.kind == BattleEventKind::AllyAttack)
+        );
+        assert_eq!(
+            left.events.last().unwrap().kind,
+            BattleEventKind::BattleEnded
+        );
     }
 
     #[test]
@@ -1199,7 +1304,12 @@ mod tests {
         game.units[0].health = 1;
         let report = game.battle().unwrap();
         assert!(!report.victory);
-        assert!(report.events.iter().any(|event| event.kind == BattleEventKind::AllyDefeated));
+        assert!(
+            report
+                .events
+                .iter()
+                .any(|event| event.kind == BattleEventKind::AllyDefeated)
+        );
         assert!(game.units.is_empty());
     }
 
@@ -1213,7 +1323,12 @@ mod tests {
         let archer_id = archer.id;
         game.units.push(archer);
         game.battle().unwrap();
-        let first_enemy_attack = game.last_battle.as_ref().unwrap().events.iter()
+        let first_enemy_attack = game
+            .last_battle
+            .as_ref()
+            .unwrap()
+            .events
+            .iter()
             .find(|event| event.kind == BattleEventKind::EnemyAttack)
             .unwrap();
         assert_eq!(first_enemy_attack.target_id, guardian_id);
@@ -1228,7 +1343,12 @@ mod tests {
         let cleric = game.spawn_unit(UnitClass::Cleric);
         game.units.push(cleric);
         let report = game.battle().unwrap();
-        assert!(report.events.iter().any(|event| event.kind == BattleEventKind::UnitHealed));
+        assert!(
+            report
+                .events
+                .iter()
+                .any(|event| event.kind == BattleEventKind::UnitHealed)
+        );
     }
 
     #[test]
@@ -1247,9 +1367,12 @@ mod tests {
         let mut game = run(306);
         game.wave = 5;
         let report = game.battle().unwrap();
-        if report.events.iter().any(|event| event.kind == BattleEventKind::BossTelegraph) {
+        if report
+            .events
+            .iter()
+            .any(|event| event.kind == BattleEventKind::BossTelegraph)
+        {
             assert!(report.boss);
         }
     }
-
 }
