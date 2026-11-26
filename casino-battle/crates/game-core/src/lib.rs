@@ -458,6 +458,19 @@ impl RunState {
             .collect()
     }
 
+    fn synergy_level(units: &[Unit], sigil: Sigil) -> i32 {
+        let count = units
+            .iter()
+            .filter(|unit| unit.hp > 0 && unit.sigil == sigil)
+            .count();
+
+        match count {
+            4.. => 2,
+            2..=3 => 1,
+            _ => 0,
+        }
+    }
+
     fn advance_side(attackers: &mut [Unit], defenders: &mut [Unit], tick: u32) -> Vec<BattleEvent> {
         let mut events = Vec::new();
 
@@ -487,7 +500,10 @@ impl RunState {
                     .map(|(index, _)| index);
 
                 if let Some(target_index) = heal_target {
-                    let heal_amount = 3 + u32::from(attackers[attacker_index].rank);
+                    let sigil = attackers[attacker_index].sigil;
+                    let synergy_bonus = Self::synergy_level(attackers, sigil) as u32;
+                    let heal_amount =
+                        3 + u32::from(attackers[attacker_index].rank) + synergy_bonus;
                     let target = &mut attackers[target_index];
                     let healed = (target.max_hp - target.hp).min(heal_amount as i32);
                     target.hp += healed;
@@ -518,7 +534,10 @@ impl RunState {
                     Role::Mystic => 1,
                     Role::Guardian | Role::Support => 0,
                 };
-                let attack = attackers[attacker_index].attack + bonus;
+                let sigil = attackers[attacker_index].sigil;
+                let attack = attackers[attacker_index].attack
+                    + bonus
+                    + Self::synergy_level(attackers, sigil);
                 let target = &mut defenders[target_index];
                 let damage = (attack - target.armor).max(1);
                 target.hp = (target.hp - damage).max(0);
@@ -742,6 +761,27 @@ mod tests {
 
         assert_eq!(defenders[0].hp, 20);
         assert_eq!(defenders[1].hp, 15);
+    }
+
+    #[test]
+    fn sigil_synergy_scales_from_two_to_four_units() {
+        let mut units = vec![RunState::new(30).party[0].clone()];
+        assert_eq!(RunState::synergy_level(&units, Sigil::Leaf), 0);
+
+        let mut second = units[0].clone();
+        second.id = 2;
+        units.push(second);
+        assert_eq!(RunState::synergy_level(&units, Sigil::Leaf), 1);
+
+        let mut third = units[0].clone();
+        third.id = 3;
+        units.push(third);
+        assert_eq!(RunState::synergy_level(&units, Sigil::Leaf), 1);
+
+        let mut fourth = units[0].clone();
+        fourth.id = 4;
+        units.push(fourth);
+        assert_eq!(RunState::synergy_level(&units, Sigil::Leaf), 2);
     }
 
     #[test]
