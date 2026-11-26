@@ -391,8 +391,8 @@ function paintBattlefield(report, eventLimit) {
   ctx.fillText('YOUR PARTY', 12, 12); ctx.fillText(report.boss ? 'BOSS ENCOUNTER' : 'ENEMY PARTY', 214, 12);
   ctx.fillStyle = '#f3c969'; ctx.fillText('VS', 151, 15);
   ctx.fillStyle = '#c9d4b0'; ctx.font = '6px monospace';
-  ctx.fillText('FRONT', 12, 27); ctx.fillText('MID', 12, 52); ctx.fillText('BACK', 12, 76);
-  ctx.fillText('FRONT', 208, 27); ctx.fillText('MID', 208, 52); ctx.fillText('BACK', 208, 76);
+  ctx.fillText('BACK', 12, 63); ctx.fillText('MID', 12, 87); ctx.fillText('FRONT', 12, 111);
+  ctx.fillText('BACK', 208, 63); ctx.fillText('MID', 208, 87); ctx.fillText('FRONT', 208, 111);
   if (!allies.length) { ctx.fillStyle = '#f5e9bd'; ctx.fillText('NO SURVIVORS', 12, 122); }
   if (!enemies.length) { ctx.fillStyle = '#f5e9bd'; ctx.fillText('CLEARED', 246, 122); }
 }
