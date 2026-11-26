@@ -553,30 +553,37 @@ mod tests {
             .unwrap();
         sqlx::migrate!("./migrations").run(&pool).await.unwrap();
 
-        let data_dir = std::env::temp_dir().join(format!(
-            "slotbound-postgres-test-{}",
-            std::process::id()
-        ));
+        let data_dir =
+            std::env::temp_dir().join(format!("slotbound-postgres-test-{}", std::process::id()));
         let router = app_with_storage(data_dir.clone(), Some(pool.clone()));
-        let created = router.clone().oneshot(
-            Request::builder()
-                .method("POST")
-                .uri("/api/runs")
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(r#"{"seed":20261126}"#))
-                .unwrap(),
-        ).await.unwrap();
+        let created = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/runs")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"seed":20261126}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(created.status(), StatusCode::OK);
         let created: GameState =
-            serde_json::from_slice(&created.into_body().collect().await.unwrap().to_bytes()).unwrap();
+            serde_json::from_slice(&created.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
 
-        let spun = router.clone().oneshot(
-            Request::builder()
-                .method("POST")
-                .uri(format!("/api/runs/{}/spin", created.run_id))
-                .body(Body::empty())
-                .unwrap(),
-        ).await.unwrap();
+        let spun = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/runs/{}/spin", created.run_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(spun.status(), StatusCode::OK);
         let expected: GameState =
             serde_json::from_slice(&spun.into_body().collect().await.unwrap().to_bytes()).unwrap();
@@ -584,15 +591,19 @@ mod tests {
 
         // A new router starts with an empty in-memory cache; the database remains authoritative.
         let restored = app_with_storage(data_dir.clone(), Some(pool.clone()));
-        let loaded = restored.oneshot(
-            Request::builder()
-                .uri(format!("/api/runs/{}", created.run_id))
-                .body(Body::empty())
-                .unwrap(),
-        ).await.unwrap();
+        let loaded = restored
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/runs/{}", created.run_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(loaded.status(), StatusCode::OK);
         let actual: GameState =
-            serde_json::from_slice(&loaded.into_body().collect().await.unwrap().to_bytes()).unwrap();
+            serde_json::from_slice(&loaded.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
         assert_eq!(actual, expected);
 
         sqlx::query("DELETE FROM slotbound_runs WHERE run_id = $1")
