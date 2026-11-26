@@ -1,0 +1,22 @@
+{
+  "project": "casino-battle",
+  "status": "role_registry_only_no_provider_configured",
+  "execution_policy": "bounded_parallel_tasks_with_independent_qa",
+  "roles": [
+    {"id":"lead","title":"Product Lead","owns":["docs/MAP.md","docs/GAMEPLAY.md"],"can_merge":false},
+    {"id":"systems","title":"Game Systems Engineer","owns":["crates/game-core/**"],"can_merge":false},
+    {"id":"combat","title":"Combat Simulation Engineer","owns":["crates/game-core/src/combat/**","crates/game-core/tests/**"],"can_merge":false},
+    {"id":"art","title":"2D Art Director","owns":["docs/ART_DIRECTION.md","docs/art/**"],"can_merge":false},
+    {"id":"client","title":"Godot 2D Client Engineer","owns":["client/**"],"can_merge":false},
+    {"id":"backend","title":"Backend Engineer","owns":["crates/game-server/**"],"can_merge":false},
+    {"id":"qa","title":"Independent QA / Red Team","owns":["qa-reports/**"],"read_only":true,"can_merge":false},
+    {"id":"release","title":"Release Engineer","owns":[".github/workflows/**","deploy/**"],"can_merge":false}
+  ],
+  "gates": {
+    "format": "cargo fmt --all -- --check",
+    "lint": "cargo clippy --workspace --all-targets -- -D warnings",
+    "tests": "cargo test --workspace --all-targets",
+    "visual": "Godot import and parse check plus 2D-only node audit",
+    "release": "all required checks green on exact candidate commit"
+  }
+}
