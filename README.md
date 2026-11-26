@@ -4,6 +4,10 @@ Slotbound is an original 2D cozy-fantasy roguelite auto-battler. A 3×3 Fate Boa
 
 **Visual direction:** Cozy 16-bit Fantasy Pixel Art. All game art, characters, environments, animations, audio and UI must be original or properly licensed. This project uses broad retro-game principles only and does not include commercial-game code, assets, audio, data tables or binaries.
 
+## Canonical game specification
+
+Read [the complete game design](docs/GAME_DESIGN.md), [the visual style guide](docs/VISUAL_STYLE_GUIDE.md), [current combat rules](docs/BATTLE_SIMULATION_RULES.md), [architecture](docs/ARCHITECTURE.md), [AI agent execution plan](docs/AI_AGENT_EXECUTION_PLAN.md) and [project MAP](docs/MAP.md). The canonical Fate Board is 3×3 with eight straight lines. The current game also includes deterministic three-choice per-wave route forks; a connected multi-stage biome map is still future work.
+
 ## Run locally
 
 Requirements: Rust 1.85+ (stable), Cargo, and a supported desktop browser.
@@ -53,4 +57,9 @@ A separate Vercel project named `slotbound` exists in the `aloews-projects` team
 
 ## Agent task pipeline
 
-The backlog records a responsible implementing role per task. The local Qwen/Ollama workflow has bounded patch rules, independent Simulation QA and Product Integrator reviews, and exact-head CI gates. Its current branch/base wiring is not yet safe for autonomous delivery on this isolated branch; no agent run is considered active until the workflow is adapted and a real successful cycle is observed. See `docs/AI_AGENT_OPERATING_MODEL.md` and `.github/agent-backlog.json`.
+The backlog records a responsible implementing role per task. The Qwen/Ollama workflow uses a separate task branch and a dedicated release-candidate integration branch. It applies bounded patch rules, role-separated Simulation QA and Product Integrator reviews, exact-head CI gates, and a maximum of two repair attempts. Treat automation as active only after a real successful agent PR lifecycle is observed. See `docs/AI_AGENT_OPERATING_MODEL.md` and `.github/agent-backlog.json`.
+
+
+## Release-candidate branch
+
+Current integration branch: `feat/slotbound-release-candidate`. Autonomous task PRs use `agents/slotbound-release-candidate` and target the integration branch, never `main`. The current runner uses one Ollama-hosted Qwen 2.5 Coder 3B model with separate role contracts; this is a bounded role pipeline, not a fleet of independent models. See `docs/AI_AGENT_EXECUTION_PLAN.md`.

@@ -7,7 +7,9 @@ Deliver a replayable 2D cozy-fantasy roguelite auto-battler. A 3×3 rune board r
 ## Repository and branch
 
 - Repository: `Aloews/full`.
-- Active Slotbound source branch: `feat/slotbound-rust-rebuild`.
+- Source development branch: `feat/slotbound-rust-rebuild`.
+- Isolated release-candidate/agent integration branch: `feat/slotbound-release-candidate`.
+- Autonomous task PR branch: `agents/slotbound-release-candidate`; all autonomous PRs target the release-candidate branch, never `main`.
 - This branch contains an isolated Slotbound project tree at repository root; the default `main` branch is not modified by this work.
 - A separate GitHub repository could not be created through the available GitHub actions in this session. Keep the game isolated on this branch until repository creation/transfer is available.
 - Vercel project `slotbound` was created in team `aloews-projects`. A preview deployment request was rejected by Vercel's daily deployment API quota (402); no deployment URL is available yet. Do not describe the project as deployed.
@@ -24,7 +26,7 @@ Deliver a replayable 2D cozy-fantasy roguelite auto-battler. A 3×3 rune board r
 - `.github/agent-backlog.json` and `.github/agent-state.json` — scoped tasks and controller state.
 - `.github/scripts` — bounded agent controller and policy tests.
 - `.github/workflows` — exact-head CI, agent cycle and exact-SHA merge gate.
-- `docs` — game concept, style guide, mechanics research, architecture, agent operating model and delivery map.
+- `docs` — game concept, canonical game design, style guide, combat rules, architecture, AI agent execution plan, operating model and delivery map.
 
 ## Verified implementation in source
 
@@ -54,7 +56,7 @@ The baseline source candidate commit `680ec889595b4defaa590f1721f000630d3c7ab4` 
 - push run [45849594472](https://github.com/Aloews/full/actions/runs/45849594472);
 - pull-request run [45849612291](https://github.com/Aloews/full/actions/runs/45849612291).
 
-The last fully green CI evidence before the new route/battle work is run [45898539706](https://github.com/Aloews/full/actions/runs/45898539706) on code candidate `b912a76b8042759a452fbecafb183f981e469e24` (run 152). It covered Rust format, Clippy, Rust tests, release API, Vercel container, JavaScript syntax, API/browser contract and agent patch-policy checks. Subsequent commits add journey events, route forks, route presentation, battle replay snapshots and Boss Gate damage scaling. The current Boss Gate candidate is `50e5a08dbcd5b51e50a390a02550c052e1172994`; its exact-head CI run [45899779863](https://github.com/Aloews/full/actions/runs/45899779863) is pending/running. Do not treat the later route/boss code as passed until that run completes successfully.
+The last fully green CI evidence before the new route/battle work is run [45898539706](https://github.com/Aloews/full/actions/runs/45898539706) on code candidate `b912a76b8042759a452fbecafb183f981e469e24` (run 152). It covered Rust format, Clippy, Rust tests, release API, Vercel container, JavaScript syntax, API/browser contract and agent patch-policy checks. Subsequent commits add journey events, route forks, route presentation, battle replay snapshots and Boss Gate damage scaling. The source-development candidate has continued advancing after the earlier green baseline. A release-candidate branch is being validated independently; only its own exact-head Slotbound CI result can be used as evidence for that branch.
 
 **Current journey-event/battle-replay candidate:** source changes are present on `feat/slotbound-rust-rebuild` through the latest route/battle snapshot work; see the branch head for exact source commits. The earlier run 116 does not cover these changes. An isolated draft validation PR was opened and closed without merging; no GitHub Actions run/check was exposed for its exact head. The only status reported on the validation commit was Vercel's daily build-rate-limit failure. Do not treat the current candidate as CI-passed or deployed until a new exact-head run is visible.
 
@@ -141,7 +143,7 @@ The last fully green CI evidence before the new route/battle work is run [458985
 - [ ] Verify a real successful agent cycle run before claiming autonomous delivery is active.
 - [x] Add task-specific implementing-agent metadata to the task backlog and a pixel-art specialist role contract.
 - [x] Validate role-to-contract resolution for pixel-art and unknown role cases in controller unit tests.
-- [ ] Adapt workflow branch/base conditions and merge policy to this isolated feature branch before enabling the agent cycle. The controller currently opens agent PRs against `main` and uses an `agents/slotbound-autonomy` branch. Do not enable it until the exact base and PR target are corrected and reviewed.
+- [ ] Configure bounded Qwen delivery on `feat/slotbound-release-candidate` with task PR branch `agents/slotbound-release-candidate`; exact-SHA CI, allowlisted diffs, separate QA and product review are required. No agent PR may target `main`.
 - [ ] Human review of workflow permissions and exact merge target.
 
 ## Infrastructure and release blockers
@@ -164,3 +166,16 @@ A milestone is accepted only when:
 7. MAP, release notes and deployment claims match observed evidence.
 
 Stop autonomous work and request human triage on unsafe migrations, unexpected branch drift, missing required secrets/permissions, repeated test failures after the repair limit, unexplained balance regressions, or a proposed change to production data/hosting configuration.
+
+
+## Isolated release-candidate and AI agent delivery branch
+
+- [x] Created `feat/slotbound-release-candidate` from the current Slotbound source candidate; this keeps the release-candidate changes separate from the source-development branch and default `main`.
+- [x] Added the canonical Game Design Document and linked it with the original visual style and current battle simulation rules.
+- [x] Configured Qwen task automation to use a separate agent branch `agents/slotbound-release-candidate` and PR base `feat/slotbound-release-candidate`.
+- [x] Configured agent work to wait for exact-commit CI before implementation/repair and for exact-commit PR CI before merging.
+- [x] Restricted autonomous patches to code/docs/test allowlists; workflow files, secrets, lockfiles, database and Vercel settings are excluded.
+- [ ] Verify first exact-head CI after all files are applied to this release-candidate branch.
+- [ ] Verify a complete real Qwen task lifecycle: task PR created, independent QA and Product review pass, PR CI green, exact-head merge, integration CI green.
+- [ ] Create a standalone GitHub repository when repository-creation permission is available; current available GitHub actions do not expose repository creation, so the existing non-empty repositories were not cleared.
+- [ ] Deploy an exact-commit Vercel Preview after the daily deployment API quota is available; no deployment URL is currently verified.

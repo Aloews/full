@@ -111,7 +111,7 @@ Event families include:
 
 Every event definition must declare eligibility conditions, selection weight, choices, costs, rewards, state mutations, failure outcomes, repeat policy and telemetry key. Avoid cosmetic choices that do not change game state. Event history and resolved choices must be persisted so reloads cannot reroll an event or claim its reward twice.
 
-The route map connects battle, event, merchant, elite and boss nodes. The player should be able to weigh risk, reward, army health, gold, roster composition and current build before selecting a route.
+The current source implements a three-option route fork after each resolved journey event. Choices can lead to Battle, Rest, Merchant, Elite or BossGate encounters depending on the wave. Rest restores one heart and up to five health per surviving unit; Merchant grants 75 gold; Elite adds and strengthens an enemy and improves the victory reward; BossGate grants +15% allied outgoing damage (rounded up, minimum +1) for the next boss battle only. The fork is persisted and cannot be replayed. A full connected multi-stage route graph with biome transitions remains planned.
 
 ## Visible battle presentation
 
@@ -161,7 +161,7 @@ Not yet implemented as a complete game: true lane formation and full targeting g
 
 The first playable implementation now includes five seeded encounter families: lost cache, moonwell shrine, travelling merchant, wounded ranger and bandit ambush. Each encounter exposes two choices with explicit effects; choices can grant gold, restore hearts, heal or strengthen the army, purchase an item, recruit a unit or trade health for gold. Pending events and their resolutions are stored in the serialized run state. The API rejects invalid/replayed choices and prevents starting the next wave until the pending event is resolved.
 
-The browser now displays encounter cards and choices, a pixel-art battlefield snapshot, health bars and a replay control that steps through the Rust-authored combat event stream. Reduced-motion mode skips timed playback and renders the final battlefield state. This is a functional vertical slice, not the finished route-map or battle-art system: branching paths, expanded encounter content, lane-aware formations, authored sprites/projectiles, boss phase art and Playwright acceptance remain required.
+The browser now displays encounter cards and choices, a pixel-art battlefield snapshot, health bars and a replay control that steps through the Rust-authored combat event stream. Reduced-motion mode skips timed playback and renders the final battlefield state. This is a functional vertical slice, not the finished route-map or battle-art system: a full connected route graph, expanded biome-specific encounter content, lane-aware formations, authored sprites/projectiles, boss phase art and Playwright acceptance remain required.
 
 ## Branching route choice implementation
 
