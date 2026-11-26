@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "project": "Slotbound",
+  "policy": "One scoped task per autonomous PR. Tasks are considered complete only after their PR is merged and its required checks pass.",
+  "tasks": [
+    {
+      "id": "GAME-001",
+      "title": "Add deterministic command history and replay",
+      "objective": "Record typed player commands and ruleset version for each material state transition. Add replay from initial seed and command sequence. Do not duplicate state or reimplement gameplay rules in the API.",
+      "acceptance": [
+        "A fixed seed and ordered command sequence reconstruct identical canonical GameState snapshots.",
+        "Invalid commands do not append events or mutate the saved state.",
+        "Tests cover replay of spins, nudge, absorption, battle and wave progression."
+      ]
+    },
+    {
+      "id": "GAME-002",
+      "title": "Implement a deterministic unit-by-unit combat timeline",
+      "objective": "Replace the single power comparison with deterministic combat ticks, target selection, attack resolution, health, deaths and a causal battle log. Keep the simulation pure Rust in slotbound-core.",
+      "acceptance": [
+        "Combat order and tie-breaking are stable for a fixed seed and roster.",
+        "Each hit/death is represented in an inspectable combat event.",
+        "Tests cover frontline targeting, defeat, victory, simultaneous death and empty army."
+      ]
+    },
+    {
+      "id": "GAME-003",
+      "title": "Create a versioned ruleset and balance simulator",
+      "objective": "Move all economy, symbol distribution, progression and enemy scaling constants into a versioned typed ruleset. Add a seeded Monte Carlo simulator that reports win rate, run length, gold and summon distributions.",
+      "acceptance": [
+        "No balance constant remains duplicated across API and browser presentation.",
+        "Same ruleset version and seed always produce the same result.",
+        "Simulator output includes sample count, seed range and uncertainty intervals."
+      ]
+    },
+    {
+      "id": "GAME-004",
+      "title": "Add Blast and configurable reel modifiers",
+      "objective": "Implement a limited-use Blast action with explicit cost and state validation, then model reel tools as typed modifiers rather than UI-only shortcuts.",
+      "acceptance": [
+        "Blast cannot be used twice in one wave unless a defined modifier grants it.",
+        "Invalid target or phase leaves the board and resources unchanged.",
+        "Tests cover all modifier combinations and replay determinism."
+      ]
+    },
+    {
+      "id": "GAME-005",
+      "title": "Expand imprints and promotion branches",
+      "objective": "Replace the single imprint string with a typed collection of imprint slots, donor inheritance rules and promotion tree nodes. Preserve stable unit identity and prevent self-feeding or locked-unit consumption.",
+      "acceptance": [
+        "Imprint slot capacity and eligibility are validated in the domain.",
+        "Absorption is atomic and deterministic with a typed result preview.",
+        "Promotion choices are data-driven and covered at every threshold."
+      ]
+    },
+    {
+      "id": "GAME-006",
+      "title": "Add stage map, enemy roster and boss abilities",
+      "objective": "Introduce versioned stages, enemy definitions, wave compositions and boss abilities. Keep enemy data original and separate from any third-party game's proprietary tables.",
+      "acceptance": [
+        "A run selects and persists a stage and stage ruleset.",
+        "Boss encounter effects are deterministic and visible before combat.",
+        "Tests cover stage boundaries and boss reward conditions."
+      ]
+    },
+    {
+      "id": "GAME-007",
+      "title": "Add browser end-to-end player journey tests",
+      "objective": "Add Playwright coverage against the real API for new run, spin, roster management, absorption, battle, item purchase, reload and run restoration. Do not replace real API calls with mocks in acceptance tests.",
+      "acceptance": [
+        "The full first-wave journey passes in a real browser.",
+        "Reload restores the same saved run state.",
+        "Errors, disabled actions and small-screen layout receive coverage."
+      ]
+    }
+  ]
+}
