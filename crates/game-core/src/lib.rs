@@ -1449,7 +1449,7 @@ mod tests {
         assert!(game.core_offer.is_some());
         game.choose_core(2).unwrap();
         assert_eq!(game.unit_limit, 6);
-        game.resolve_journey_event(0).unwrap();
+        game.resolve_journey_event(1).unwrap();
         assert!(game.next_wave().is_ok());
     }
 
