@@ -106,9 +106,7 @@ fn main() {
         clusters_8_plus,
         percent(clusters_8_plus, total_clusters)
     );
-    println!(
-        "Recruits by rank: I={rank_one}, II={rank_two}, III={rank_three}"
-    );
+    println!("Recruits by rank: I={rank_one}, II={rank_two}, III={rank_three}");
     println!(
         "Runs reaching party cap: {} ({:.2}%)",
         capped_party_draws,
