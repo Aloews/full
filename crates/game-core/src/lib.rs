@@ -965,7 +965,7 @@ impl GameState {
                     enemies.remove(target_index);
                 }
 
-                let class_splash = if actor.class == Some(UnitClass::Mage) {
+                let class_splash: u32 = if actor.class == Some(UnitClass::Mage) {
                     2
                 } else {
                     0
@@ -1013,7 +1013,7 @@ impl GameState {
                     }
                 }
 
-                let class_healing = if actor.class == Some(UnitClass::Cleric) {
+                let class_healing: u32 = if actor.class == Some(UnitClass::Cleric) {
                     2
                 } else {
                     0
