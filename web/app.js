@@ -141,6 +141,7 @@ let game = null;
 let keepId = null;
 let busy = false;
 let toastTimer = null;
+let battleReplayToken = 0;
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -272,7 +273,7 @@ function renderUnit(unit) {
 
 
 
-function paintBattlefield(report) {
+function paintBattlefield(report, eventLimit) {
   const canvas = $('battlefield');
   if (!canvas || !report) return;
   const ctx = canvas.getContext('2d');
@@ -288,6 +289,7 @@ function paintBattlefield(report) {
   }
   px(154, 0, 2, 128, '#f3c969');
   px(156, 0, 1, 128, '#f5e9bd');
+  const events = (report.events || []).slice(0, eventLimit === undefined ? undefined : eventLimit);
   const actors = new Map();
   const add = (name, team, health, amount) => {
     if (!name || name === 'Squad') return;
@@ -298,7 +300,7 @@ function paintBattlefield(report) {
     current.max = Math.max(current.max, current.hp + amount);
     actors.set(name, current);
   };
-  (report.events || []).forEach((entry) => {
+  events.forEach((entry) => {
     if (entry.kind === 'ally_attack') { add(entry.actor, 'ally', undefined, 0); add(entry.target, 'enemy', entry.remaining_health, entry.amount); }
     if (entry.kind === 'enemy_attack') { add(entry.actor, 'enemy', undefined, 0); add(entry.target, 'ally', entry.remaining_health, entry.amount); }
     if (entry.kind === 'enemy_defeated') add(entry.target, 'enemy', 0, 0);
@@ -308,9 +310,11 @@ function paintBattlefield(report) {
   });
   const allies = [...actors.values()].filter((unit) => unit.team === 'ally');
   const enemies = [...actors.values()].filter((unit) => unit.team === 'enemy');
+  const positions = new Map();
   const drawUnit = (unit, index, team) => {
     const x = team === 'ally' ? 22 + (index % 3) * 38 : 204 + (index % 3) * 34;
     const y = 67 + Math.floor(index / 3) * 25;
+    positions.set(unit.name, { x: x + 12, y: y + 9 });
     const color = team === 'ally' ? '#9bc477' : '#d77b59';
     px(x + 4, y, 12, 4, '#2b2638'); px(x + 2, y + 4, 16, 12, '#2b2638');
     px(x + 5, y + 2, 10, 5, color); px(x + 5, y + 7, 10, 7, color);
@@ -321,11 +325,42 @@ function paintBattlefield(report) {
   };
   allies.forEach((unit, index) => drawUnit(unit, index, 'ally'));
   enemies.forEach((unit, index) => drawUnit(unit, index, 'enemy'));
+  const lastEvent = events[events.length - 1];
+  if (lastEvent && ['ally_attack', 'enemy_attack', 'unit_healed', 'boss_telegraph'].includes(lastEvent.kind)) {
+    const from = positions.get(lastEvent.actor);
+    const to = positions.get(lastEvent.target);
+    if (from && to) {
+      ctx.strokeStyle = lastEvent.kind === 'unit_healed' ? '#9bc477' : '#f3c969';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
+      px(to.x - 3, to.y - 3, 6, 6, lastEvent.kind === 'unit_healed' ? '#b7e0a1' : '#f3c969');
+    }
+  }
   ctx.fillStyle = '#f5e9bd'; ctx.font = 'bold 7px monospace';
   ctx.fillText('YOUR PARTY', 12, 12); ctx.fillText(report.boss ? 'BOSS ENCOUNTER' : 'ENEMY PARTY', 214, 12);
   ctx.fillStyle = '#f3c969'; ctx.fillText('VS', 151, 15);
   if (!allies.length) { ctx.fillStyle = '#f5e9bd'; ctx.fillText('NO SURVIVORS', 12, 122); }
   if (!enemies.length) { ctx.fillStyle = '#f5e9bd'; ctx.fillText('CLEARED', 246, 122); }
+}
+
+
+function playBattleReplay(report) {
+  const token = ++battleReplayToken;
+  const events = report?.events || [];
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (reducedMotion || events.length < 2) {
+    paintBattlefield(report);
+    return;
+  }
+  let cursor = 0;
+  const step = () => {
+    if (token !== battleReplayToken) return;
+    paintBattlefield(report, cursor);
+    if (cursor >= events.length) return;
+    cursor += 1;
+    window.setTimeout(step, 115);
+  };
+  step();
 }
 
 function renderBattle(lost) {
@@ -355,10 +390,10 @@ function renderBattle(lost) {
     const journeyMarkup = event ? `<section class="journey-event"><span class="eyebrow">JOURNEY ENCOUNTER · WAVE ${event.wave}</span><h3>${esc(event.title)}</h3><p>${esc(event.description)}</p><div class="journey-choices">${event.choices.map((choice, index) => `<button class="journey-choice" data-action="journey-choice" data-index="${index}"><strong>${esc(choice.label)}</strong><small>${esc(choice.description)}</small></button>`).join('')}</div></section>` : '';
     const latestOutcome = !event && game.event_history?.length ? `<div class="journey-outcome"><span class="eyebrow">JOURNEY CONSEQUENCE</span><strong>${esc(game.event_history[game.event_history.length - 1].outcome)}</strong></div>` : '';
     $('battle-content').innerHTML = `<div class="battle-result ${report.victory ? 'victory' : 'defeat'}"><strong>${report.victory ? 'VICTORY' : 'DEFEAT'}</strong><span>${report.boss ? 'Boss encounter' : `Wave ${report.wave}`} · ${report.rounds || 0} rounds · ${game.units.length} survivors</span><small>${report.victory ? `+${report.gold_awarded} gold` : `-${report.damage_taken} hearts · +${report.gold_awarded} gold`}</small></div><canvas id="battlefield" class="battlefield" width="320" height="128" role="img" aria-label="Pixel-art battlefield showing the last battle formation and combat health"></canvas>${journeyMarkup}${latestOutcome}<div class="combat-log"><span class="eyebrow">COMBAT LOG</span>${timeline || '<div class="empty-state">No combat events recorded.</div>'}</div>`;
-    paintBattlefield(report);
+    playBattleReplay(report);
     const blocked = Boolean(game.core_offer || event);
     const buttonLabel = game.core_offer ? 'CHOOSE A CORE FIRST' : event ? 'RESOLVE JOURNEY EVENT' : 'PREPARE NEXT WAVE';
-    $('battle-actions').innerHTML = `<button class="button button-primary" id="next-wave" ${blocked ? 'disabled' : ''}>${buttonLabel} <span>↗</span></button>`;
+    $('battle-actions').innerHTML = `<button class="button button-quiet" data-action="replay-battle">REPLAY BATTLE</button><button class="button button-primary" id="next-wave" ${blocked ? 'disabled' : ''}>${buttonLabel} <span>↗</span></button>`;
     $('next-wave').addEventListener('click', () => act('/next-wave'));
     return;
   }
@@ -413,6 +448,7 @@ document.addEventListener('click', (event) => {
   if (action === 'promote') act('/promotion', { unit_id: Number(button.dataset.id), choice: button.dataset.choice });
   if (action === 'core') act('/core', { index: Number(button.dataset.index) });
   if (action === 'journey-choice') act('/event', { index: Number(button.dataset.index) });
+  if (action === 'replay-battle' && game.last_battle) playBattleReplay(game.last_battle);
   if (action === 'buy') act('/item', { item: button.dataset.item });
 });
 
