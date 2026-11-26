@@ -1939,7 +1939,6 @@ mod tests {
         assert!(game.pending_event.is_some());
     }
 
-
     #[test]
     fn battle_report_captures_authoritative_starting_formations() {
         let mut game = run(607);
@@ -1948,9 +1947,16 @@ mod tests {
         assert_eq!(report.allies.len(), starting_units.len());
         assert!(!report.enemies.is_empty());
         for unit in starting_units {
-            let snapshot = report.allies.iter().find(|snapshot| snapshot.id == unit.id).unwrap();
+            let snapshot = report
+                .allies
+                .iter()
+                .find(|snapshot| snapshot.id == unit.id)
+                .unwrap();
             assert_eq!(snapshot.max_health, unit.health);
-            assert_eq!(snapshot.current_health, unit.current_health.unwrap_or(unit.health));
+            assert_eq!(
+                snapshot.current_health,
+                unit.current_health.unwrap_or(unit.health)
+            );
             assert_eq!(snapshot.class, Some(unit.class));
         }
     }
@@ -1961,7 +1967,13 @@ mod tests {
         game.battle().unwrap();
         let mut value = serde_json::to_value(game).unwrap();
         let object = value.as_object_mut().unwrap();
-        for key in ["pending_event", "event_history", "pending_route", "current_route", "route_history"] {
+        for key in [
+            "pending_event",
+            "event_history",
+            "pending_route",
+            "current_route",
+            "route_history",
+        ] {
             object.remove(key);
         }
         let battle = object
