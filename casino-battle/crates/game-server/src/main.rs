@@ -8,7 +8,7 @@ use axum::{
     Json, Router,
 };
 use casino_battle_core::{
-    BattleReport, DrawOutcome, GameError, RunPhase, RunState, Sigil, SynergyStatus, Unit,
+    BattleReport, DrawOutcome, GameError, Relic, RunPhase, RunState, Sigil, SynergyStatus, Unit,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -113,6 +113,8 @@ struct RunSnapshot {
     hearts: u8,
     board: Vec<Vec<Sigil>>,
     party: Vec<Unit>,
+    relics: Vec<Relic>,
+    pending_relics: Vec<Relic>,
     synergies: Vec<SynergyStatus>,
     total_draws: u32,
     battle_wins: u32,
@@ -127,6 +129,8 @@ impl From<&RunState> for RunSnapshot {
             hearts: run.hearts,
             board: run.board.iter().map(|row| row.to_vec()).collect(),
             party: run.party.clone(),
+            relics: run.relics.clone(),
+            pending_relics: run.pending_relics.clone(),
             synergies: run.synergies(),
             total_draws: run.total_draws,
             battle_wins: run.battle_wins,
@@ -151,7 +155,12 @@ impl ApiError {
 
     fn game(error: GameError) -> Self {
         let status = match error {
-            GameError::NotEnoughEssence | GameError::RunOver | GameError::InvalidMerge => {
+            GameError::NotEnoughEssence
+            | GameError::RunOver
+            | GameError::InvalidMerge
+            | GameError::RewardPending
+            | GameError::NoRelicChoice
+            | GameError::InvalidRelicChoice => {
                 StatusCode::CONFLICT
             }
             GameError::EmptyParty | GameError::InvalidLane => StatusCode::UNPROCESSABLE_ENTITY,
@@ -187,6 +196,12 @@ struct MergeRequest {
 struct FormationRequest {
     unit_id: u64,
     lane: u8,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RelicRequest {
+    relic: Relic,
 }
 
 #[derive(Serialize)]
@@ -260,6 +275,17 @@ async fn battle(
     Ok(Json(report))
 }
 
+async fn select_relic(
+    State(state): State<AppState>,
+    Path(run_id): Path<Uuid>,
+    Json(request): Json<RelicRequest>,
+) -> Result<Json<RunSnapshot>, ApiError> {
+    let (run, ()) = state
+        .transition(run_id, |run| run.choose_relic(request.relic))
+        .await?;
+    Ok(Json(RunSnapshot::from(&run)))
+}
+
 async fn set_formation(
     State(state): State<AppState>,
     Path(run_id): Path<Uuid>,
@@ -326,6 +352,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/runs/:run_id/battle", post(battle))
         .route("/api/v1/runs/:run_id/merge", post(merge))
         .route("/api/v1/runs/:run_id/formation", post(set_formation))
+        .route("/api/v1/runs/:run_id/relic", post(select_relic))
         .with_state(state)
         .layer(cors)
         .layer(TraceLayer::new_for_http());
