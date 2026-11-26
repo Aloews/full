@@ -32,3 +32,30 @@ The project may use broad genre-level ideas (reel-based recruitment, auto-battle
 ## Initial balance model
 
 The first playable slice uses six classes, an eight-line 3×3 board, six spins per wave, an initial spin cost of 100 gold increasing by 50 each paid spin, a five-unit starting capacity, absorption thresholds at levels 5 and 12, and a boss milestone every five waves. These are explicit prototype parameters, not claims about the commercial game's exact internal balance. Each parameter must be moved into a versioned ruleset/configuration module before balance expansion.
+
+
+## Visual direction — original 16-bit pixel-art fantasy
+
+Slotbound uses a deliberately authored pixel-art language inspired by the readability and charm of 8/16-bit console adventures (top-down fantasy exploration, compact character silhouettes, bright arcade feedback). These are genre-level references only: all characters, sprites, environments, icons, UI compositions, animation frames, sound and lore must be original.
+
+### Art direction
+- Build the world from a consistent tile grid; use nearest-neighbour scaling and integer pixel sizes. Never blur pixel assets with bilinear filtering.
+- Use a compact natural palette: deep forest greens, blue-green shadows, warm parchment, brass/gold reward accents, and restrained danger reds.
+- Give every class a recognisable silhouette at 16×16 or 24×24 source resolution. Distinguish classes by shape first, colour second.
+- Use chunky outlines, 1–2 highlight tones, deliberate negative space and readable silhouettes. Avoid gradients, glossy glass panels, soft shadows and rounded SaaS-card styling in the game layer.
+- Make the slot machine feel like a fantasy relic/arcade altar built into the world, not a generic casino dashboard.
+- Use short stepped animations: reel stop, line match flash, summon pop, unit idle, hit recoil, damage blink, boss entrance and reward reveal. Respect reduced-motion settings.
+
+### Presentation layers
+1. **World layer:** tile-based arena/route map with foreground, collision and decoration layers.
+2. **Character layer:** original class sprites, enemy sprites, boss silhouettes, hit effects and projectiles.
+3. **Machine layer:** 3×3 reel chamber rendered as physical pixel-art tiles; match paths are visibly traced over the board.
+4. **HUD layer:** compact pixel panels for gold, hearts, wave, spins, unit capacity and active modifiers.
+5. **Feedback layer:** readable floating combat numbers, short event log and strong state-change animation; no critical information conveyed by colour alone.
+
+### Technical contract
+- The browser renderer owns drawing only; Rust remains authoritative for all state transitions, probabilities, combat, economy and progression.
+- Use Canvas 2D with integer-coordinate drawing, `imageSmoothingEnabled = false`, a fixed logical resolution and integer scaling. Keep semantic HTML controls for keyboard and assistive-technology access.
+- Sprite definitions must be data-driven and versioned; do not make emoji the final art asset.
+- Animation must be deterministic from authoritative game events and must never alter simulation outcomes.
+- The current procedural class glyphs are a temporary first pass, not finished production sprites. Replace them with original sprite sheets and animation states as the visual milestone advances.
