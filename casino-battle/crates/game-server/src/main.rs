@@ -182,6 +182,13 @@ struct MergeRequest {
     donor_id: u64,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FormationRequest {
+    unit_id: u64,
+    lane: u8,
+}
+
 #[derive(Serialize)]
 struct CreateRunResponse {
     run_id: Uuid,
