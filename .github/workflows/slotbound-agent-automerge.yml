@@ -33,13 +33,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          pr_number="$(gh pr list \
+          gh pr list \
             --repo "$GITHUB_REPOSITORY" \
             --state open \
             --head "$EXPECTED_BRANCH" \
             --base main \
-            --json number,headRefOid,isDraft \
-            --jq ".[] | select(.headRefOid == \"$EXPECTED_SHA\" and .isDraft == false) | .number" | head -n 1)"
+            --json number,headRefOid,isDraft > "$RUNNER_TEMP/open-prs.json"
+
+          pr_number="$(jq -r --arg sha "$EXPECTED_SHA" \
+            '.[] | select(.headRefOid == $sha and .isDraft == false) | .number' \
+            "$RUNNER_TEMP/open-prs.json" | head -n 1)"
 
           if [[ -z "$pr_number" ]]; then
             echo "No non-draft agent PR matches the exact successful SHA; refusing to merge."
@@ -75,16 +78,26 @@ jobs:
               raise SystemExit(f"Blocking check result(s) detected: {names}")
           PY
 
-          pr_state="$(gh pr view "$pr_number" --repo "$GITHUB_REPOSITORY" \
-            --json state,isDraft,baseRefName,headRefOid,mergeable \
-            --jq '[.state, (.isDraft|tostring), .baseRefName, .headRefOid, (.mergeable|tostring)] | @tsv')"
+          gh pr view "$pr_number" --repo "$GITHUB_REPOSITORY" \
+            --json state,isDraft,baseRefName,headRefOid > "$RUNNER_TEMP/pr-state.json"
+          python3 - "$RUNNER_TEMP/pr-state.json" "$EXPECTED_SHA" <<'PY'
+          import json
+          import sys
 
-          IFS=$'\t' read -r state is_draft base head_sha mergeable <<< "$pr_state"
-          [[ "$state" == "OPEN" ]]
-          [[ "$is_draft" == "false" ]]
-          [[ "$base" == "main" ]]
-          [[ "$head_sha" == "$EXPECTED_SHA" ]]
-          [[ "$mergeable" == "MERGEABLE" ]]
+          pr = json.load(open(sys.argv[1], encoding="utf-8"))
+          expected_sha = sys.argv[2]
+          if pr.get("state") != "OPEN":
+              raise SystemExit("PR is not open; refusing to merge.")
+          if pr.get("isDraft") is not False:
+              raise SystemExit("PR is still a draft; refusing to merge.")
+          if pr.get("baseRefName") != "main":
+              raise SystemExit("PR base is not main; refusing to merge.")
+          if pr.get("headRefOid") != expected_sha:
+              raise SystemExit("PR head changed after CI; refusing to merge stale SHA.")
+          PY
 
           gh pr merge "$pr_number" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
-          gh workflow run slotbound-agent-cycle.yml --repo "$GITHUB_REPOSITORY" --ref main
+
+          # GITHUB_TOKEN merges do not trigger another push workflow. Dispatch CI on
+          # the new main head; the next agent cycle starts only after that CI succeeds.
+          gh workflow run slotbound-ci.yml --repo "$GITHUB_REPOSITORY" --ref main
