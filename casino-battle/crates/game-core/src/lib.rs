@@ -90,11 +90,13 @@ pub struct Unit {
     pub name: String,
     pub sigil: Sigil,
     pub role: Role,
+    #[serde(default)]
     pub lane: u8,
     pub hp: i32,
     pub max_hp: i32,
     pub attack: i32,
     pub armor: i32,
+    #[serde(default)]
     pub support_heal_bonus: i32,
     pub attack_cooldown: u32,
     pub cooldown_left: u32,
