@@ -2465,7 +2465,9 @@ mod tests {
     fn absorption_inherits_a_typed_imprint_and_unique_donor_trait() {
         let mut game = run(902);
         let target_id = game.units[0].id;
-        let donor = game.spawn_unit(UnitClass::Mage);
+        game.units[0].traits = vec![UnitTrait::Brutal];
+        let mut donor = game.spawn_unit(UnitClass::Mage);
+        donor.traits = vec![UnitTrait::Swift];
         let donor_trait = donor.traits[0];
         let donor_id = donor.id;
         game.units.push(donor);
@@ -2474,6 +2476,7 @@ mod tests {
         let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
         assert_eq!(target.imprints, vec![UnitImprintSlot { kind: UnitImprint::Spellpower, rank: 1 }]);
         assert!(target.traits.contains(&donor_trait));
+        assert_eq!(target.traits.len(), 2);
         assert!(game.units.iter().all(|unit| unit.id != donor_id));
     }
 
@@ -2525,8 +2528,8 @@ mod tests {
 
         assert_eq!(trait_attack_bonus(&actor.traits), 2);
         assert_eq!(trait_initiative_bonus(&actor.traits), 2);
-        assert_eq!(imprint_attack_bonus(&actor, &healthy_target, 3), 5);
-        assert_eq!(imprint_attack_bonus(&actor, &wounded_target, 3), 4);
+        assert_eq!(imprint_attack_bonus(&actor, &healthy_target, 3), 6);
+        assert_eq!(imprint_attack_bonus(&actor, &wounded_target, 3), 5);
         assert_eq!(trait_damage_reduction(&[UnitTrait::Guarded]), 1);
         assert_eq!(imprint_rank_bonus(&actor.imprints, UnitImprint::Critical, 1), 2);
     }
