@@ -241,22 +241,21 @@ where
                 .fetch_optional(&mut *transaction)
                 .await
                 .map_err(|_| ApiError::database())?;
-        let mut game = stored
-            .map(|row| row.0)
-            .ok_or_else(ApiError::not_found)?;
+        let mut game = stored.map(|row| row.0).ok_or_else(ApiError::not_found)?;
 
         mutation(&mut game).map_err(ApiError::from_game)?;
 
-        sqlx::query(
-            "UPDATE slotbound_runs SET state = $2, updated_at = now() WHERE run_id = $1",
-        )
-        .bind(&run_id)
-        .bind(sqlx::types::Json(game.clone()))
-        .execute(&mut *transaction)
-        .await
-        .map_err(|_| ApiError::database())?;
+        sqlx::query("UPDATE slotbound_runs SET state = $2, updated_at = now() WHERE run_id = $1")
+            .bind(&run_id)
+            .bind(sqlx::types::Json(game.clone()))
+            .execute(&mut *transaction)
+            .await
+            .map_err(|_| ApiError::database())?;
 
-        transaction.commit().await.map_err(|_| ApiError::database())?;
+        transaction
+            .commit()
+            .await
+            .map_err(|_| ApiError::database())?;
         return Ok(Json(game));
     }
 
