@@ -34,6 +34,12 @@ if "migrate_legacy_state" not in domain or "ruleset_version: 3" not in domain:
     raise SystemExit("v3 unit build save migration is missing")
 if "unit.traits" not in client or "unit.imprints" not in client:
     raise SystemExit("unit trait and imprint flow is missing")
+if "UnitImprint::Spellpower" not in domain or "UnitImprint::Mending" not in domain:
+    raise SystemExit("cross-class Spellpower or Mending imprint ability is missing")
+if "rolled_trait == UnitTrait::Stout" not in domain:
+    raise SystemExit("Stout health bonus is missing from recruitment or save migration")
+if "legacy imprint migration is missing" not in domain:
+    raise SystemExit("legacy imprint migration is missing")
 if "imprint_slot_capacity" not in domain or "imprint_rank_bonus" not in domain:
     raise SystemExit("ranked imprint capacity or combat effects are missing")
 if "pub struct FormationPosition" not in domain or "fn select_target_index" not in domain:

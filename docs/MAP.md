@@ -121,7 +121,7 @@ The last fully green CI evidence before the new route/battle work is run [458985
 - [ ] Deterministic command history and replay with canonical state hashes.
 - [ ] Monte Carlo simulator with seed ranges, sample sizes and uncertainty intervals.
 - [x] Add one deterministic random trait to each recruited unit, with unique trait inheritance from absorbed donors (up to three traits).
-- [x] Replace the single-display-only imprint path with typed ranked imprint slots, donor-class inheritance, duplicate rank-up and slot capacity increases at absorption levels 5 and 12.
+- [x] Replace the single-display-only imprint path with typed ranked imprint slots, donor-class inheritance, duplicate rank-up and slot capacity increases at absorption levels 5 and 12; Stout inheritance changes persistent health, while Spellpower/Mending work across classes.
 - [ ] Expand promotion choices into a multi-node promotion tree with branch-specific abilities and cross-class inheritance.
 - [ ] More reel tools (including Blast) with explicit charges, targets, costs and phase rules.
 - [ ] Formation positions, role synergies, stage map and route choices.

@@ -63,7 +63,7 @@
         "Tests cover branch unlock thresholds, inheritance conflicts, rank limits, invalid promotion choices and save migration."
       ],
       "agent_role": "rust-gameplay-engineer",
-      "delivery_notes": "The first vertical slice is delivered on feat/slotbound-unit-builds: deterministic random traits (Brutal/Swift/Stout/Guarded), unique trait inheritance on absorption, typed donor-class imprint slots, rank-up to 3, 1/2/3 slot capacity at absorption levels 0/5/12, actual battle modifiers and v2→v3 save migration. The old imprint string is retained only for save/UI compatibility. Remaining: branch-specific promotion tree nodes, richer donor inheritance previews and class-specific multi-node promotion content."
+      "delivery_notes": "The first vertical slice is delivered on feat/slotbound-unit-builds: deterministic random traits (Brutal/Swift/Stout/Guarded), unique trait inheritance on absorption, typed donor-class imprint slots, rank-up to 3, 1/2/3 slot capacity at absorption levels 0/5/12, real cross-class Spellpower/Mending abilities, actual battle modifiers and v2→v3 save migration. The old imprint string is retained only for save/UI compatibility. Remaining: branch-specific promotion tree nodes, richer donor inheritance previews and class-specific multi-node promotion content."
     },
     {
       "id": "GAME-006",

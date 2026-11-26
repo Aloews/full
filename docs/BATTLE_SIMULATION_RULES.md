@@ -25,18 +25,18 @@ Enemy names are original prototype definitions. Authored biome-specific waves ar
 Each new unit receives exactly one deterministic trait roll from the run RNG:
 - **Brutal**: +2 primary attack damage.
 - **Swift**: +2 initiative before ally turn ordering.
-- **Stout**: +3 persistent maximum health at recruitment. Its current health is also raised by 3 when migrating a legacy unit into this trait.
+- **Stout**: +3 persistent maximum health whenever acquired at recruitment, inherited through absorption or granted during legacy migration. Its current health rises by the same amount, capped at the new maximum.
 - **Guarded**: reduces each incoming hit by 1; total damage remains at least 1.
 
 Absorption transfers any donor trait not already held by the keeper. A unit can hold at most three distinct traits; repeated trait types do not stack.
 
-Each absorbed donor grants an imprint from the donor's class: Guardian → Fortify, Archer → Pierce, Mage → Spellpower, Cleric → Mending, Rogue → Critical, Beast → Fury. Slot capacity is 1 initially, 2 from absorption level 5, and 3 from absorption level 12. If the keeper already holds that imprint, its rank increases up to 3; if all slots are occupied, a new imprint is not added. Absorption remains atomic and the donor is still consumed.
+Each absorbed donor grants an imprint from the donor's class: Guardian → Fortify, Archer → Pierce, Mage → Spellpower, Cleric → Mending, Rogue → Critical, Beast → Fury. Slot capacity is 1 initially, 2 from absorption level 5, and 3 from absorption level 12. If the keeper already holds that imprint, its rank increases up to 3; if all slots are occupied, a new imprint is not added. Absorption remains atomic and the donor is still consumed. A newly inherited Stout trait adds 3 maximum/current HP to the keeper.
 
 Imprint effects by rank:
 - **Fortify**: −1 incoming damage per rank (subject to the 1-damage minimum).
 - **Pierce**: +1 primary attack damage per rank.
-- **Spellpower**: +2 Mage splash damage per rank.
-- **Mending**: +1 Cleric healing per rank.
+- **Spellpower**: adds an even-tick splash attack for any carrier, dealing +2 damage per rank; a Mage also retains its base splash damage.
+- **Mending**: allows any carrier to heal the most wounded ally on even ticks for +1 HP per rank; a Cleric also retains its base heal.
 - **Critical**: +1 primary attack damage per rank on every third tick.
 - **Fury**: +1 primary attack damage per rank while the target has more than half of its maximum HP.
 
@@ -97,7 +97,7 @@ Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `
 
 ## Test requirements
 
-Current Rust tests cover same-seed timelines, role-based unique formation slots, lane-first/front-row targeting, Guardian taunt override, Cleric healing, ally defeat/removal, survivor recovery, boss telegraphs with target/lane, deterministic trait rolls, trait and imprint effects, donor inheritance, ranked imprints, slot unlocks and v2 migration. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
+Current Rust tests cover same-seed timelines, role-based unique formation slots, lane-first/front-row targeting, Guardian taunt override, Cleric healing, ally defeat/removal, survivor recovery, boss telegraphs with target/lane, deterministic trait rolls, Stout health at recruitment and inheritance, cross-class Spellpower/Mending, trait and imprint effects, donor inheritance, ranked imprints, slot unlocks and v2 migration. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
 
 ## Known limitations
 
