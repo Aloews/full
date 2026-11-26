@@ -28,19 +28,19 @@ Use as a broad reference for silhouette clarity, playful enemy shapes, friendly 
 
 ### Despot's Game: Dystopian Battle Simulator
 
-Steam tags it as Auto Battler, Roguelike, Pixel Graphics and 2D. Its description explicitly describes indirect combat: prepare the team and let it fight on its own. Steam's current page snapshot shows 82% Very Positive from 1,297 English reviews (the page also has a broader all-language review count).
+Steam tags it as Auto Battler, Roguelike, Pixel Graphics and 2D. Its description explicitly describes indirect combat: prepare the team and let it fight on its own. The Steam listing carries the Auto Battler, Roguelike, Pixel Graphics and 2D tags. Its review score is dynamic marketplace data and is not used as a market-size estimate.
 
 **Take:** readable pre-battle preparation, unit roles, team combinations and an automatic-combat feedback loop. Its dystopian tone is not the target aesthetic.
 
 ### Rogue Battler
 
-Released 7 May 2026. Its Steam page identifies it as a 2D, pixel-graphics auto-battler roguelike with fully automated combat and pre-fight build decisions. The page snapshot shows 93% positive from 16 reviews, a small sample that demonstrates genre overlap, not broad market demand.
+Released 7 May 2026. Its Steam page identifies it as a 2D, pixel-graphics auto-battler roguelike with fully automated combat and pre-fight build decisions. The listing is tagged 2D, Pixel Graphics, Auto Battler and Roguelike. The review count is small; use it as genre overlap, not demand evidence.
 
 **Take:** focused retro presentation, room/reward decisions and clear automated combat rules.
 
 ### Idle Pixel Battle Demo
 
-Released as a demo on 1 September 2026. The Steam listing describes a fantasy pixel-art auto-battler built around team composition, equipment, monsters and automatic wave combat. Its listing snapshot shows 93% positive from 30 reviews. This is demo feedback and must not be presented as a full commercial launch result.
+Released as a demo on 1 September 2026. The Steam listing describes a fantasy pixel-art auto-battler built around team composition, equipment, monsters and automatic wave combat. The Steam demo listing is tagged 2D Pixel Graphics, Roguelite and Auto Battler. Demo feedback must not be presented as a full commercial launch result.
 
 **Take:** clear hero identities, collectible party building and retro battle presentation.
 
@@ -79,3 +79,15 @@ The intended result is a **cozy premium 16-bit pixel-art roguelite auto-battler*
 - [ ] Biome tile sets use consistent tile size and palette ramps.
 - [ ] The visual has a warm, collectible, premium indie-game character.
 - [ ] Randomness is expressed with runes, charms or sigils — never casino furniture.
+
+## Primary source links
+
+Checked 2026-11-26. Store tags and descriptions can change; user-review counts and percentages are snapshots, not proof of total audience demand.
+
+- Despot's Game — https://store.steampowered.com/app/1227280/
+- Rogue Battler — https://store.steampowered.com/app/4527990/
+- Idle Pixel Battle Demo — https://store.steampowered.com/app/5020820/
+- Pixelords — https://store.steampowered.com/app/4510260/
+- Godot 4.3 multiple-resolution / pixel-art guidance — https://docs.godotengine.org/en/4.3/tutorials/rendering/multiple_resolutions.html
+- Godot 4.3 project settings — https://docs.godotengine.org/en/4.3/classes/class_projectsettings.html
+- Liberated Pixel Cup style guide (16-bit top-down RPG reference) — https://lpc.opengameart.org/static/LPC-Style-Guide/build/styleguide.html
