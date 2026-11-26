@@ -11,6 +11,18 @@ const BERRY := Color("#9C7180")
 const CREAM := Color("#F8F2E7")
 
 var elapsed := 0.0
+var run_id := ""
+var run_snapshot: Dictionary = {}
+var api_request: HTTPRequest
+var pending_action := ""
+var api_busy := false
+var server_url := ""
+var status_text := "CONNECTING TO GAME SERVER"
+var next_status_text := ""
+var draw_button: Button
+var battle_button: Button
+var status_label: Label
+
 var fate_pattern := [
     [0, 1, 0, 3],
     [2, 1, 4, 3],
@@ -18,6 +30,191 @@ var fate_pattern := [
     [3, 5, 2, 1]
 ]
 var fate_colors := [SAGE, CLAY, BLUE, Color("#A99B82"), BERRY, HONEY]
+
+func _ready() -> void:
+    server_url = OS.get_environment("CASINO_BATTLE_API")
+    if server_url.is_empty():
+        server_url = "http://127.0.0.1:3000"
+    server_url = server_url.trim_suffix("/")
+
+    api_request = HTTPRequest.new()
+    add_child(api_request)
+    api_request.request_completed.connect(_on_request_completed)
+    _setup_controls()
+    _create_run()
+
+func _setup_controls() -> void:
+    var layer := CanvasLayer.new()
+    layer.layer = 10
+    add_child(layer)
+
+    var root := Control.new()
+    root.set_anchors_preset(Control.PRESET_FULL_RECT)
+    layer.add_child(root)
+
+    status_label = Label.new()
+    status_label.position = Vector2(810, 568)
+    status_label.custom_minimum_size = Vector2(230, 18)
+    status_label.add_theme_font_size_override("font_size", 10)
+    status_label.add_theme_color_override("font_color", Color(INK, 0.74))
+    root.add_child(status_label)
+
+    draw_button = Button.new()
+    draw_button.text = "DRAW SIGILS"
+    draw_button.position = Vector2(810, 590)
+    draw_button.custom_minimum_size = Vector2(178, 32)
+    _style_button(draw_button, HONEY)
+    draw_button.pressed.connect(_on_draw_pressed)
+    root.add_child(draw_button)
+
+    battle_button = Button.new()
+    battle_button.text = "AUTO-BATTLE"
+    battle_button.position = Vector2(810, 628)
+    battle_button.custom_minimum_size = Vector2(178, 32)
+    _style_button(battle_button, SAGE)
+    battle_button.pressed.connect(_on_battle_pressed)
+    root.add_child(battle_button)
+
+    _update_controls()
+
+func _style_button(button: Button, fill: Color) -> void:
+    var normal := StyleBoxFlat.new()
+    normal.bg_color = fill
+    normal.border_color = INK
+    normal.set_border_width_all(1)
+    normal.set_corner_radius_all(7)
+    normal.content_margin_left = 10
+    normal.content_margin_right = 10
+    normal.content_margin_top = 5
+    normal.content_margin_bottom = 5
+
+    var hover := normal.duplicate()
+    hover.bg_color = fill.lightened(0.08)
+    var pressed := normal.duplicate()
+    pressed.bg_color = fill.darkened(0.08)
+    var disabled := normal.duplicate()
+    disabled.bg_color = PAPER_SHADE
+    disabled.border_color = Color(INK, 0.25)
+
+    button.add_theme_stylebox_override("normal", normal)
+    button.add_theme_stylebox_override("hover", hover)
+    button.add_theme_stylebox_override("pressed", pressed)
+    button.add_theme_stylebox_override("disabled", disabled)
+    button.add_theme_color_override("font_color", INK)
+    button.add_theme_color_override("font_hover_color", INK)
+    button.add_theme_color_override("font_pressed_color", INK)
+    button.add_theme_color_override("font_disabled_color", Color(INK, 0.4))
+    button.add_theme_font_size_override("font_size", 12)
+
+func _create_run() -> void:
+    _send_request("create", HTTPClient.METHOD_POST, "/api/v1/runs", "{}")
+
+func _refresh_run() -> void:
+    if run_id.is_empty():
+        return
+    _send_request("refresh", HTTPClient.METHOD_GET, "/api/v1/runs/%s" % run_id, "")
+
+func _send_request(action: String, method: int, path: String, body: String) -> void:
+    if api_busy:
+        return
+    api_busy = true
+    pending_action = action
+    status_text = "CONTACTING THE SERVER"
+    var headers := PackedStringArray(["Content-Type: application/json"])
+    var error := api_request.request(server_url + path, headers, method, body)
+    if error != OK:
+        api_busy = false
+        pending_action = ""
+        status_text = "SERVER NOT REACHABLE"
+    _update_controls()
+    queue_redraw()
+
+func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+    api_busy = false
+    var action := pending_action
+    pending_action = ""
+
+    if result != HTTPRequest.RESULT_SUCCESS:
+        status_text = "SERVER OFFLINE · RUN API"
+        _update_controls()
+        queue_redraw()
+        return
+
+    if response_code < 200 or response_code >= 300:
+        status_text = "SERVER ERROR · %d" % response_code
+        _update_controls()
+        queue_redraw()
+        return
+
+    var payload = JSON.parse_string(body.get_string_from_utf8())
+    if not (payload is Dictionary):
+        status_text = "INVALID SERVER RESPONSE"
+        _update_controls()
+        queue_redraw()
+        return
+
+    match action:
+        "create":
+            run_id = str(payload.get("run_id", ""))
+            _apply_run_snapshot(payload.get("state", {}))
+            status_text = "CONNECTED · RUN READY"
+        "draw":
+            _apply_board(payload.get("board", []))
+            var clusters: Array = payload.get("matches", [])
+            next_status_text = "FATE DRAW · %d CLUSTERS" % clusters.size()
+            _refresh_run()
+        "battle":
+            var won := bool(payload.get("victory", false))
+            var next_wave := int(payload.get("wave", 1))
+            next_status_text = ("VICTORY · WAVE %02d" % next_wave) if won else "THE PARTY NEEDS REST"
+            _refresh_run()
+        "refresh":
+            _apply_run_snapshot(payload)
+            status_text = next_status_text if not next_status_text.is_empty() else "CONNECTED · PREPARATION"
+            next_status_text = ""
+        _:
+            status_text = "CONNECTED"
+
+    _update_controls()
+    queue_redraw()
+
+func _apply_run_snapshot(snapshot: Dictionary) -> void:
+    run_snapshot = snapshot
+    _apply_board(snapshot.get("board", []))
+
+func _apply_board(board: Array) -> void:
+    var indices := {
+        "leaf": 0,
+        "ember": 1,
+        "tide": 2,
+        "stone": 3,
+        "moon": 4,
+        "wing": 5
+    }
+    for row in range(mini(4, board.size())):
+        if not (board[row] is Array):
+            continue
+        for col in range(mini(4, board[row].size())):
+            fate_pattern[row][col] = int(indices.get(str(board[row][col]), 0))
+
+func _on_draw_pressed() -> void:
+    if run_id.is_empty():
+        return
+    _send_request("draw", HTTPClient.METHOD_POST, "/api/v1/runs/%s/draw" % run_id, "{}")
+
+func _on_battle_pressed() -> void:
+    if run_id.is_empty():
+        return
+    _send_request("battle", HTTPClient.METHOD_POST, "/api/v1/runs/%s/battle" % run_id, "{}")
+
+func _update_controls() -> void:
+    if not is_instance_valid(draw_button):
+        return
+    var active := str(run_snapshot.get("phase", "preparation")) == "preparation"
+    var essence := int(run_snapshot.get("essence", 0))
+    draw_button.disabled = api_busy or run_id.is_empty() or not active or essence <= 0
+    battle_button.disabled = api_busy or run_id.is_empty() or not active or run_snapshot.get("party", []).is_empty()
+    status_label.text = status_text
 
 func _process(delta: float) -> void:
     elapsed += delta
