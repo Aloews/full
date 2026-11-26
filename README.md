@@ -32,7 +32,7 @@ Runs use PostgreSQL when `SLOTBOUND_DATABASE_URL` (or fallback `DATABASE_URL`) i
 - Every fifth wave is a boss; a boss victory offers one of three Cores.
 - Use the between-wave cache for permanent attack, mitigation or healing items.
 
-The current combat resolver is a deterministic power comparison, not yet a unit-by-unit battle timeline. The web visual layer is also a prototype: its symbols still need original pixel sprites, animation strips, bitmap typography and a full asset pipeline. See `docs/MAP.md` for implemented scope, limitations and release gates.
+The current combat resolver uses a deterministic tick timeline with class-specific effects, persistent survivor health, casualties and a typed combat log. This is an early combat foundation and still needs authored enemy waves, richer abilities and balance validation. The web visual layer is also a prototype: its symbols still need original pixel sprites, animation strips, bitmap typography and a full asset pipeline. See `docs/MAP.md` for implemented scope, limitations and release gates.
 
 ## Engineering contract
 
