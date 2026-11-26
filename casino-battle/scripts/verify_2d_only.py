@@ -30,8 +30,6 @@ required_project_settings = (
     "window/size/viewport_height=360",
     "window/size/window_width_override=1280",
     "window/size/window_height_override=720",
-    "window/size/min_width=640",
-    "window/size/min_height=360",
     'window/stretch/mode="viewport"',
     'window/stretch/aspect="keep"',
     'window/stretch/scale_mode="integer"',
@@ -47,6 +45,7 @@ main_text = (ROOT / "scripts" / "main.gd").read_text(encoding="utf-8")
 required_pixel_contract = (
     "draw_set_transform(Vector2.ZERO, 0.0, Vector2(0.5, 0.5))",
     "root.scale = Vector2(0.5, 0.5)",
+    "get_window().min_size = Vector2i(640, 360)",
     "func _pixel_snap(value: float) -> float:",
     "draw_polyline(_closed(pixel_points), INK, pixel_width, false)",
     "event.position * 2.0",
