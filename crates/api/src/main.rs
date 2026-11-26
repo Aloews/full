@@ -579,6 +579,69 @@ mod tests {
         fs::remove_dir_all(dir).unwrap();
     }
 
+
+    #[tokio::test]
+    async fn journey_event_choice_is_saved_and_cannot_be_replayed() {
+        let dir = std::env::temp_dir().join(format!("slotbound-api-event-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let router = app_with_data_dir(dir.clone());
+        let mut exercised = false;
+        for seed in 1..=64u64 {
+            let created = router.clone().oneshot(
+                Request::builder().method("POST").uri("/api/runs")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(format!(r#"{{"seed":{seed}}}"#))).unwrap()
+            ).await.unwrap();
+            assert_eq!(created.status(), StatusCode::OK);
+            let created: GameState = serde_json::from_slice(
+                &created.into_body().collect().await.unwrap().to_bytes()
+            ).unwrap();
+            let battled = router.clone().oneshot(
+                Request::builder().method("POST")
+                    .uri(format!("/api/runs/{}/battle", created.run_id))
+                    .body(Body::empty()).unwrap()
+            ).await.unwrap();
+            assert_eq!(battled.status(), StatusCode::OK);
+            let battled: GameState = serde_json::from_slice(
+                &battled.into_body().collect().await.unwrap().to_bytes()
+            ).unwrap();
+            if battled.pending_event.is_none() { continue; }
+
+            let event_uri = format!("/api/runs/{}/event", created.run_id);
+            let resolved = router.clone().oneshot(
+                Request::builder().method("POST").uri(&event_uri)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"index":1}"#)).unwrap()
+            ).await.unwrap();
+            assert_eq!(resolved.status(), StatusCode::OK);
+            let saved: GameState = serde_json::from_slice(
+                &resolved.into_body().collect().await.unwrap().to_bytes()
+            ).unwrap();
+            assert!(saved.pending_event.is_none());
+            assert_eq!(saved.event_history.len(), 1);
+
+            let replay = router.clone().oneshot(
+                Request::builder().method("POST").uri(&event_uri)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"index":1}"#)).unwrap()
+            ).await.unwrap();
+            assert_eq!(replay.status(), StatusCode::CONFLICT);
+            let restored = app_with_data_dir(dir.clone()).oneshot(
+                Request::builder().uri(format!("/api/runs/{}", created.run_id))
+                    .body(Body::empty()).unwrap()
+            ).await.unwrap();
+            assert_eq!(restored.status(), StatusCode::OK);
+            let restored: GameState = serde_json::from_slice(
+                &restored.into_body().collect().await.unwrap().to_bytes()
+            ).unwrap();
+            assert_eq!(restored.event_history, saved.event_history);
+            exercised = true;
+            break;
+        }
+        assert!(exercised, "the deterministic seed sample must produce at least one survivable event");
+        fs::remove_dir_all(dir).unwrap();
+    }
+
     #[tokio::test]
     async fn postgres_storage_persists_run_across_router_instances() {
         let Ok(database_url) = std::env::var("TEST_DATABASE_URL") else {
