@@ -581,6 +581,12 @@ func _draw_creature(center: Vector2, coat: Color, label: String, friendly: bool,
             _draw_cinderkit(c, s, coat)
         "Puddlekin":
             _draw_puddlekin(c, s, coat)
+        "Pebbleback":
+            _draw_pebbleback(c, s, coat)
+        "Moonmote":
+            _draw_moonmote(c, s, coat)
+        "Breezeling":
+            _draw_breezeling(c, s, coat)
         "Gloomling":
             _draw_gloomling(c, s, coat)
         "Mosswood Guardian":
@@ -672,6 +678,86 @@ func _draw_puddlekin(c: Vector2, s: float, coat: Color) -> void:
     draw_ellipse_placeholder(c + Vector2(0, -26) * s, Vector2(18, 5) * s, SAGE)
     draw_line(c + Vector2(0, -27) * s, c + Vector2(10, -33) * s, Color("#5D785F"), 1.2 * s)
     draw_circle(c + Vector2(0, -29) * s, 3.5 * s, HONEY)
+
+func _draw_pebbleback(c: Vector2, s: float, coat: Color) -> void:
+    # A tiny mossy armadillo: low shell silhouette, pebble plates and a curious face.
+    var shell := PackedVector2Array([
+        c + Vector2(-29, 10) * s, c + Vector2(-27, -7) * s,
+        c + Vector2(-17, -23) * s, c + Vector2(0, -28) * s,
+        c + Vector2(19, -20) * s, c + Vector2(29, -3) * s,
+        c + Vector2(26, 13) * s, c + Vector2(12, 21) * s,
+        c + Vector2(-13, 21) * s
+    ])
+    _outline(shell, coat.darkened(0.06), 2.7 * s)
+    for plate in range(3):
+        var offset := Vector2(-12.0 + plate * 12.0, -12.0 + absf(plate - 1) * 2.0) * s
+        draw_arc(c + offset, 8.0 * s, PI, TAU, 18, Color("#E0D2B9"), 1.5 * s)
+    var head := PackedVector2Array([
+        c + Vector2(-14, 8) * s, c + Vector2(-13, -5) * s,
+        c + Vector2(-5, -14) * s, c + Vector2(8, -14) * s,
+        c + Vector2(17, -5) * s, c + Vector2(17, 9) * s,
+        c + Vector2(7, 17) * s, c + Vector2(-7, 16) * s
+    ])
+    _outline(head, coat.lightened(0.2), 1.8 * s)
+    _draw_eyes(c + Vector2(2, -2) * s, s, 5.5)
+    draw_circle(c + Vector2(12, 5) * s, 2.2 * s, INK)
+    draw_arc(c + Vector2(-2, 5) * s, 3.5 * s, 0.15, PI - 0.15, 12, INK, 1.1 * s)
+
+func _draw_moonmote(c: Vector2, s: float, coat: Color) -> void:
+    # A sleepy moon-spirit with two soft winglets and a little star marking.
+    var left_wing := PackedVector2Array([
+        c + Vector2(-8, -3) * s, c + Vector2(-34, -22) * s,
+        c + Vector2(-31, 2) * s, c + Vector2(-17, 17) * s
+    ])
+    var right_wing := PackedVector2Array([
+        c + Vector2(8, -3) * s, c + Vector2(34, -22) * s,
+        c + Vector2(31, 2) * s, c + Vector2(17, 17) * s
+    ])
+    _outline(left_wing, coat.lightened(0.1), 2.0 * s)
+    _outline(right_wing, coat.lightened(0.1), 2.0 * s)
+    var body := PackedVector2Array([
+        c + Vector2(0, -29) * s, c + Vector2(18, -15) * s,
+        c + Vector2(23, 3) * s, c + Vector2(15, 21) * s,
+        c + Vector2(0, 27) * s, c + Vector2(-15, 21) * s,
+        c + Vector2(-23, 3) * s, c + Vector2(-18, -15) * s
+    ])
+    _outline(body, coat.lightened(0.16), 2.5 * s)
+    draw_arc(c + Vector2(0, -24) * s, 10.0 * s, PI + 0.2, TAU - 0.2, 20, HONEY, 2.0 * s)
+    _draw_eyes(c + Vector2(0, -2) * s, s, 7.0)
+    draw_arc(c + Vector2(0, 6) * s, 4.0 * s, 0.2, PI - 0.2, 12, INK, 1.2 * s)
+    draw_circle(c + Vector2(-13, 8) * s, 3.0 * s, Color("#D99583", 0.55))
+    draw_circle(c + Vector2(13, 8) * s, 3.0 * s, Color("#D99583", 0.55))
+    draw_circle(c + Vector2(0, -14) * s, 2.2 * s, HONEY)
+
+func _draw_breezeling(c: Vector2, s: float, coat: Color) -> void:
+    # A puffin-like breeze bird with a distinct beak, feather crest and wing marks.
+    var body := PackedVector2Array([
+        c + Vector2(-22, 14) * s, c + Vector2(-24, -2) * s,
+        c + Vector2(-15, -19) * s, c + Vector2(0, -25) * s,
+        c + Vector2(17, -17) * s, c + Vector2(24, 0) * s,
+        c + Vector2(19, 17) * s, c + Vector2(0, 23) * s,
+        c + Vector2(-15, 20) * s
+    ])
+    _outline(body, coat.lightened(0.12), 2.5 * s)
+    var left_wing := PackedVector2Array([
+        c + Vector2(-14, -2) * s, c + Vector2(-34, -10) * s,
+        c + Vector2(-27, 11) * s, c + Vector2(-12, 12) * s
+    ])
+    _outline(left_wing, coat.darkened(0.08), 1.8 * s)
+    var beak := PackedVector2Array([
+        c + Vector2(7, -1) * s, c + Vector2(23, 4) * s,
+        c + Vector2(7, 9) * s
+    ])
+    _outline(beak, HONEY, 1.2 * s)
+    _draw_eyes(c + Vector2(-3, -4) * s, s, 6.0)
+    draw_arc(c + Vector2(-2, 5) * s, 3.7 * s, 0.15, PI - 0.15, 12, INK, 1.2 * s)
+    var crest := PackedVector2Array([
+        c + Vector2(-7, -22) * s, c + Vector2(-13, -36) * s,
+        c + Vector2(-1, -30) * s, c + Vector2(8, -37) * s,
+        c + Vector2(10, -20) * s
+    ])
+    _outline(crest, HONEY.lightened(0.05), 1.6 * s)
+    draw_line(c + Vector2(-4, 12) * s, c + Vector2(6, 12) * s, Color(INK, 0.45), 1.2 * s)
 
 func _draw_gloomling(c: Vector2, s: float, coat: Color) -> void:
     var body := PackedVector2Array([
