@@ -87,9 +87,9 @@ Replay must reconstruct canonical state and combat events from the same initial 
 
 ## Combat engine
 
-Current behaviour is a deterministic army-power comparison. It is explicitly a prototype simplification.
+The current candidate contains a first deterministic Rust tick/timeline simulation. It resolves initiative, stable target selection, class-specific combat hooks, attacks, damage, healing, casualties and boss telegraphs, and returns a typed event log. Unit health persists between waves with a small camp recovery. The implementation is deliberately bounded to 40 ticks and currently uses simple wave-derived enemy groups.
 
-Target behaviour is a pure Rust tick/timeline simulation with:
+The next combat increment is to extend the domain simulation with:
 - battle participants, positions and lanes;
 - stable initiative and target selection;
 - attack clocks and ability cooldowns;
