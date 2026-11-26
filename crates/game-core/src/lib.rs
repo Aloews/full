@@ -894,7 +894,8 @@ impl GameState {
             self.pending_event = None;
         } else {
             self.phase = RunPhase::Intermission;
-            self.pending_event = Some(self.generate_journey_event());
+            let event = self.generate_journey_event();
+            self.pending_event = Some(event);
         }
         events.push(BattleEvent {
             tick: rounds,
