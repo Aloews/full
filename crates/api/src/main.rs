@@ -8,6 +8,7 @@ use axum::{
 use serde::Deserialize;
 use serde_json::json;
 use slotbound_core::{GameError, GameState, ItemKind};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::{
     collections::HashMap,
     fs,
@@ -25,6 +26,7 @@ struct AppState {
     runs: Arc<RwLock<HashMap<String, GameState>>>,
     next_id: Arc<AtomicU64>,
     data_dir: Arc<PathBuf>,
+    pool: Option<PgPool>,
 }
 
 #[derive(Debug)]
@@ -46,6 +48,13 @@ impl ApiError {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             code: "storage_failure",
             message: "The run could not be saved".into(),
+        }
+    }
+    fn database() -> Self {
+        Self {
+            status: StatusCode::SERVICE_UNAVAILABLE,
+            code: "database_unavailable",
+            message: "Persistent storage is temporarily unavailable".into(),
         }
     }
     fn from_game(error: GameError) -> Self {
@@ -127,40 +136,60 @@ struct UnitRequest {
     unit_id: u64,
 }
 
-fn app_state(data_dir: PathBuf) -> AppState {
+fn app_state(data_dir: PathBuf, pool: Option<PgPool>) -> AppState {
     let mut runs = HashMap::new();
-    if let Ok(entries) = fs::read_dir(&data_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
-                continue;
-            }
-            match fs::read(&path)
-                .ok()
-                .and_then(|bytes| serde_json::from_slice::<GameState>(&bytes).ok())
-            {
-                Some(game) => {
-                    runs.insert(game.run_id.clone(), game);
+    if pool.is_none() {
+        if let Ok(entries) = fs::read_dir(&data_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+                    continue;
                 }
-                None => eprintln!("Skipping unreadable Slotbound save: {}", path.display()),
+                match fs::read(&path)
+                    .ok()
+                    .and_then(|bytes| serde_json::from_slice::<GameState>(&bytes).ok())
+                {
+                    Some(game) => {
+                        runs.insert(game.run_id.clone(), game);
+                    }
+                    None => eprintln!("Skipping unreadable Slotbound save: {}", path.display()),
+                }
             }
         }
     }
+
     AppState {
         runs: Arc::new(RwLock::new(runs)),
         next_id: Arc::new(AtomicU64::new(1)),
         data_dir: Arc::new(data_dir),
+        pool,
     }
 }
 
-pub fn app() -> Router {
-    let data_dir = std::env::var_os("SLOTBOUND_DATA_DIR")
+fn database_pool() -> Option<PgPool> {
+    let url = std::env::var("DATABASE_URL").ok()?;
+    let pool = PgPoolOptions::new()
+        .max_connections(4)
+        .connect_lazy(&url)
+        .expect("DATABASE_URL is invalid");
+    Some(pool)
+}
+
+fn default_data_dir() -> PathBuf {
+    std::env::var_os("SLOTBOUND_DATA_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(".slotbound-data/runs"));
-    app_with_data_dir(data_dir)
+        .unwrap_or_else(|| PathBuf::from(".slotbound-data/runs"))
+}
+
+pub fn app() -> Router {
+    app_with_storage(default_data_dir(), database_pool())
 }
 
 fn app_with_data_dir(data_dir: PathBuf) -> Router {
+    app_with_storage(data_dir, None)
+}
+
+fn app_with_storage(data_dir: PathBuf, pool: Option<PgPool>) -> Router {
     Router::new()
         .route("/", get(index))
         .route("/app.js", get(javascript))
@@ -177,9 +206,8 @@ fn app_with_data_dir(data_dir: PathBuf) -> Router {
         .route("/api/runs/{run_id}/next-wave", post(next_wave))
         .route("/api/runs/{run_id}/core", post(choose_core))
         .route("/api/runs/{run_id}/item", post(buy_item))
-        .with_state(app_state(data_dir))
+        .with_state(app_state(data_dir, pool))
 }
-
 async fn save_game(data_dir: &PathBuf, game: &GameState) -> Result<(), ApiError> {
     tokio::fs::create_dir_all(data_dir)
         .await
@@ -205,6 +233,33 @@ async fn mutate_run<F>(
 where
     F: FnOnce(&mut GameState) -> Result<(), GameError>,
 {
+    if let Some(pool) = &state.pool {
+        let mut transaction = pool.begin().await.map_err(|_| ApiError::database())?;
+        let stored: Option<sqlx::types::Json<GameState>> =
+            sqlx::query_as("SELECT state FROM slotbound_runs WHERE run_id = $1 FOR UPDATE")
+                .bind(&run_id)
+                .fetch_optional(&mut *transaction)
+                .await
+                .map_err(|_| ApiError::database())?;
+        let mut game = stored
+            .map(|row| row.0)
+            .ok_or_else(ApiError::not_found)?;
+
+        mutation(&mut game).map_err(ApiError::from_game)?;
+
+        sqlx::query(
+            "UPDATE slotbound_runs SET state = $2, updated_at = now() WHERE run_id = $1",
+        )
+        .bind(&run_id)
+        .bind(sqlx::types::Json(game.clone()))
+        .execute(&mut *transaction)
+        .await
+        .map_err(|_| ApiError::database())?;
+
+        transaction.commit().await.map_err(|_| ApiError::database())?;
+        return Ok(Json(game));
+    }
+
     let mut runs = state.runs.write().await;
     let game = runs.get_mut(&run_id).ok_or_else(ApiError::not_found)?;
     let previous = game.clone();
@@ -217,7 +272,6 @@ where
     }
     Ok(Json(game.clone()))
 }
-
 async fn index() -> Html<&'static str> {
     Html(include_str!("../../../web/index.html"))
 }
@@ -238,8 +292,12 @@ async fn stylesheet() -> Response {
     )
         .into_response()
 }
-async fn health() -> Json<serde_json::Value> {
-    Json(json!({"status":"ok","service":"slotbound-api"}))
+async fn health(State(state): State<AppState>) -> Json<serde_json::Value> {
+    Json(json!({
+        "status": "ok",
+        "service": "slotbound-api",
+        "storage": if state.pool.is_some() { "postgresql" } else { "local_file" }
+    }))
 }
 
 async fn create_run(
@@ -256,15 +314,37 @@ async fn create_run(
         .unwrap_or_default();
     let run_id = format!("run-{seed:016x}-{nonce:x}-{id}");
     let game = GameState::new(seed, run_id.clone());
-    save_game(&state.data_dir, &game).await?;
-    state.runs.write().await.insert(run_id, game.clone());
+
+    if let Some(pool) = &state.pool {
+        sqlx::query("INSERT INTO slotbound_runs (run_id, state) VALUES ($1, $2)")
+            .bind(&run_id)
+            .bind(sqlx::types::Json(game.clone()))
+            .execute(pool)
+            .await
+            .map_err(|_| ApiError::database())?;
+    } else {
+        save_game(&state.data_dir, &game).await?;
+        state.runs.write().await.insert(run_id, game.clone());
+    }
+
     Ok(Json(game))
 }
-
 async fn get_run(
     State(state): State<AppState>,
     Path(run_id): Path<String>,
 ) -> Result<Json<GameState>, ApiError> {
+    if let Some(pool) = &state.pool {
+        let stored: Option<sqlx::types::Json<GameState>> =
+            sqlx::query_as("SELECT state FROM slotbound_runs WHERE run_id = $1")
+                .bind(&run_id)
+                .fetch_optional(pool)
+                .await
+                .map_err(|_| ApiError::database())?;
+        return stored
+            .map(|row| Json(row.0))
+            .ok_or_else(ApiError::not_found);
+    }
+
     state
         .runs
         .read()
@@ -274,7 +354,6 @@ async fn get_run(
         .map(Json)
         .ok_or_else(ApiError::not_found)
 }
-
 async fn spin(
     State(state): State<AppState>,
     Path(run_id): Path<String>,
@@ -355,6 +434,16 @@ async fn buy_item(
 
 #[tokio::main]
 async fn main() {
+    let data_dir = default_data_dir();
+    let pool = database_pool();
+
+    if let Some(pool) = &pool {
+        sqlx::migrate!("./migrations")
+            .run(pool)
+            .await
+            .expect("apply Slotbound database migrations");
+    }
+
     let port = std::env::var("PORT")
         .ok()
         .and_then(|v| v.parse::<u16>().ok())
@@ -364,7 +453,7 @@ async fn main() {
         .await
         .expect("bind API listener");
     println!("Slotbound server listening on http://{address}");
-    axum::serve(listener, app())
+    axum::serve(listener, app_with_storage(data_dir, pool))
         .await
         .expect("serve Slotbound API");
 }
