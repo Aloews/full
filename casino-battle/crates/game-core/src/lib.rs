@@ -150,6 +150,8 @@ pub enum GameError {
     UnitNotFound,
     #[error("units must share a sigil and rank, and the keeper must be below rank 3")]
     InvalidMerge,
+    #[error("lane must be between 0 and 2")]
+    InvalidLane,
 }
 
 impl RunState {
@@ -170,6 +172,21 @@ impl RunState {
         let starter = state.make_unit(Sigil::Leaf, 1);
         state.party.push(starter);
         state
+    }
+
+    pub fn set_lane(&mut self, unit_id: u64, lane: u8) -> Result<(), GameError> {
+        self.ensure_preparation()?;
+        if lane > 2 {
+            return Err(GameError::InvalidLane);
+        }
+
+        let unit = self
+            .party
+            .iter_mut()
+            .find(|unit| unit.id == unit_id)
+            .ok_or(GameError::UnitNotFound)?;
+        unit.lane = lane;
+        Ok(())
     }
 
     pub fn synergies(&self) -> Vec<SynergyStatus> {
@@ -685,6 +702,26 @@ mod tests {
         let mut run = RunState::new(123);
         run.essence = 0;
         assert_eq!(run.draw(), Err(GameError::NotEnoughEssence));
+    }
+
+    #[test]
+    fn formation_lane_can_be_changed_during_preparation() {
+        let mut run = RunState::new(51);
+        let unit_id = run.party[0].id;
+
+        run.set_lane(unit_id, 2).unwrap();
+
+        assert_eq!(run.party[0].lane, 2);
+    }
+
+    #[test]
+    fn invalid_lane_and_missing_unit_do_not_mutate_formation() {
+        let mut run = RunState::new(52);
+        let before = run.party.clone();
+
+        assert_eq!(run.set_lane(1, 3), Err(GameError::InvalidLane));
+        assert_eq!(run.set_lane(999, 1), Err(GameError::UnitNotFound));
+        assert_eq!(run.party, before);
     }
 
     #[test]
