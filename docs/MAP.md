@@ -122,7 +122,10 @@ The last fully green CI evidence before the new route/battle work is run [458985
 - [ ] Monte Carlo simulator with seed ranges, sample sizes and uncertainty intervals.
 - [x] Add one deterministic random trait to each recruited unit, with unique trait inheritance from absorbed donors (up to three traits).
 - [x] Replace the single-display-only imprint path with typed ranked imprint slots, donor-class inheritance, duplicate rank-up and slot capacity increases at absorption levels 5 and 12; Stout inheritance changes persistent health, while Spellpower/Mending work across classes.
-- [ ] Expand promotion choices into a multi-node promotion tree with branch-specific abilities and cross-class inheritance.
+- [x] Add typed two-stage promotion paths: a class-specific choice at absorption level 5 unlocks a branch-specific second choice at level 12.
+- [x] Give second-tier branches distinct stat, trait or imprint effects; persist the full path and update old v3 saves.
+- [x] Require promotion choices before further absorption or wave progression; protect units with pending promotion from being consumed as donors.
+- [ ] Expand the promotion tree with additional third-tier branches and player-facing inheritance previews.
 - [ ] More reel tools (including Blast) with explicit charges, targets, costs and phase rules.
 - [ ] Formation positions, role synergies, stage map and route choices.
 - [ ] Distinct biomes, enemy families, bosses and environmental effects.

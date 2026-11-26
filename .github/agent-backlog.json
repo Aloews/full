@@ -54,16 +54,17 @@
     {
       "id": "GAME-005",
       "title": "Expand imprints and promotion branches",
-      "objective": "Extend the delivered typed traits and ranked imprint-slot system into a full unit build tree. Add branch-specific promotion nodes, ability unlocks, explicit inheritance/override choices and deterministic previews. Preserve stable unit IDs and atomic absorption; old single-string imprint saves must migrate without losing progress.",
+      "objective": "Extend the delivered two-stage promotion tree into additional third-tier branches, data-driven promotion definitions, player-facing effect comparisons and explicit inheritance/override choices. Preserve stable unit IDs, atomic absorption and safe save migrations.",
       "acceptance": [
-        "Trait and imprint inheritance previews show exact effects before absorption and apply atomically on confirmation.",
-        "Promotion nodes are typed/versioned data; every unit can follow one of the eligible branches with no unreachable node or duplicate unlock.",
-        "Legacy v1/v2 saves migrate to the current ruleset without rerolling traits or losing legacy imprints.",
-        "All combat effects remain server-authoritative and deterministic for a fixed seed and command sequence.",
+        "All current class branches remain reachable; each third-tier node has exactly one valid parent and no duplicate unlock.",
+        "Promotion definitions and effects are typed/versioned data, not duplicated UI-only rules.",
+        "Player-facing previews show exact attack/health/trait/imprint effects before confirmation.",
+        "Legacy v1/v2/v3 saves migrate to the current ruleset without rerolling traits or losing promotions/imprints.",
+        "All promotion effects remain server-authoritative and deterministic for a fixed seed and command sequence.",
         "Tests cover branch unlock thresholds, inheritance conflicts, rank limits, invalid promotion choices and save migration."
       ],
       "agent_role": "rust-gameplay-engineer",
-      "delivery_notes": "The first vertical slice is delivered on feat/slotbound-unit-builds: deterministic random traits (Brutal/Swift/Stout/Guarded), unique trait inheritance on absorption, typed donor-class imprint slots, rank-up to 3, 1/2/3 slot capacity at absorption levels 0/5/12, real cross-class Spellpower/Mending abilities, actual battle modifiers and v2→v3 save migration. The old imprint string is retained only for save/UI compatibility. Remaining: branch-specific promotion tree nodes, richer donor inheritance previews and class-specific multi-node promotion content."
+      "delivery_notes": "The two-stage promotion path slice is now implemented: typed PromotionNode path, class-specific first tier at absorption level 5, branch-specific second tier at level 12, distinct server-side attack/health/trait/imprint effects, promotion-choice progression gates, donor protection, UI path breadcrumbs, and v3→v4 save migration. Remaining: third-tier branches and interactive inheritance previews."
     },
     {
       "id": "GAME-006",

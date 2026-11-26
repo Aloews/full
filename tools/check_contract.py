@@ -30,8 +30,8 @@ if "JourneyRouteRequired" not in api or "pending_route" not in client:
 
 if "pub enum UnitTrait" not in domain or "pub enum UnitImprint" not in domain:
     raise SystemExit("typed unit traits or imprints are missing")
-if "migrate_legacy_state" not in domain or "ruleset_version: 3" not in domain:
-    raise SystemExit("v3 unit build save migration is missing")
+if "migrate_legacy_state" not in domain or "ruleset_version: 4" not in domain:
+    raise SystemExit("v4 unit build and promotion-path save migration is missing")
 if "unit.traits" not in client or "unit.imprints" not in client:
     raise SystemExit("unit trait and imprint flow is missing")
 if "UnitImprint::Spellpower" not in domain or "UnitImprint::Mending" not in domain:
@@ -42,7 +42,14 @@ if "legacy imprint migration is missing" not in domain:
     raise SystemExit("legacy imprint migration is missing")
 if "imprint_slot_capacity" not in domain or "imprint_rank_bonus" not in domain:
     raise SystemExit("ranked imprint capacity or combat effects are missing")
-if "pub struct FormationPosition" not in domain or "fn select_target_index" not in domain:
+
+if "pub enum PromotionNode" not in domain or "fn second_promotion_choices" not in domain:
+    raise SystemExit("typed two-stage promotion tree is missing")
+if "unit.promotion_path" not in client or "promotion-path" not in client:
+    raise SystemExit("promotion path is not displayed on unit cards")
+if "PromotionChoiceRequired" not in domain or "PromotionChoiceRequired" not in api:
+    raise SystemExit("mandatory promotion progression gate is missing")
+\nif "pub struct FormationPosition" not in domain or "fn select_target_index" not in domain:
     raise SystemExit("typed tactical formation or lane-aware target selector is missing")
 if domain.count("position: Some(unit.position)") < 2:
     raise SystemExit("battle report must include ally and enemy formation snapshots")
