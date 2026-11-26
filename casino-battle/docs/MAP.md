@@ -31,7 +31,8 @@ The map is the source of truth for autonomous coding agents. Update status only 
 
 ## Gameplay systems
 
-- [x] Three-lane targeting with nearest-lane target selection (basic prototype).
+- [x] Three-lane targeting with nearest-lane target selection.
+- [x] Preparation-only unit lane placement through the client and validated server endpoint.
 - [x] Initial unit roles and sigil synergies (two tiers); data-driven content definitions remain open.
 - [x] Duplicate merging and rank-up to three ranks (basic prototype).
 - [ ] Branching evolution, imprints and traits that alter combat behavior.
