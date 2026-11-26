@@ -340,6 +340,10 @@ func _unit_position(unit_id: int) -> Vector2:
 
     return Vector2(0, 0)
 
+func _pixel_point(point: Vector2) -> Vector2:
+    # One logical source pixel is two design units on the 640x360 viewport.
+    return Vector2(roundf(point.x / 2.0) * 2.0, roundf(point.y / 2.0) * 2.0)
+
 func _draw_battle_effects() -> void:
     for event in battle_frame_events:
         var source_id := int(event.get("source_unit_id", 0))
@@ -362,7 +366,7 @@ func _draw_battle_effects() -> void:
         elif kind == "defeat":
             for angle in range(0, 360, 60):
                 var direction := Vector2.from_angle(deg_to_rad(float(angle)))
-                draw_line(target + direction * 13.0, target + direction * 24.0, HONEY, 2.0, true)
+                draw_line(_pixel_point(target + direction * 13.0), _pixel_point(target + direction * 24.0), HONEY, 2.0, false)
 
 func _update_relic_panel() -> void:
     if not is_instance_valid(relic_panel):
