@@ -429,11 +429,11 @@ impl RunState {
     }
 
     fn create_enemy_wave(&mut self) -> Vec<Unit> {
-        let count = (1 + self.wave as usize / 2).clamp(1, 5);
+        let count = (3 + self.wave.saturating_sub(1) as usize / 2).clamp(3, 8);
         (0..count)
             .map(|index| {
                 let sigil = Sigil::from_index(self.random_index(Sigil::ALL.len()));
-                let base_hp = 10 + self.wave as i32 * 3 + index as i32 * 2;
+                let base_hp = 16 + self.wave as i32 * 4 + index as i32 * 3;
                 let unit = Unit {
                     id: i64::MAX as u64 - index as u64,
                     name: format!("Gloomling {}", index + 1),
@@ -447,8 +447,8 @@ impl RunState {
                     lane: (index % 3) as u8,
                     hp: base_hp,
                     max_hp: base_hp,
-                    attack: 2 + self.wave as i32,
-                    armor: (self.wave / 4) as i32,
+                    attack: 4 + self.wave as i32 * 2 + index as i32 / 2,
+                    armor: (self.wave / 5) as i32,
                     attack_cooldown: 3,
                     cooldown_left: 0,
                     rank: 1,
