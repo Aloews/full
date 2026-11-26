@@ -2636,7 +2636,7 @@ mod tests {
         let donor_id = donor.id;
         game.units.push(donor);
 
-        let expected_absorb_health = (24u32 / 6).max(1);
+        let expected_absorb_health = 24u32 / 6;
         game.absorb(target_id, donor_id).unwrap();
         let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
         assert_eq!(target.health, 40 + expected_absorb_health + 3);
