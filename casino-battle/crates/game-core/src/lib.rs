@@ -577,7 +577,11 @@ impl RunState {
                     lane: (index % 3) as u8,
                     hp: max_hp,
                     max_hp,
-                    attack: if is_boss { base_attack + 2 } else { base_attack },
+                    attack: if is_boss {
+                        base_attack + 2
+                    } else {
+                        base_attack
+                    },
                     armor: (self.wave / 5) as i32 + boss_armor,
                     support_heal_bonus: 0,
                     attack_cooldown: 3,
@@ -1018,7 +1022,14 @@ mod tests {
         assert_eq!(report.relic_choices.len(), 3);
         assert_eq!(run.phase, RunPhase::RelicChoice);
         assert_eq!(run.pending_relics, report.relic_choices);
-        assert_eq!(report.relic_choices.iter().collect::<std::collections::HashSet<_>>().len(), 3);
+        assert_eq!(
+            report
+                .relic_choices
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            3
+        );
     }
 
     #[test]
@@ -1104,6 +1115,9 @@ mod tests {
         assert_eq!(run.draw(), Err(GameError::RunOver));
         assert_eq!(run.resolve_auto_battle(), Err(GameError::RunOver));
         assert_eq!(run.merge_units(1, 2), Err(GameError::RunOver));
-        assert_eq!(run.choose_relic(Relic::HoneyBell), Err(GameError::NoRelicChoice));
+        assert_eq!(
+            run.choose_relic(Relic::HoneyBell),
+            Err(GameError::NoRelicChoice)
+        );
     }
 }
