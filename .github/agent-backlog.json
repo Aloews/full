@@ -54,13 +54,16 @@
     {
       "id": "GAME-005",
       "title": "Expand imprints and promotion branches",
-      "objective": "Replace the single imprint string with a typed collection of imprint slots, donor inheritance rules and promotion tree nodes. Preserve stable unit identity and prevent self-feeding or locked-unit consumption.",
+      "objective": "Extend the delivered typed traits and ranked imprint-slot system into a full unit build tree. Add branch-specific promotion nodes, ability unlocks, explicit inheritance/override choices and deterministic previews. Preserve stable unit IDs and atomic absorption; old single-string imprint saves must migrate without losing progress.",
       "acceptance": [
-        "Imprint slot capacity and eligibility are validated in the domain.",
-        "Absorption is atomic and deterministic with a typed result preview.",
-        "Promotion choices are data-driven and covered at every threshold."
+        "Trait and imprint inheritance previews show exact effects before absorption and apply atomically on confirmation.",
+        "Promotion nodes are typed/versioned data; every unit can follow one of the eligible branches with no unreachable node or duplicate unlock.",
+        "Legacy v1/v2 saves migrate to the current ruleset without rerolling traits or losing legacy imprints.",
+        "All combat effects remain server-authoritative and deterministic for a fixed seed and command sequence.",
+        "Tests cover branch unlock thresholds, inheritance conflicts, rank limits, invalid promotion choices and save migration."
       ],
-      "agent_role": "rust-gameplay-engineer"
+      "agent_role": "rust-gameplay-engineer",
+      "delivery_notes": "The first vertical slice is delivered on feat/slotbound-unit-builds: deterministic random traits (Brutal/Swift/Stout/Guarded), unique trait inheritance on absorption, typed donor-class imprint slots, rank-up to 3, 1/2/3 slot capacity at absorption levels 0/5/12, actual battle modifiers and v2→v3 save migration. The old imprint string is retained only for save/UI compatibility. Remaining: branch-specific promotion tree nodes, richer donor inheritance previews and class-specific multi-node promotion content."
     },
     {
       "id": "GAME-006",

@@ -1,4 +1,4 @@
-# Combat Simulation Rules — Current Version 2
+# Combat Simulation Rules — Current Version 3
 
 ## Authority and determinism
 
@@ -18,6 +18,29 @@ The simulation is bounded to 40 ticks. It ends immediately when either side is e
 - On every fifth wave, the first enemy is replaced by the Mosswood Sentinel with `30 + 3 × wave` max HP and `4 + floor(wave / 3)` attack. Boss flag enables telegraph events.
 
 Enemy names are original prototype definitions. Authored biome-specific waves are pending.
+
+
+## Random traits and inherited imprints
+
+Each new unit receives exactly one deterministic trait roll from the run RNG:
+- **Brutal**: +2 primary attack damage.
+- **Swift**: +2 initiative before ally turn ordering.
+- **Stout**: +3 persistent maximum health at recruitment. Its current health is also raised by 3 when migrating a legacy unit into this trait.
+- **Guarded**: reduces each incoming hit by 1; total damage remains at least 1.
+
+Absorption transfers any donor trait not already held by the keeper. A unit can hold at most three distinct traits; repeated trait types do not stack.
+
+Each absorbed donor grants an imprint from the donor's class: Guardian → Fortify, Archer → Pierce, Mage → Spellpower, Cleric → Mending, Rogue → Critical, Beast → Fury. Slot capacity is 1 initially, 2 from absorption level 5, and 3 from absorption level 12. If the keeper already holds that imprint, its rank increases up to 3; if all slots are occupied, a new imprint is not added. Absorption remains atomic and the donor is still consumed.
+
+Imprint effects by rank:
+- **Fortify**: −1 incoming damage per rank (subject to the 1-damage minimum).
+- **Pierce**: +1 primary attack damage per rank.
+- **Spellpower**: +2 Mage splash damage per rank.
+- **Mending**: +1 Cleric healing per rank.
+- **Critical**: +1 primary attack damage per rank on every third tick.
+- **Fury**: +1 primary attack damage per rank while the target has more than half of its maximum HP.
+
+Damage modifiers are evaluated in this order: class hook and trait/imprint flat bonuses, item bonus, Might Core multiplier, team synergy multiplier, then BossGate bonus. Incoming reductions from Guardian, Guarded and Fortify are combined and then damage is clamped to at least 1. Trait and imprint arrays are serialized in Unit; the legacy single-string imprint remains as a compatibility/display fallback.
 
 ## Tick order
 
@@ -74,8 +97,8 @@ Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `
 
 ## Test requirements
 
-Current Rust tests cover same-seed timelines, role-based unique formation slots, lane-first/front-row targeting, Guardian taunt override, Cleric healing, ally defeat/removal, survivor recovery, boss telegraphs with target/lane and old snapshots without positions. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
+Current Rust tests cover same-seed timelines, role-based unique formation slots, lane-first/front-row targeting, Guardian taunt override, Cleric healing, ally defeat/removal, survivor recovery, boss telegraphs with target/lane, deterministic trait rolls, trait and imprint effects, donor inheritance, ranked imprints, slot unlocks and v2 migration. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
 
 ## Known limitations
 
-This is a first combat foundation, not a balanced full game system. Formation positions are role-derived and cannot yet be edited by the player. It has no range/blocked-lane rules, active ability cooldown system, status effects, shields, resistance system, enemy skill families, multi-phase bosses or authored projectile animation. These remain in `.github/agent-backlog.json` and `docs/MAP.md`.
+This is a first combat foundation, not a balanced full game system. Formation positions are role-derived and cannot yet be edited by the player. It has no player-editable formation, range/blocked-lane rules, active ability cooldown system, status effects, shields, resistance system, enemy skill families, multi-phase bosses or authored projectile animation. These remain in `.github/agent-backlog.json` and `docs/MAP.md`.

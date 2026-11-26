@@ -28,6 +28,14 @@ if 'data-action="route-choice"' not in client or "choose_route" not in api:
 if "JourneyRouteRequired" not in api or "pending_route" not in client:
     raise SystemExit("route progression gate or browser state is missing")
 
+if "pub enum UnitTrait" not in domain or "pub enum UnitImprint" not in domain:
+    raise SystemExit("typed unit traits or imprints are missing")
+if "migrate_legacy_state" not in domain or "ruleset_version: 3" not in domain:
+    raise SystemExit("v3 unit build save migration is missing")
+if "unit.traits" not in client or "unit.imprints" not in client:
+    raise SystemExit("unit trait and imprint flow is missing")
+if "imprint_slot_capacity" not in domain or "imprint_rank_bonus" not in domain:
+    raise SystemExit("ranked imprint capacity or combat effects are missing")
 if "pub struct FormationPosition" not in domain or "fn select_target_index" not in domain:
     raise SystemExit("typed tactical formation or lane-aware target selector is missing")
 if domain.count("position: Some(unit.position)") < 2:

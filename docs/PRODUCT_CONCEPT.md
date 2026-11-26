@@ -174,3 +174,11 @@ The first tactical battlefield slice uses a typed 3×3 formation coordinate: row
 Target selection first respects Guardian taunt when the enemy attacks, then prefers the attacker's lane, the frontmost available target in that lane, remaining-health ratio and stable unit ID. Boss telegraphs are recorded before the corresponding strike and carry the selected target ID, name and lane. The report stores initial positions and HP, and the browser draws those exact positions and the warning trajectory during playback.
 
 This is a deterministic role-based formation, not yet a player-editable grid. Manual repositioning, range classes, blocked lanes, projectiles, and full enemy movement patterns remain future work.
+
+## Random unit traits and inherited imprints
+
+Every recruited companion receives one deterministic trait roll from four original traits: **Brutal** (+2 attack damage), **Swift** (+2 initiative), **Stout** (+3 persistent maximum health), or **Guarded** (−1 incoming damage, with the combat minimum still 1). Absorption can inherit a donor's distinct trait; a unit can hold up to three different traits.
+
+Donors also contribute a typed imprint based on their class: Guardian → Fortify, Archer → Pierce, Mage → Spellpower, Cleric → Mending, Rogue → Critical, Beast → Fury. An imprint slot starts with capacity one; absorption level 5 unlocks a second slot and level 12 unlocks a third. Repeating an imprint increases its rank up to three; a different imprint is only accepted when a slot is available.
+
+Imprints alter the authoritative Rust battle calculations: Fortify reduces incoming damage per rank, Pierce adds primary damage, Spellpower adds spell splash damage, Mending increases healing, Critical adds damage every third tick and Fury adds damage against targets above half health. The browser shows trait and imprint chips on each unit card, with their effect in the tooltip. Legacy display-only imprint strings are converted into typed slots by save migration.
