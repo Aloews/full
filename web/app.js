@@ -1,11 +1,77 @@
 'use strict';
 
 const $ = (id) => document.getElementById(id);
-const CLASS_META = {
-  guardian: ['🛡️', 'Guardian', 'Frontline'], archer: ['🏹', 'Archer', 'Ranged'],
-  mage: ['🔮', 'Mage', 'Arcane'], cleric: ['✨', 'Cleric', 'Support'],
-  rogue: ['🗡️', 'Rogue', 'Skirmisher'], beast: ['🐺', 'Beast', 'Bruiser'],
+const PIXEL_PALETTES = {
+  guardian: { ink: '#2B2638', main: '#5E9B58', light: '#9BC477', shadow: '#3F714C', skin: '#F5E9BD', accent: '#F3C969' },
+  archer: { ink: '#2B2638', main: '#5E9B58', light: '#9BC477', shadow: '#3F714C', skin: '#F5E9BD', accent: '#E87958' },
+  mage: { ink: '#2B2638', main: '#A66DA6', light: '#D5A9D0', shadow: '#754C7D', skin: '#F5E9BD', accent: '#72B9D2' },
+  cleric: { ink: '#2B2638', main: '#72B9D2', light: '#B7E0E2', shadow: '#4F8294', skin: '#F5E9BD', accent: '#F3C969' },
+  rogue: { ink: '#2B2638', main: '#754C7D', light: '#A66DA6', shadow: '#513854', skin: '#F5E9BD', accent: '#E87958' },
+  beast: { ink: '#2B2638', main: '#9A6545', light: '#D7A36A', shadow: '#67432F', skin: '#F5E9BD', accent: '#5E9B58' },
 };
+function pixelSpriteMarkup(className, label) {
+  const sprite = Object.prototype.hasOwnProperty.call(PIXEL_PALETTES, className) ? className : 'guardian';
+  return `<canvas class="pixel-unit" width="16" height="16" data-sprite="${sprite}" role="img" aria-label="${esc(label)}"></canvas>`;
+}
+function paintPixelSprites() {
+  document.querySelectorAll('canvas[data-sprite]').forEach((canvas) => {
+    const ctx = canvas.getContext('2d');
+    const palette = PIXEL_PALETTES[canvas.dataset.sprite];
+    if (!ctx || !palette) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, 16, 16);
+    const r = (x, y, w, h, color) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    };
+    const c = palette;
+    if (canvas.dataset.sprite === 'guardian') {
+      r(5, 1, 6, 2, c.ink); r(4, 3, 8, 4, c.ink); r(5, 3, 6, 3, c.main);
+      r(6, 4, 1, 1, c.skin); r(9, 4, 1, 1, c.skin); r(7, 5, 2, 1, c.shadow);
+      r(4, 7, 8, 5, c.ink); r(5, 8, 6, 3, c.main); r(6, 8, 2, 1, c.light);
+      r(2, 8, 3, 4, c.ink); r(3, 9, 1, 2, c.skin);
+      r(11, 7, 4, 6, c.ink); r(12, 8, 2, 4, c.accent); r(13, 9, 1, 2, c.light);
+      r(5, 12, 2, 3, c.ink); r(9, 12, 2, 3, c.ink); r(4, 14, 4, 1, c.shadow); r(8, 14, 4, 1, c.shadow);
+      r(5, 2, 6, 1, c.accent);
+    } else if (canvas.dataset.sprite === 'archer') {
+      r(5, 1, 7, 2, c.ink); r(4, 3, 8, 4, c.ink); r(5, 3, 6, 3, c.main);
+      r(5, 2, 7, 1, c.light); r(6, 4, 1, 1, c.skin); r(9, 4, 1, 1, c.skin);
+      r(4, 7, 8, 5, c.ink); r(5, 8, 6, 3, c.shadow); r(6, 8, 4, 1, c.main);
+      r(2, 6, 2, 7, c.ink); r(3, 7, 1, 5, c.accent);
+      r(12, 7, 1, 6, c.ink); r(13, 8, 1, 4, c.accent); r(14, 6, 1, 1, c.ink); r(14, 12, 1, 1, c.ink);
+      r(5, 12, 2, 3, c.ink); r(9, 12, 2, 3, c.ink); r(4, 14, 4, 1, c.shadow); r(8, 14, 4, 1, c.shadow);
+    } else if (canvas.dataset.sprite === 'mage') {
+      r(6, 0, 4, 2, c.ink); r(5, 2, 6, 2, c.ink); r(4, 4, 8, 3, c.ink);
+      r(6, 1, 4, 1, c.main); r(5, 3, 6, 1, c.light); r(5, 5, 6, 1, c.skin);
+      r(4, 7, 8, 6, c.ink); r(5, 8, 6, 4, c.main); r(6, 8, 3, 1, c.light); r(8, 10, 2, 2, c.shadow);
+      r(2, 8, 2, 4, c.ink); r(3, 9, 1, 2, c.main);
+      r(12, 5, 2, 2, c.ink); r(13, 4, 2, 2, c.accent); r(14, 5, 1, 1, c.light);
+      r(5, 13, 2, 2, c.ink); r(9, 13, 2, 2, c.ink); r(4, 14, 4, 1, c.shadow); r(8, 14, 4, 1, c.shadow);
+    } else if (canvas.dataset.sprite === 'cleric') {
+      r(6, 0, 4, 1, c.accent); r(5, 1, 6, 1, c.ink); r(4, 3, 8, 4, c.ink);
+      r(5, 3, 6, 3, c.skin); r(6, 4, 1, 1, c.ink); r(9, 4, 1, 1, c.ink);
+      r(4, 7, 8, 6, c.ink); r(5, 8, 6, 4, c.main); r(7, 8, 2, 3, c.light); r(7, 9, 2, 1, c.accent);
+      r(2, 7, 2, 6, c.ink); r(3, 8, 1, 4, c.accent);
+      r(12, 6, 2, 2, c.ink); r(13, 4, 1, 6, c.ink); r(12, 5, 3, 1, c.accent); r(13, 6, 1, 1, c.light);
+      r(5, 13, 2, 2, c.ink); r(9, 13, 2, 2, c.ink); r(4, 14, 4, 1, c.shadow); r(8, 14, 4, 1, c.shadow);
+    } else if (canvas.dataset.sprite === 'rogue') {
+      r(4, 2, 8, 2, c.ink); r(3, 4, 10, 4, c.ink); r(5, 4, 6, 3, c.main);
+      r(6, 5, 1, 1, c.skin); r(9, 5, 1, 1, c.skin); r(7, 6, 2, 1, c.shadow);
+      r(4, 8, 8, 5, c.ink); r(5, 9, 6, 3, c.shadow); r(6, 9, 4, 1, c.main);
+      r(2, 8, 3, 4, c.ink); r(3, 9, 2, 2, c.accent);
+      r(12, 5, 2, 7, c.ink); r(13, 4, 1, 3, c.light); r(13, 8, 1, 3, c.accent);
+      r(5, 13, 2, 2, c.ink); r(9, 13, 2, 2, c.ink); r(4, 14, 4, 1, c.shadow); r(8, 14, 4, 1, c.shadow);
+    } else if (canvas.dataset.sprite === 'beast') {
+      r(3, 2, 3, 4, c.ink); r(10, 2, 3, 4, c.ink); r(4, 3, 2, 2, c.accent); r(10, 3, 2, 2, c.accent);
+      r(4, 5, 8, 6, c.ink); r(5, 6, 6, 4, c.main); r(6, 7, 1, 1, c.skin); r(9, 7, 1, 1, c.skin);
+      r(7, 9, 3, 2, c.ink); r(8, 9, 1, 1, c.light);
+      r(2, 9, 3, 3, c.ink); r(3, 10, 2, 1, c.shadow);
+      r(11, 9, 3, 3, c.ink); r(12, 10, 2, 1, c.accent);
+      r(4, 11, 8, 3, c.ink); r(5, 12, 6, 1, c.shadow);
+      r(5, 13, 2, 2, c.ink); r(9, 13, 2, 2, c.ink); r(4, 14, 4, 1, c.shadow); r(8, 14, 4, 1, c.shadow);
+    }
+  });
+}
 const ITEM_META = {
   sharpening_stone: ['Sharpening Stone', 'Permanent army attack bonus'],
   vitality_charm: ['Vitality Charm', 'Reduce damage taken in a lost battle'],
@@ -110,7 +176,7 @@ function render() {
   $('reels').innerHTML = game.board.flatMap((row, r) => row.map((symbol, c) => {
     const meta = CLASS_META[symbol] || ['?', symbol, ''];
     const wins = game.last_spin?.wins?.some((win) => win.class === symbol && game.last_spin.board[r][c] === symbol);
-    return `<div class="reel-cell ${wins ? 'reel-win' : ''}"><span>${meta[0]}</span><small>${meta[1]}</small></div>`;
+    return `<div class="reel-cell ${wins ? 'reel-win' : ''}">${pixelSpriteMarkup(symbol, meta[1])}<small>${meta[1]}</small></div>`;
   })).join('');
   $('last-spin').textContent = game.last_spin
     ? `${game.last_spin.wins.length} winning line${game.last_spin.wins.length === 1 ? '' : 's'}${game.last_spin.jackpot ? ' · JACKPOT' : ''}`
@@ -127,6 +193,7 @@ function render() {
   renderCores();
   renderShop();
   renderStatus();
+  paintPixelSprites();
 }
 
 function renderUnit(unit) {
@@ -134,7 +201,7 @@ function renderUnit(unit) {
   const keeper = keepId === unit.id;
   const canAct = ['preparation', 'intermission'].includes(game.phase) && !busy;
   return `<article class="unit-card ${keeper ? 'is-keeper' : ''}">
-    <div class="unit-top"><span class="unit-symbol">${meta[0]}</span><span class="unit-type">${esc(meta[2])}</span><button class="lock-button" data-action="lock" data-id="${unit.id}" aria-label="${unit.locked ? 'Unlock' : 'Lock'} ${esc(meta[1])}" ${!canAct ? 'disabled' : ''}>${unit.locked ? '🔒' : '⌑'}</button></div>
+    <div class="unit-top"><span class="unit-symbol">${pixelSpriteMarkup(unit.class, meta[1])}</span><span class="unit-type">${esc(meta[2])}</span><button class="lock-button" data-action="lock" data-id="${unit.id}" aria-label="${unit.locked ? 'Unlock' : 'Lock'} ${esc(meta[1])}" ${!canAct ? 'disabled' : ''}>${unit.locked ? '🔒' : '⌑'}</button></div>
     <h3>${esc(unit.promotion || meta[1])}</h3><div class="unit-level">LV ${unit.level} · ABSORB ${unit.absorb_level}</div>
     <div class="unit-stats"><span>⚔ ${unit.attack}</span><span>♥ ${unit.health}</span></div>
     <div class="unit-imprint">${unit.imprint ? `✦ ${esc(unit.imprint)}` : 'No imprint'}</div>
