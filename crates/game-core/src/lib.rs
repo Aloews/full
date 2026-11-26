@@ -655,6 +655,8 @@ pub enum GameError {
     DonorLocked,
     #[error("promotion choice is not valid for this unit")]
     InvalidPromotion,
+    #[error("choose the pending promotion before absorbing again or advancing")]
+    PromotionChoiceRequired,
     #[error("core offer is not available or the selected index is invalid")]
     InvalidCoreChoice,
     #[error("choose an offered Core before starting the next wave")]
@@ -899,6 +901,9 @@ impl GameState {
         if self.units[donor_index].locked {
             return Err(GameError::DonorLocked);
         }
+        if self.units[target_index].pending_promotion {
+            return Err(GameError::PromotionChoiceRequired);
+        }
         let donor = self.units.remove(donor_index);
         let target_index = self
             .units
@@ -943,6 +948,12 @@ impl GameState {
         }
         if target.absorb_level == 5 || target.absorb_level == 12 {
             target.pending_promotion = true;
+            if let Some(options) = promotion_options_for(target) {
+                target.promotion_options = [
+                    options[0].label().to_string(),
+                    options[1].label().to_string(),
+                ];
+            }
         }
         Ok(())
     }
@@ -954,19 +965,16 @@ impl GameState {
             .iter_mut()
             .find(|u| u.id == unit_id)
             .ok_or(GameError::UnitNotFound)?;
-        if !unit.pending_promotion || !unit.class.promotions().contains(&choice) {
+        let eligible = promotion_options_for(unit).ok_or(GameError::InvalidPromotion)?;
+        let selected = PromotionNode::from_label(choice).ok_or(GameError::InvalidPromotion)?;
+        if !unit.pending_promotion || !eligible.contains(&selected) {
             return Err(GameError::InvalidPromotion);
         }
-        unit.promotion = Some(choice.to_string());
+
+        unit.promotion_path.push(selected);
+        unit.promotion = Some(selected.label().to_string());
         unit.pending_promotion = false;
-        if choice.contains("Warden") || choice.contains("Bulwark") || choice.contains("Templar") {
-            unit.health = unit.health.saturating_add(8);
-            if let Some(current) = unit.current_health.as_mut() {
-                *current = current.saturating_add(8).min(unit.health);
-            }
-        } else {
-            unit.attack = unit.attack.saturating_add(4);
-        }
+        apply_promotion_effect(unit, selected);
         Ok(())
     }
 
@@ -1747,6 +1755,9 @@ impl GameState {
     }
 
     pub fn next_wave(&mut self) -> Result<(), GameError> {
+        if self.units.iter().any(|unit| unit.pending_promotion) {
+            return Err(GameError::PromotionChoiceRequired);
+        }
         if self.phase != RunPhase::Intermission {
             return Err(GameError::WrongPhase);
         }
@@ -1875,6 +1886,122 @@ impl GameState {
         x ^= x << 17;
         self.rng_state = x;
         (x >> 16) as u32
+    }
+}
+
+
+fn add_unit_trait(unit: &mut Unit, kind: UnitTrait) {
+    if unit.traits.len() >= 3 || unit.traits.contains(&kind) {
+        return;
+    }
+    if kind == UnitTrait::Stout {
+        unit.health = unit.health.saturating_add(3);
+        if let Some(current) = unit.current_health.as_mut() {
+            *current = current.saturating_add(3).min(unit.health);
+        }
+    }
+    unit.traits.push(kind);
+}
+
+fn add_unit_imprint(unit: &mut Unit, kind: UnitImprint) {
+    if let Some(existing) = unit.imprints.iter_mut().find(|slot| slot.kind == kind) {
+        existing.rank = existing.rank.saturating_add(1).min(3);
+    } else if unit.imprints.len() < imprint_slot_capacity(unit.absorb_level) {
+        unit.imprints.push(UnitImprintSlot { kind, rank: 1 });
+    }
+}
+
+fn grant_promotion_health(unit: &mut Unit, amount: u32) {
+    unit.health = unit.health.saturating_add(amount);
+    if let Some(current) = unit.current_health.as_mut() {
+        *current = current.saturating_add(amount).min(unit.health);
+    }
+}
+
+fn apply_promotion_effect(unit: &mut Unit, node: PromotionNode) {
+    match node {
+        PromotionNode::Warden | PromotionNode::Bulwark | PromotionNode::Templar => {
+            grant_promotion_health(unit, 8);
+        }
+        PromotionNode::Crossbowman | PromotionNode::Pathfinder |
+        PromotionNode::Stormcaller | PromotionNode::Arcanist |
+        PromotionNode::Oracle | PromotionNode::Duelist |
+        PromotionNode::Trickster | PromotionNode::Ravager |
+        PromotionNode::DireBeast => {
+            unit.attack = unit.attack.saturating_add(4);
+        }
+        PromotionNode::Vanguard => unit.attack = unit.attack.saturating_add(6),
+        PromotionNode::Sentinel => grant_promotion_health(unit, 10),
+        PromotionNode::Aegis => {
+            grant_promotion_health(unit, 10);
+            add_unit_trait(unit, UnitTrait::Guarded);
+        }
+        PromotionNode::Stonewall => {
+            grant_promotion_health(unit, 12);
+            add_unit_imprint(unit, UnitImprint::Fortify);
+        }
+        PromotionNode::Deadeye => unit.attack = unit.attack.saturating_add(6),
+        PromotionNode::Ballista => {
+            unit.attack = unit.attack.saturating_add(4);
+            grant_promotion_health(unit, 4);
+        }
+        PromotionNode::Windrunner => add_unit_trait(unit, UnitTrait::Swift),
+        PromotionNode::Trailblazer => {
+            grant_promotion_health(unit, 5);
+            add_unit_imprint(unit, UnitImprint::Pierce);
+        }
+        PromotionNode::Tempest => unit.attack = unit.attack.saturating_add(7),
+        PromotionNode::Starcaller => {
+            unit.attack = unit.attack.saturating_add(3);
+            add_unit_imprint(unit, UnitImprint::Spellpower);
+        }
+        PromotionNode::Runesmith => add_unit_imprint(unit, UnitImprint::Spellpower),
+        PromotionNode::Spellweaver => {
+            unit.attack = unit.attack.saturating_add(4);
+            add_unit_imprint(unit, UnitImprint::Spellpower);
+        }
+        PromotionNode::Paladin => {
+            grant_promotion_health(unit, 8);
+            add_unit_trait(unit, UnitTrait::Guarded);
+        }
+        PromotionNode::Lifebinder => add_unit_imprint(unit, UnitImprint::Mending),
+        PromotionNode::Seer => {
+            add_unit_trait(unit, UnitTrait::Swift);
+            add_unit_imprint(unit, UnitImprint::Mending);
+        }
+        PromotionNode::Prophet => {
+            grant_promotion_health(unit, 5);
+            add_unit_imprint(unit, UnitImprint::Mending);
+        }
+        PromotionNode::Assassin => {
+            unit.attack = unit.attack.saturating_add(4);
+            add_unit_imprint(unit, UnitImprint::Critical);
+        }
+        PromotionNode::Shadowstep => {
+            grant_promotion_health(unit, 4);
+            add_unit_trait(unit, UnitTrait::Swift);
+        }
+        PromotionNode::Phantom => {
+            add_unit_trait(unit, UnitTrait::Swift);
+            add_unit_imprint(unit, UnitImprint::Critical);
+        }
+        PromotionNode::Saboteur => {
+            unit.attack = unit.attack.saturating_add(4);
+            add_unit_imprint(unit, UnitImprint::Pierce);
+        }
+        PromotionNode::Behemoth => grant_promotion_health(unit, 15),
+        PromotionNode::Packlord => {
+            grant_promotion_health(unit, 8);
+            add_unit_trait(unit, UnitTrait::Brutal);
+        }
+        PromotionNode::Stalker => {
+            add_unit_imprint(unit, UnitImprint::Critical);
+            add_unit_imprint(unit, UnitImprint::Pierce);
+        }
+        PromotionNode::Alpha => {
+            unit.attack = unit.attack.saturating_add(6);
+            add_unit_trait(unit, UnitTrait::Brutal);
+        }
     }
 }
 
