@@ -9,6 +9,66 @@ const PIXEL_PALETTES = {
   rogue: { ink: '#2B2638', main: '#754C7D', light: '#A66DA6', shadow: '#513854', skin: '#F5E9BD', accent: '#E87958' },
   beast: { ink: '#2B2638', main: '#9A6545', light: '#D7A36A', shadow: '#67432F', skin: '#F5E9BD', accent: '#5E9B58' },
 };
+
+function paintWorldScene() {
+  const canvas = $('world-scene');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.imageSmoothingEnabled = false;
+  const px = (x, y, w, h, color) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+  };
+  const colors = {
+    sky: '#72b9d2', dusk: '#4f8294', mountain: '#3d5b55', mountainLight: '#6f9870',
+    deep: '#243d38', tree: '#315b42', leaf: '#5e9b58', leafLight: '#9bc477',
+    trunk: '#805638', ground: '#456b43', grass: '#9bc477', stone: '#8a8b70',
+    stoneLight: '#d8d09d', shadow: '#2b2638', gold: '#f3c969', window: '#f6dfa0'
+  };
+  px(0, 0, 320, 64, colors.sky);
+  px(0, 0, 320, 18, colors.dusk);
+  // Distant stars and a blocky crescent moon.
+  [[18,10],[42,22],[77,9],[116,17],[160,8],[205,18],[248,10],[291,21]].forEach(([x,y],i) =>
+    px(x, y, i % 3 === 0 ? 2 : 1, i % 3 === 0 ? 2 : 1, colors.window));
+  px(270, 7, 8, 8, colors.gold); px(272, 5, 6, 2, colors.gold);
+  px(276, 9, 4, 5, colors.dusk);
+  // Stepped mountain silhouettes.
+  [[0,31,42,12],[30,25,48,18],[66,32,42,11],[190,29,44,14],[225,23,55,20],[278,31,42,12]].forEach(([x,y,w,h]) => {
+    px(x,y,w,h,colors.mountain);
+    px(x+8,y-4,w-16,4,colors.mountainLight);
+  });
+  // Woodland canopy layers.
+  [[8,35],[35,31],[60,37],[235,35],[260,29],[292,36]].forEach(([x,y],i) => {
+    px(x+5,y+10,5,13,colors.trunk);
+    px(x,y+3,15,12,colors.deep);
+    px(x+2,y,11,11,i%2?colors.leaf:colors.tree);
+    px(x+4,y+2,4,3,colors.leafLight);
+    px(x+12,y+7,3,4,colors.deep);
+  });
+  // Ground plane and stone path.
+  px(0,48,320,16,colors.ground);
+  for(let x=0;x<320;x+=16){px(x,48,8,2,colors.leaf);px(x+8,60,8,2,colors.deep);}
+  [[133,50],[149,53],[165,50],[181,53],[197,50]].forEach(([x,y])=>px(x,y,12,6,colors.stone));
+  [[138,51],[154,54],[170,51],[186,54],[202,51]].forEach(([x,y])=>px(x,y,5,2,colors.stoneLight));
+  // Original rune shrine, built from chunky 16-bit stone tiles.
+  px(103,27,34,25,colors.shadow); px(107,23,26,29,colors.stone);
+  px(111,19,18,8,colors.stoneLight); px(115,15,10,5,colors.gold);
+  px(112,29,16,23,colors.shadow); px(115,32,10,20,colors.deep);
+  px(118,35,4,7,colors.gold); px(119,37,2,3,colors.window);
+  px(99,49,42,5,colors.shadow); px(95,54,50,4,colors.stoneLight);
+  // Small party silhouettes approaching the shrine.
+  px(72,46,8,3,colors.shadow); px(74,39,5,7,colors.shadow);
+  px(75,40,3,4,colors.leaf); px(73,47,3,5,colors.shadow); px(78,47,3,5,colors.shadow);
+  px(218,47,7,3,colors.shadow); px(219,41,5,6,colors.shadow);
+  px(220,42,3,3,colors.gold); px(218,48,3,4,colors.shadow); px(222,48,3,4,colors.shadow);
+  // Grass tufts and firefly pixels.
+  [[15,56],[53,52],[87,58],[145,59],[230,55],[282,53],[308,58]].forEach(([x,y]) => {
+    px(x,y,2,4,colors.leafLight); px(x-2,y+2,2,2,colors.leaf);
+  });
+  [[91,29],[155,35],[208,27],[286,43]].forEach(([x,y])=>px(x,y,2,2,colors.gold));
+}
+
 function pixelSpriteMarkup(className, label) {
   const sprite = Object.prototype.hasOwnProperty.call(PIXEL_PALETTES, className) ? className : 'guardian';
   return `<canvas class="pixel-unit" width="16" height="16" data-sprite="${sprite}" role="img" aria-label="${esc(label)}"></canvas>`;
@@ -294,4 +354,5 @@ document.addEventListener('click', (event) => {
 
 $('spin').addEventListener('click', () => act('/spin'));
 $('new-run').addEventListener('click', startRun);
+paintWorldScene();
 restoreRun().catch((error) => notify(error.message));
