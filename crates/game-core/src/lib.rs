@@ -2323,7 +2323,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         let migrated_event = restored.pending_event.clone().unwrap();
-        assert_eq!(restored.ruleset_version, 2);
+        assert_eq!(restored.ruleset_version, 3);
         assert!(restored.pending_route.is_none());
         assert!(!restored.migrate_legacy_state());
         assert_eq!(restored.pending_event, Some(migrated_event));
@@ -2362,7 +2362,7 @@ mod tests {
         let mut game = run(703);
         game.ruleset_version = 1;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 2);
+        assert_eq!(game.ruleset_version, 3);
         assert!(game.pending_event.is_none());
         assert!(game.pending_route.is_none());
         assert!(!game.migrate_legacy_state());
@@ -2446,6 +2446,108 @@ mod tests {
         ];
         assert_eq!(select_target_index(&targets, &attacker, true), Some(1));
         assert_eq!(select_target_index(&targets, &attacker, false), Some(0));
+    }
+
+
+    #[test]
+    fn new_units_receive_one_deterministic_random_trait() {
+        let mut a = run(901);
+        let mut b = run(901);
+        assert_eq!(a.units[0].traits.len(), 1);
+        assert_eq!(a.units[0].traits, b.units[0].traits);
+        let a_unit = a.spawn_unit(UnitClass::Mage);
+        let b_unit = b.spawn_unit(UnitClass::Mage);
+        assert_eq!(a_unit.traits, b_unit.traits);
+        assert!(a_unit.imprints.is_empty());
+    }
+
+    #[test]
+    fn absorption_inherits_a_typed_imprint_and_unique_donor_trait() {
+        let mut game = run(902);
+        let target_id = game.units[0].id;
+        let donor = game.spawn_unit(UnitClass::Mage);
+        let donor_trait = donor.traits[0];
+        let donor_id = donor.id;
+        game.units.push(donor);
+
+        game.absorb(target_id, donor_id).unwrap();
+        let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
+        assert_eq!(target.imprints, vec![UnitImprintSlot { kind: UnitImprint::Spellpower, rank: 1 }]);
+        assert!(target.traits.contains(&donor_trait));
+        assert!(game.units.iter().all(|unit| unit.id != donor_id));
+    }
+
+    #[test]
+    fn imprint_duplicates_rank_up_and_new_slots_unlock_at_absorption_thresholds() {
+        let mut game = run(903);
+        let target_id = game.units[0].id;
+        game.units[0].absorb_level = 4;
+        game.units[0].imprints = vec![UnitImprintSlot { kind: UnitImprint::Fortify, rank: 1 }];
+
+        let duplicate = game.spawn_unit(UnitClass::Guardian);
+        let duplicate_id = duplicate.id;
+        game.units.push(duplicate);
+        game.absorb(target_id, duplicate_id).unwrap();
+        let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
+        assert_eq!(target.absorb_level, 5);
+        assert_eq!(target.imprints[0].rank, 2);
+        assert_eq!(imprint_slot_capacity(target.absorb_level), 2);
+
+        let new_donor = game.spawn_unit(UnitClass::Cleric);
+        let new_donor_id = new_donor.id;
+        game.units.push(new_donor);
+        game.absorb(target_id, new_donor_id).unwrap();
+        let target = game.units.iter().find(|unit| unit.id == target_id).unwrap();
+        assert!(target.imprints.iter().any(|slot| slot.kind == UnitImprint::Mending && slot.rank == 1));
+    }
+
+    #[test]
+    fn traits_and_imprints_apply_their_documented_battle_modifiers() {
+        let actor = Combatant {
+            id: 1,
+            name: "Trait bearer".to_string(),
+            class: Some(UnitClass::Mage),
+            position: FormationPosition { row: 2, lane: 1 },
+            traits: vec![UnitTrait::Brutal, UnitTrait::Swift],
+            imprints: vec![
+                UnitImprintSlot { kind: UnitImprint::Pierce, rank: 1 },
+                UnitImprintSlot { kind: UnitImprint::Critical, rank: 2 },
+                UnitImprintSlot { kind: UnitImprint::Fury, rank: 1 },
+            ],
+            attack: 5,
+            max_health: 10,
+            current_health: 10,
+            initiative: 12,
+            boss: false,
+        };
+        let healthy_target = combatant(2, None, 0, 1);
+        let wounded_target = Combatant { current_health: 4, ..healthy_target.clone() };
+
+        assert_eq!(trait_attack_bonus(&actor.traits), 2);
+        assert_eq!(trait_initiative_bonus(&actor.traits), 2);
+        assert_eq!(imprint_attack_bonus(&actor, &healthy_target, 3), 5);
+        assert_eq!(imprint_attack_bonus(&actor, &wounded_target, 3), 4);
+        assert_eq!(trait_damage_reduction(&[UnitTrait::Guarded]), 1);
+        assert_eq!(imprint_rank_bonus(&actor.imprints, UnitImprint::Critical, 1), 2);
+    }
+
+    #[test]
+    fn v2_saves_gain_traits_and_typed_imprints_without_rerolling_on_second_migration() {
+        let mut game = run(904);
+        game.units[0].traits.clear();
+        game.units[0].imprint = Some("Pierce".to_string());
+        game.units[0].imprints.clear();
+        game.ruleset_version = 2;
+
+        assert!(game.migrate_legacy_state());
+        assert_eq!(game.ruleset_version, 3);
+        assert_eq!(game.units[0].traits.len(), 1);
+        assert_eq!(game.units[0].imprints, vec![UnitImprintSlot { kind: UnitImprint::Pierce, rank: 1 }]);
+        let trait_after_migration = game.units[0].traits.clone();
+        let imprint_after_migration = game.units[0].imprints.clone();
+        assert!(!game.migrate_legacy_state());
+        assert_eq!(game.units[0].traits, trait_after_migration);
+        assert_eq!(game.units[0].imprints, imprint_after_migration);
     }
 
     #[test]
