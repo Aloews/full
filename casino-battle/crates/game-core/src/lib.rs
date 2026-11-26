@@ -975,6 +975,7 @@ mod tests {
         let mut wounded = support.clone();
         wounded.id = 2;
         wounded.role = Role::Striker;
+        wounded.sigil = Sigil::Ember;
         wounded.hp = 5;
         wounded.max_hp = 20;
 
