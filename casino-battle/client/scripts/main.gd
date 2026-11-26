@@ -217,7 +217,7 @@ func _start_battle_replay(events: Array) -> void:
         visual_max_hp[unit_id] = int(unit.get("max_hp", 1))
 
     var wave := int(run_snapshot.get("wave", 1))
-    var enemy_count := mini(1 + int(wave / 2), 5)
+    var enemy_count := mini(3 + int(maxi(0, wave - 1) / 2), 8)
     for enemy_index in range(enemy_count):
         var enemy_id := 9223372036854775807 - enemy_index
         var enemy_hp := 10 + wave * 3 + enemy_index * 2
@@ -297,7 +297,7 @@ func _unit_position(unit_id: int) -> Vector2:
         lane_counts[lane] = stack + 1
 
     var largest_enemy_id := 9223372036854775807
-    if unit_id >= largest_enemy_id - 4:
+    if unit_id >= largest_enemy_id - 7:
         var enemy_index := largest_enemy_id - unit_id
         return Vector2(850.0 + float(enemy_index / 3) * 62.0, 258.0 + float(enemy_index % 3) * 88.0)
 
