@@ -57,8 +57,8 @@ The map is the source of truth for autonomous coding agents. Update status only 
 ## Backend and production
 
 - [ ] Player identity and run ownership.
-- [ ] Cross-instance database locking, transaction-level state transitions and player run ownership.
-- [ ] Session security and request validation.
+- [x] Cross-instance mutation serialization through PostgreSQL row locks; in-memory mode explicitly remains single-process.
+- [ ] Player authentication, session ownership and authorization checks.
 - [ ] PostgreSQL schema versioning and migration release job.
 - [ ] Rate limits and abuse protection.
 - [ ] Structured logs, metrics and tracing.
