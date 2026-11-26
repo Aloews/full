@@ -59,6 +59,7 @@ The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Ver
 - [x] Originality, rendering grid, palette, silhouette, animation, biome, interface and asset QA rules documented.
 - [ ] Replace emoji glyphs and prototype interface styling with original production sprite sheets and pixel UI assets.
 - [ ] Add bitmap font and asset provenance/atlas manifest.
+- [x] Add a first procedural woodland-frontier Canvas scene with a rune shrine, stepped mountains, tree silhouettes and path tiles (composition prototype; not a production tilemap).
 - [ ] Create first full biome tile set and parallax/ambient layers.
 - [ ] Author animation strips for all common units, enemies and bosses.
 
@@ -71,6 +72,7 @@ The CI workflow includes Rust formatting, Clippy, Rust tests, release build, Ver
 - [x] Basic promotions, boss/Core reward and item cache.
 - [x] Run persistence adapter and exact-head CI on commit above.
 - [ ] Real-browser Playwright first-wave journey and reload/restore verification.
+- [ ] Verify the new woodland scene and six class sprites at desktop/mobile sizes; add visual regression coverage.
 
 ### S1 — Make battles real and readable
 - [x] Deterministic tick-based combat timeline with stable initiative and target selection.
