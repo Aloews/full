@@ -17,15 +17,17 @@
     {
       "id": "GAME-002",
       "title": "Extend the deterministic tactical auto-battle engine",
-      "objective": "Build on the existing deterministic 40-tick combat timeline. Add actual lane/formation positions, typed armour and shields, cooldown-based class abilities, status effects, boss targeting patterns and explicit turn-cap resolution. Keep every rule in pure Rust slotbound-core and expose causal events to the browser.",
+      "objective": "Extend the deterministic tactical auto-battle beyond the delivered role-based 3×3 formation and lane-aware targeting slice. Add player-editable positions, range/blocked-lane rules, typed armour and shields, cooldown-based class abilities, status effects, advanced boss targeting patterns and explicit turn-cap resolution. Keep every rule in pure Rust slotbound-core and expose causal events to the browser.",
       "acceptance": [
-        "Formation positions and legal lane targets are typed domain state with stable tie-breaks.",
+        "Player formation changes validate a unique legal row/lane slot and persist; swaps are atomic and deterministic.",
+        "Range and blocked-lane rules define legal targets; if no target is reachable, the unit follows a documented wait/reposition rule.",
         "Every ability has a documented cooldown/trigger condition and resource/state prerequisites.",
         "Armour, shields, status application and expiry resolve in one documented order.",
         "Boss telegraphs identify affected lane/targets before damage resolves.",
         "Tests cover victory, defeat, simultaneous elimination, empty army, turn cap, status stacking and deterministic replay."
       ],
-      "agent_role": "rust-gameplay-engineer"
+      "agent_role": "rust-gameplay-engineer",
+      "delivery_notes": "The initial role-based 3×3 formation slice is implemented on feat/slotbound-tactical-combat: deterministic positions, lane-aware/front-row targeting, Guardian taunt precedence and target-specific boss telegraphs are covered by Rust tests and rendered from battle snapshots. Remaining scope is player-editable positions, range/blocked-lane rules, cooldown abilities, armour/shields/status order, boss targeting patterns and turn-cap coverage."
     },
     {
       "id": "GAME-003",

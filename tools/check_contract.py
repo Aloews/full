@@ -5,6 +5,7 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 api = (ROOT / "crates/api/src/main.rs").read_text(encoding="utf-8")
 client = (ROOT / "web/app.js").read_text(encoding="utf-8")
+domain = (ROOT / "crates/game-core/src/lib.rs").read_text(encoding="utf-8")
 html = (ROOT / "web/index.html").read_text(encoding="utf-8")
 
 routes = set(re.findall(r'\.route\("(/api/[^\"]+)"', api))
@@ -27,6 +28,14 @@ if 'data-action="route-choice"' not in client or "choose_route" not in api:
 if "JourneyRouteRequired" not in api or "pending_route" not in client:
     raise SystemExit("route progression gate or browser state is missing")
 
+if "pub struct FormationPosition" not in domain or "fn select_target_index" not in domain:
+    raise SystemExit("typed tactical formation or lane-aware target selector is missing")
+if domain.count("position: Some(unit.position)") < 2:
+    raise SystemExit("battle report must include ally and enemy formation snapshots")
+if "unit.position?.row" not in client or "unit.position?.lane" not in client:
+    raise SystemExit("pixel battlefield does not render server-authored formation positions")
+if "target.position.lane + 1" not in domain or "boss_telegraph" not in client:
+    raise SystemExit("target-specific boss telegraph is not connected to the battlefield")
 if "function playBattleReplay(report)" not in client:
     raise SystemExit("battle replay renderer is missing")
 if 'data-action="journey-choice"' not in client or "resolve_event" not in api:

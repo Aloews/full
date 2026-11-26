@@ -166,3 +166,11 @@ The browser now displays encounter cards and choices, a pixel-art battlefield sn
 ## Branching route choice implementation
 
 After each resolved journey encounter, the expedition offers three deterministic route options. The available path types include a standard encounter, a sanctuary rest, a merchant crossing and an elite lair; on the approach to a fifth-wave boss, the route set includes the boss gate with rest and supply detours. Route selections are persisted, cannot be replayed, and gate progression to the next wave. Rest restores one heart and up to five health per surviving unit, merchants add 75 gold, and elite routes add an enemy, increase enemy stats and grant an additional victory reward. The browser presents the fork as connected pixel-styled route nodes. This is a per-wave branching fork, not yet a full connected multi-step world map with biome transitions.
+
+## Tactical formation and lane targeting implementation
+
+The first tactical battlefield slice uses a typed 3×3 formation coordinate: row 0 is the front, row 1 the middle and row 2 the back; lanes 0–2 are left, centre and right. Ally roles receive deterministic preferred slots (Guardian/Beast front, Rogue middle, Archer/Mage/Cleric back) with stable collision resolution. Enemy formations use a fixed role layout; bosses take the front-centre slot.
+
+Target selection first respects Guardian taunt when the enemy attacks, then prefers the attacker's lane, the frontmost available target in that lane, remaining-health ratio and stable unit ID. Boss telegraphs are recorded before the corresponding strike and carry the selected target ID, name and lane. The report stores initial positions and HP, and the browser draws those exact positions and the warning trajectory during playback.
+
+This is a deterministic role-based formation, not yet a player-editable grid. Manual repositioning, range classes, blocked lanes, projectiles, and full enemy movement patterns remain future work.

@@ -1,4 +1,4 @@
-# Combat Simulation Rules — Current Version 1
+# Combat Simulation Rules — Current Version 2
 
 ## Authority and determinism
 
@@ -8,7 +8,10 @@ The simulation is bounded to 40 ticks. It ends immediately when either side is e
 
 ## Participant construction
 
-- Every player unit becomes a combatant with persistent ID, class, attack, max health, current health and class initiative.
+- Every player unit becomes a combatant with persistent ID, class, attack, max health, current health, class initiative and a typed `FormationPosition { row, lane }`.
+- Rows are 0 (front), 1 (middle), 2 (back); lanes are 0 (left), 1 (centre), 2 (right).
+- Ally role defaults: Guardian front-centre, Beast front-left, Rogue middle-right, Archer back-left, Mage back-centre, Cleric back-right. Collisions resolve deterministically by scanning the remaining formation slots from the role's preferred position.
+- Enemy roles use a fixed deterministic lane layout; the boss starts front-centre.
 - `current_health = None` means full health; a numeric value is clamped to the legal interval and used as current HP.
 - Enemy count is `2 + min(floor((wave - 1) / 3), 3)`.
 - Each ordinary enemy has `8 + 2 × wave` max HP and `2 + floor(wave / 5)` attack.
@@ -30,9 +33,9 @@ Initiative: Rogue 10, Archer 9, Mage 8, Beast 7, Guardian 6, Cleric 5.
 
 ## Target selection
 
-- Allies attack the enemy with the lowest remaining-health percentage; equal ratios resolve by ascending enemy ID.
-- Enemies prefer a living Guardian. Within the same priority, choose the lowest remaining-health percentage, then ascending unit ID.
-- There is no lane or rear/front cell grid yet. Guardian priority is not a full formation system.
+- Allies prefer the closest lane, then the frontmost living enemy in that lane, then lowest remaining-health percentage and ascending enemy ID.
+- Enemies prefer a living Guardian first (taunt), then the closest lane, frontmost row, lowest remaining-health percentage and ascending unit ID.
+- Boss telegraphs are emitted immediately before the boss attack and include the actual target ID/name and target lane.
 
 ## Class combat hooks
 
@@ -63,7 +66,7 @@ Integer order: base attack plus class/item bonuses, then Might Core multiplier, 
 
 Surviving units retain current HP in `Unit.current_health`; defeated units are removed. A full-health survivor serialises as `None`, while a damaged survivor stores numeric HP. The camp restores 2 HP at the next wave, capped at max health. The API persists updated hearts, gold, Core offer and report in the run transaction.
 
-Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `UnitHealed`, `BossTelegraph` and `BattleEnded`. Each includes a tick, stable actor/target IDs, display labels, amount and remaining health. The UI shows the last eight events; the saved report retains the complete event list.
+Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `UnitHealed`, `BossTelegraph` and `BattleEnded`. Each includes a tick, stable actor/target IDs, display labels, amount and remaining health. Boss telegraphs point at the actual selected target and include its lane in the target label. `BattleReport` also snapshots initial positions and HP for both formations; position is optional when reading legacy reports. The UI shows the last eight events; the saved report retains the complete event list.
 
 ## Battle report estimates
 
@@ -71,8 +74,8 @@ Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `
 
 ## Test requirements
 
-Current Rust tests cover same-seed timelines, Guardian-first targeting, Cleric healing, ally defeat/removal, survivor recovery and boss telegraphs. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
+Current Rust tests cover same-seed timelines, role-based unique formation slots, lane-first/front-row targeting, Guardian taunt override, Cleric healing, ally defeat/removal, survivor recovery, boss telegraphs with target/lane and old snapshots without positions. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
 
 ## Known limitations
 
-This is a first combat foundation, not a balanced full game system. It has no authored lane grid, active ability cooldown system, status effects, shields, resistance system, enemy skill families, boss phase changes or live combat animation. These remain in `.github/agent-backlog.json` and `docs/MAP.md`.
+This is a first combat foundation, not a balanced full game system. Formation positions are role-derived and cannot yet be edited by the player. It has no range/blocked-lane rules, active ability cooldown system, status effects, shields, resistance system, enemy skill families, multi-phase bosses or authored projectile animation. These remain in `.github/agent-backlog.json` and `docs/MAP.md`.
