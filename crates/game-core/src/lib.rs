@@ -118,6 +118,19 @@ pub struct SpinReport {
     pub gold_awarded: u32,
 }
 
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FormationPosition {
+    pub row: u8,
+    pub lane: u8,
+}
+
+impl Default for FormationPosition {
+    fn default() -> Self {
+        Self { row: 0, lane: 1 }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CombatantSnapshot {
     pub id: u64,
@@ -126,6 +139,8 @@ pub struct CombatantSnapshot {
     pub max_health: u32,
     pub current_health: u32,
     pub boss: bool,
+    #[serde(default)]
+    pub position: FormationPosition,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -178,6 +193,7 @@ struct Combatant {
     id: u64,
     name: String,
     class: Option<UnitClass>,
+    position: FormationPosition,
     attack: u32,
     max_health: u32,
     current_health: u32,
@@ -677,6 +693,7 @@ impl GameState {
                 id: unit.id,
                 name: format!("{} #{}", unit.class.label(), unit.id),
                 class: Some(unit.class),
+                position: FormationPosition::default(),
                 attack: unit.attack,
                 max_health: unit.health.max(1),
                 current_health: unit
@@ -696,6 +713,8 @@ impl GameState {
             })
             .collect();
         let mut enemies = build_enemy_party(self.wave, boss, elite);
+        assign_formation_positions(&mut allies, true);
+        assign_formation_positions(&mut enemies, false);
         let ally_snapshots = allies
             .iter()
             .map(|unit| CombatantSnapshot {
@@ -705,6 +724,7 @@ impl GameState {
                 max_health: unit.max_health,
                 current_health: unit.current_health,
                 boss: unit.boss,
+                position: unit.position,
             })
             .collect::<Vec<_>>();
         let enemy_snapshots = enemies
@@ -738,16 +758,7 @@ impl GameState {
                     continue;
                 }
                 let actor = allies[actor_index].clone();
-                let target_index = enemies
-                    .iter()
-                    .enumerate()
-                    .min_by_key(|(_, enemy)| {
-                        (
-                            enemy.current_health.saturating_mul(100) / enemy.max_health.max(1),
-                            enemy.id,
-                        )
-                    })
-                    .map(|(index, _)| index)
+                let target_index = select_target_index(&enemies, &actor, false)
                     .expect("enemy list is checked as non-empty");
                 let target = enemies[target_index].clone();
                 let class_bonus = match actor.class {
@@ -797,16 +808,7 @@ impl GameState {
                 }
 
                 if actor.class == Some(UnitClass::Mage) && tick % 2 == 0 && !enemies.is_empty() {
-                    let splash_index = enemies
-                        .iter()
-                        .enumerate()
-                        .min_by_key(|(_, enemy)| {
-                            (
-                                enemy.current_health.saturating_mul(100) / enemy.max_health.max(1),
-                                enemy.id,
-                            )
-                        })
-                        .map(|(index, _)| index)
+                    let splash_index = select_target_index(&enemies, &actor, false)
                         .expect("enemy list is checked as non-empty");
                     let splash_target = enemies[splash_index].clone();
                     let splash_base_damage = 2u32.saturating_mul(core_percent) / 100;
@@ -892,22 +894,7 @@ impl GameState {
                         remaining_health: 0,
                     });
                 }
-                let target_index = allies
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, ally)| ally.current_health > 0)
-                    .min_by_key(|(_, ally)| {
-                        (
-                            if ally.class == Some(UnitClass::Guardian) {
-                                0u8
-                            } else {
-                                1u8
-                            },
-                            ally.current_health.saturating_mul(100) / ally.max_health.max(1),
-                            ally.id,
-                        )
-                    })
-                    .map(|(index, _)| index);
+                let target_index = select_target_index(&allies, &enemy, true);
                 let Some(target_index) = target_index else {
                     break;
                 };
@@ -1520,6 +1507,85 @@ fn apply_boss_gate_bonus(base_damage: u32, enabled: bool) -> u32 {
     base_damage.saturating_add(bonus.max(1))
 }
 
+
+fn assign_formation_positions(party: &mut [Combatant], allied: bool) {
+    let mut occupied = [[false; 3]; 3];
+    for (index, unit) in party.iter_mut().enumerate() {
+        let preferred = if allied {
+            match unit.class {
+                Some(UnitClass::Guardian) => FormationPosition { row: 0, lane: 1 },
+                Some(UnitClass::Beast) => FormationPosition { row: 0, lane: 0 },
+                Some(UnitClass::Rogue) => FormationPosition { row: 1, lane: 2 },
+                Some(UnitClass::Archer) => FormationPosition { row: 2, lane: 0 },
+                Some(UnitClass::Mage) => FormationPosition { row: 2, lane: 1 },
+                Some(UnitClass::Cleric) => FormationPosition { row: 2, lane: 2 },
+                None => FormationPosition { row: 1, lane: 1 },
+            }
+        } else if unit.boss {
+            FormationPosition { row: 0, lane: 1 }
+        } else {
+            let layout = [
+                FormationPosition { row: 0, lane: 1 },
+                FormationPosition { row: 0, lane: 0 },
+                FormationPosition { row: 2, lane: 2 },
+                FormationPosition { row: 0, lane: 2 },
+                FormationPosition { row: 1, lane: 0 },
+                FormationPosition { row: 2, lane: 1 },
+                FormationPosition { row: 1, lane: 2 },
+                FormationPosition { row: 2, lane: 0 },
+                FormationPosition { row: 1, lane: 1 },
+            ];
+            layout[index % layout.len()]
+        };
+
+        let mut selected = None;
+        for row_offset in 0..3u8 {
+            let row = (preferred.row + row_offset) % 3;
+            for lane_offset in 0..3u8 {
+                let lane = (preferred.lane + lane_offset) % 3;
+                if !occupied[usize::from(row)][usize::from(lane)] {
+                    selected = Some(FormationPosition { row, lane });
+                    break;
+                }
+            }
+            if selected.is_some() {
+                break;
+            }
+        }
+        let position = selected.unwrap_or(FormationPosition {
+            row: ((index / 3) % 3) as u8,
+            lane: (index % 3) as u8,
+        });
+        occupied[usize::from(position.row)][usize::from(position.lane)] = true;
+        unit.position = position;
+    }
+}
+
+fn select_target_index(
+    targets: &[Combatant],
+    attacker: &Combatant,
+    prioritize_guardian: bool,
+) -> Option<usize> {
+    targets
+        .iter()
+        .enumerate()
+        .filter(|(_, target)| target.current_health > 0)
+        .min_by_key(|(_, target)| {
+            (
+                if prioritize_guardian && target.class == Some(UnitClass::Guardian) {
+                    0u8
+                } else {
+                    1u8
+                },
+                attacker.position.lane.abs_diff(target.position.lane),
+                target.position.row,
+                target.current_health.saturating_mul(100) / target.max_health.max(1),
+                target.id,
+            )
+        })
+        .map(|(index, _)| index)
+}
+
 fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> {
     let extra = ((wave.saturating_sub(1) / 3).min(3)) as usize;
     let count = 2 + extra + if elite { 1 } else { 0 };
@@ -1557,6 +1623,7 @@ fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> 
                     names[index % names.len()].to_string()
                 },
                 class: None,
+                position: FormationPosition::default(),
                 attack,
                 max_health: base_health,
                 current_health: base_health,
