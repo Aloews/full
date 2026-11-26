@@ -227,7 +227,6 @@ pub fn item_prices() -> [u32; 3] {
     ]
 }
 
-
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum JourneyEventKind {
@@ -922,7 +921,6 @@ impl GameState {
         Ok(report)
     }
 
-
     fn generate_journey_event(&mut self) -> JourneyEvent {
         let kind = match self.random_u32() % 5 {
             0 => JourneyEventKind::LostCache,
@@ -932,11 +930,58 @@ impl GameState {
             _ => JourneyEventKind::BanditAmbush,
         };
         let (title, description, choices) = match kind {
-            JourneyEventKind::LostCache => ("A cache beneath the roots", "A moss-covered chest lies half-buried beside the old road. Something valuable remains inside.", vec![("Take the gold", "Gain 70 gold."), ("Drink the tonic", "Restore one heart, up to the run limit.")]),
-            JourneyEventKind::MoonwellShrine => ("The moonwell shrine", "Silver water circles a cracked stone altar. The shrine answers only one offering.", vec![("Offer 60 gold", "Restore up to 4 health to every surviving unit."), ("Take the blessing", "Every surviving unit gains 2 attack.")]),
-            JourneyEventKind::TravellingMerchant => ("A travelling merchant", "A lantern-lit cart blocks the narrow forest path. Its owner has one rare supply.", vec![("Buy a sharpening stone · 80 gold", "Gain a permanent battle attack item."), ("Trade stories", "Leave peacefully and gain 25 gold.")]),
-            JourneyEventKind::WoundedRanger => ("A wounded ranger", "A scout from the northern trail offers to join, if you can spare supplies.", vec![("Recruit · 50 gold", "Recruit a random class if your formation has room."), ("Share provisions", "Gain 35 gold from the ranger's recovered map.")]),
-            JourneyEventKind::BanditAmbush => ("Bandits on the old road", "Masked bandits demand payment. You can surrender your purse or fight through.", vec![("Pay the toll", "Lose 40 gold and avoid injury."), ("Stand your ground", "Gain 90 gold, but lose one heart.")]),
+            JourneyEventKind::LostCache => (
+                "A cache beneath the roots",
+                "A moss-covered chest lies half-buried beside the old road. Something valuable remains inside.",
+                vec![
+                    ("Take the gold", "Gain 70 gold."),
+                    ("Drink the tonic", "Restore one heart, up to the run limit."),
+                ],
+            ),
+            JourneyEventKind::MoonwellShrine => (
+                "The moonwell shrine",
+                "Silver water circles a cracked stone altar. The shrine answers only one offering.",
+                vec![
+                    (
+                        "Offer 60 gold",
+                        "Restore up to 4 health to every surviving unit.",
+                    ),
+                    ("Take the blessing", "Every surviving unit gains 2 attack."),
+                ],
+            ),
+            JourneyEventKind::TravellingMerchant => (
+                "A travelling merchant",
+                "A lantern-lit cart blocks the narrow forest path. Its owner has one rare supply.",
+                vec![
+                    (
+                        "Buy a sharpening stone · 80 gold",
+                        "Gain a permanent battle attack item.",
+                    ),
+                    ("Trade stories", "Leave peacefully and gain 25 gold."),
+                ],
+            ),
+            JourneyEventKind::WoundedRanger => (
+                "A wounded ranger",
+                "A scout from the northern trail offers to join, if you can spare supplies.",
+                vec![
+                    (
+                        "Recruit · 50 gold",
+                        "Recruit a random class if your formation has room.",
+                    ),
+                    (
+                        "Share provisions",
+                        "Gain 35 gold from the ranger's recovered map.",
+                    ),
+                ],
+            ),
+            JourneyEventKind::BanditAmbush => (
+                "Bandits on the old road",
+                "Masked bandits demand payment. You can surrender your purse or fight through.",
+                vec![
+                    ("Pay the toll", "Lose 40 gold and avoid injury."),
+                    ("Stand your ground", "Gain 90 gold, but lose one heart."),
+                ],
+            ),
         };
         JourneyEvent {
             id: format!("wave-{}-event", self.wave),
@@ -944,9 +989,13 @@ impl GameState {
             kind,
             title: title.to_string(),
             description: description.to_string(),
-            choices: choices.into_iter().map(|(label, description)| {
-                JourneyChoice { label: label.to_string(), description: description.to_string() }
-            }).collect(),
+            choices: choices
+                .into_iter()
+                .map(|(label, description)| JourneyChoice {
+                    label: label.to_string(),
+                    description: description.to_string(),
+                })
+                .collect(),
         }
     }
 
@@ -954,7 +1003,10 @@ impl GameState {
         if self.phase != RunPhase::Intermission {
             return Err(GameError::WrongPhase);
         }
-        let event = self.pending_event.clone().ok_or(GameError::NoJourneyEvent)?;
+        let event = self
+            .pending_event
+            .clone()
+            .ok_or(GameError::NoJourneyEvent)?;
         if choice_index >= event.choices.len() {
             return Err(GameError::InvalidJourneyChoice);
         }
@@ -970,21 +1022,34 @@ impl GameState {
             }
             JourneyEventKind::MoonwellShrine => {
                 if choice_index == 0 {
-                    if self.gold < 60 { return Err(GameError::NotEnoughGold); }
+                    if self.gold < 60 {
+                        return Err(GameError::NotEnoughGold);
+                    }
                     self.gold -= 60;
                     for unit in &mut self.units {
-                        unit.current_health = Some(unit.current_health.unwrap_or(unit.health).saturating_add(4).min(unit.health));
-                        if unit.current_health == Some(unit.health) { unit.current_health = None; }
+                        unit.current_health = Some(
+                            unit.current_health
+                                .unwrap_or(unit.health)
+                                .saturating_add(4)
+                                .min(unit.health),
+                        );
+                        if unit.current_health == Some(unit.health) {
+                            unit.current_health = None;
+                        }
                     }
                     "The moonwell restored up to 4 health to every survivor.".to_string()
                 } else {
-                    for unit in &mut self.units { unit.attack = unit.attack.saturating_add(2); }
+                    for unit in &mut self.units {
+                        unit.attack = unit.attack.saturating_add(2);
+                    }
                     "The moonwell blessed the army: +2 attack to every survivor.".to_string()
                 }
             }
             JourneyEventKind::TravellingMerchant => {
                 if choice_index == 0 {
-                    if self.gold < 80 { return Err(GameError::NotEnoughGold); }
+                    if self.gold < 80 {
+                        return Err(GameError::NotEnoughGold);
+                    }
                     self.gold -= 80;
                     self.items.push(ItemKind::SharpeningStone);
                     "Purchased a sharpening stone.".to_string()
@@ -995,8 +1060,12 @@ impl GameState {
             }
             JourneyEventKind::WoundedRanger => {
                 if choice_index == 0 {
-                    if self.gold < 50 { return Err(GameError::NotEnoughGold); }
-                    if self.units.len() >= self.unit_limit { return Err(GameError::UnitCapacityReached); }
+                    if self.gold < 50 {
+                        return Err(GameError::NotEnoughGold);
+                    }
+                    if self.units.len() >= self.unit_limit {
+                        return Err(GameError::UnitCapacityReached);
+                    }
                     self.gold -= 50;
                     let class = self.random_class();
                     let recruit = self.spawn_unit(class);
@@ -1009,13 +1078,17 @@ impl GameState {
             }
             JourneyEventKind::BanditAmbush => {
                 if choice_index == 0 {
-                    if self.gold < 40 { return Err(GameError::NotEnoughGold); }
+                    if self.gold < 40 {
+                        return Err(GameError::NotEnoughGold);
+                    }
                     self.gold -= 40;
                     "Paid the toll. The army escaped without injury.".to_string()
                 } else {
                     self.gold = self.gold.saturating_add(90);
                     self.hearts = self.hearts.saturating_sub(1);
-                    if self.hearts == 0 { self.phase = RunPhase::Lost; }
+                    if self.hearts == 0 {
+                        self.phase = RunPhase::Lost;
+                    }
                     "The bandits fled. Recovered 90 gold, but lost one heart.".to_string()
                 }
             }
@@ -1521,7 +1594,6 @@ mod tests {
         assert_eq!(game.units[0].current_health, Some(7));
     }
 
-
     #[test]
     fn journey_event_is_seeded_and_reproducible() {
         let mut a = run(411);
@@ -1549,9 +1621,15 @@ mod tests {
         let mut game = run(413);
         game.battle().unwrap();
         if game.pending_event.is_some() {
-            assert_eq!(game.resolve_journey_event(99), Err(GameError::InvalidJourneyChoice));
+            assert_eq!(
+                game.resolve_journey_event(99),
+                Err(GameError::InvalidJourneyChoice)
+            );
             game.resolve_journey_event(0).unwrap();
-            assert_eq!(game.resolve_journey_event(0), Err(GameError::NoJourneyEvent));
+            assert_eq!(
+                game.resolve_journey_event(0),
+                Err(GameError::NoJourneyEvent)
+            );
             assert_eq!(game.event_history.len(), 1);
         }
     }

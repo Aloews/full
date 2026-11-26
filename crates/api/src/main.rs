@@ -137,7 +137,9 @@ struct ItemRequest {
     item: ItemKind,
 }
 #[derive(Deserialize)]
-struct JourneyChoiceRequest { index: usize }
+struct JourneyChoiceRequest {
+    index: usize,
+}
 #[derive(Deserialize)]
 struct UnitRequest {
     unit_id: u64,
