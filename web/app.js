@@ -394,7 +394,7 @@ function renderBattle(lost) {
     playBattleReplay(report);
     const blocked = Boolean(game.core_offer || event);
     const buttonLabel = game.core_offer ? 'CHOOSE A CORE FIRST' : event ? 'RESOLVE JOURNEY EVENT' : 'PREPARE NEXT WAVE';
-    $('battle-actions').innerHTML = `<button class="button button-quiet" data-action="replay-battle">REPLAY BATTLE</button><button class="button button-primary" id="next-wave" ${blocked ? 'disabled' : ''}>${buttonLabel} <span>↗</span></button>`;
+    $('battle-actions').innerHTML = `<button class="button button-quiet" data-action="replay-battle">REPLAY BATTLE</button><button class="button button-quiet" data-action="skip-replay">SKIP</button><button class="button button-primary" id="next-wave" ${blocked ? 'disabled' : ''}>${buttonLabel} <span>↗</span></button>`;
     $('next-wave').addEventListener('click', () => act('/next-wave'));
     return;
   }
@@ -450,6 +450,7 @@ document.addEventListener('click', (event) => {
   if (action === 'core') act('/core', { index: Number(button.dataset.index) });
   if (action === 'journey-choice') act('/event', { index: Number(button.dataset.index) });
   if (action === 'replay-battle' && game.last_battle) playBattleReplay(game.last_battle);
+  if (action === 'skip-replay' && game.last_battle) { battleReplayToken += 1; paintBattlefield(game.last_battle); }
   if (action === 'buy') act('/item', { item: button.dataset.item });
 });
 
