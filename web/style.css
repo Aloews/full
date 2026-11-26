@@ -522,3 +522,37 @@ button:focus-visible, a:focus-visible {
   .combat-event { grid-template-columns: 25px minmax(0, auto) 1fr; }
   .combat-event > b { grid-column: 2 / -1; }
 }
+
+.world-scene {
+  position: relative;
+  margin: 0 0 18px;
+  overflow: hidden;
+  border: 3px solid #2b2638;
+  background: #243d38;
+  box-shadow: 4px 4px 0 #172823, inset 0 0 0 2px #f5e9bd;
+}
+.world-scene canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 190px;
+  image-rendering: pixelated;
+}
+.scene-caption {
+  position: absolute;
+  right: 9px;
+  bottom: 7px;
+  padding: 4px 7px;
+  color: #fff6d8;
+  background: #192b29e8;
+  border: 1px solid #a6bf7d;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-shadow: 1px 1px #2b2638;
+}
+.scene-caption span { color: #f3c969; padding: 0 4px; }
+@media (max-width: 580px) {
+  .world-scene { margin-bottom: 12px; }
+  .scene-caption { font-size: 7px; }
+}
