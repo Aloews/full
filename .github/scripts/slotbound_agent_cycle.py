@@ -303,6 +303,8 @@ def main() -> int:
         command(["gh", "workflow", "run", "slotbound-ci.yml", "--repo", repo, "--ref", BRANCH])
     else:
         command(["gh", "pr", "create", "--base", "main", "--head", BRANCH, "--title", title, "--body", body])
+        # GITHUB_TOKEN pushes do not start a new workflow run; dispatch CI explicitly.
+        command(["gh", "workflow", "run", "slotbound-ci.yml", "--repo", repo, "--ref", BRANCH])
     print(f"Created/updated {task['id']} candidate with verified local checks. Paths: {paths}")
     return 0
 
