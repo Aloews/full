@@ -537,7 +537,7 @@ func _draw_battlefield(size: Vector2) -> void:
         )
 
     var wave := int(run_snapshot.get("wave", 1))
-    var enemy_count := mini(1 + int(wave / 2), 5)
+    var enemy_count := mini(3 + int(maxi(0, wave - 1) / 2), 8)
     for enemy_index in range(enemy_count):
         var enemy_id := 9223372036854775807 - enemy_index
         var enemy_position := _unit_position(enemy_id)
