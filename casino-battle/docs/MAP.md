@@ -11,7 +11,8 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [x] Art direction locked to cozy retro 16-bit pixel art: Slotbound battle readability + Zelda world charm + Mario-like character clarity.
 - [x] Casino logic represented as sigils / probability / combinations, not a casino setting.
 - [x] Flat side-on 2D battlefield layout selected for the first prototype.
-- [x] 640×360 internal canvas with 2× nearest-neighbour output scaling specified and implemented.
+- [x] 640×360 internal canvas with 2× nearest-neighbour viewport scaling specified and implemented.
+- [x] Integer stretch mode, fixed aspect and a 640×360 minimum window guard configured.
 - [x] Pixel snapping and non-antialiased pixel-cluster contours specified and implemented.
 - [ ] Original character bible and visual asset library.
 - [ ] Final UI style guide, typography and icon set.
