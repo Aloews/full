@@ -154,7 +154,7 @@ impl ApiError {
             GameError::NotEnoughEssence | GameError::RunOver | GameError::InvalidMerge => {
                 StatusCode::CONFLICT
             }
-            GameError::EmptyParty => StatusCode::UNPROCESSABLE_ENTITY,
+            GameError::EmptyParty | GameError::InvalidLane => StatusCode::UNPROCESSABLE_ENTITY,
             GameError::UnitNotFound => StatusCode::NOT_FOUND,
         };
         Self::new(status, "invalid_game_action")
@@ -253,6 +253,17 @@ async fn battle(
     Ok(Json(report))
 }
 
+async fn set_formation(
+    State(state): State<AppState>,
+    Path(run_id): Path<Uuid>,
+    Json(request): Json<FormationRequest>,
+) -> Result<Json<RunSnapshot>, ApiError> {
+    let (run, ()) = state
+        .transition(run_id, |run| run.set_lane(request.unit_id, request.lane))
+        .await?;
+    Ok(Json(RunSnapshot::from(&run)))
+}
+
 async fn merge(
     State(state): State<AppState>,
     Path(run_id): Path<Uuid>,
@@ -307,6 +318,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/runs/:run_id/draw", post(draw))
         .route("/api/v1/runs/:run_id/battle", post(battle))
         .route("/api/v1/runs/:run_id/merge", post(merge))
+        .route("/api/v1/runs/:run_id/formation", post(set_formation))
         .with_state(state)
         .layer(cors)
         .layer(TraceLayer::new_for_http());
