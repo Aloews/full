@@ -65,7 +65,9 @@ impl ApiError {
             | GameError::NudgeSpent
             | GameError::CoreChoiceRequired
             | GameError::JourneyEventRequired
-            | GameError::NoJourneyEvent => StatusCode::CONFLICT,
+            | GameError::NoJourneyEvent
+            | GameError::JourneyRouteRequired
+            | GameError::NoJourneyRoute => StatusCode::CONFLICT,
             GameError::NotEnoughGold | GameError::UnitCapacityReached | GameError::InvalidNudge => {
                 StatusCode::UNPROCESSABLE_ENTITY
             }
@@ -90,6 +92,9 @@ impl ApiError {
             GameError::JourneyEventRequired => "journey_event_required",
             GameError::NoJourneyEvent => "no_journey_event",
             GameError::InvalidJourneyChoice => "invalid_journey_choice",
+            GameError::JourneyRouteRequired => "journey_route_required",
+            GameError::NoJourneyRoute => "no_journey_route",
+            GameError::InvalidRouteChoice => "invalid_route_choice",
             GameError::InvalidItem => "invalid_item",
         };
         Self {
@@ -226,6 +231,7 @@ fn app_with_storage(data_dir: PathBuf, pool: Option<PgPool>) -> Router {
         .route("/api/runs/{run_id}/lock", post(toggle_lock))
         .route("/api/runs/{run_id}/battle", post(battle))
         .route("/api/runs/{run_id}/event", post(resolve_event))
+        .route("/api/runs/{run_id}/route", post(choose_route))
         .route("/api/runs/{run_id}/next-wave", post(next_wave))
         .route("/api/runs/{run_id}/core", post(choose_core))
         .route("/api/runs/{run_id}/item", post(buy_item))
@@ -451,6 +457,14 @@ async fn resolve_event(
     Json(body): Json<JourneyChoiceRequest>,
 ) -> Result<Json<GameState>, ApiError> {
     mutate_run(state, run_id, |game| game.resolve_journey_event(body.index)).await
+}
+
+async fn choose_route(
+    State(state): State<AppState>,
+    Path(run_id): Path<String>,
+    Json(body): Json<JourneyChoiceRequest>,
+) -> Result<Json<GameState>, ApiError> {
+    mutate_run(state, run_id, |game| game.choose_route(body.index)).await
 }
 
 async fn next_wave(
