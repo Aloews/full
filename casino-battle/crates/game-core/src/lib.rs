@@ -502,8 +502,7 @@ impl RunState {
                 if let Some(target_index) = heal_target {
                     let sigil = attackers[attacker_index].sigil;
                     let synergy_bonus = Self::synergy_level(attackers, sigil) as u32;
-                    let heal_amount =
-                        3 + u32::from(attackers[attacker_index].rank) + synergy_bonus;
+                    let heal_amount = 3 + u32::from(attackers[attacker_index].rank) + synergy_bonus;
                     let target = &mut attackers[target_index];
                     let healed = (target.max_hp - target.hp).min(heal_amount as i32);
                     target.hp += healed;
