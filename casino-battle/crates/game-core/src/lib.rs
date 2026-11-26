@@ -46,6 +46,7 @@ pub enum Role {
 #[serde(rename_all = "snake_case")]
 pub enum RunPhase {
     Preparation,
+    RelicChoice,
     RunOver,
 }
 
@@ -54,6 +55,26 @@ pub enum RunPhase {
 pub enum SynergyTier {
     Budding,
     Flourishing,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Relic {
+    HoneyBell,
+    CloverMantle,
+    ThornBadge,
+    SwiftFeather,
+    TidesongThread,
+}
+
+impl Relic {
+    const ALL: [Self; 5] = [
+        Self::HoneyBell,
+        Self::CloverMantle,
+        Self::ThornBadge,
+        Self::SwiftFeather,
+        Self::TidesongThread,
+    ];
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -74,6 +95,7 @@ pub struct Unit {
     pub max_hp: i32,
     pub attack: i32,
     pub armor: i32,
+    pub support_heal_bonus: i32,
     pub attack_cooldown: u32,
     pub cooldown_left: u32,
     pub rank: u8,
@@ -96,6 +118,10 @@ pub struct RunState {
     next_unit_id: u64,
     pub board: [[Sigil; BOARD_SIZE]; BOARD_SIZE],
     pub party: Vec<Unit>,
+    #[serde(default)]
+    pub relics: Vec<Relic>,
+    #[serde(default)]
+    pub pending_relics: Vec<Relic>,
     pub total_draws: u32,
     pub battle_wins: u32,
 }
@@ -135,6 +161,7 @@ pub struct BattleReport {
     pub surviving_enemies: usize,
     pub hearts_left: u8,
     pub essence_reward: u32,
+    pub relic_choices: Vec<Relic>,
     pub events: Vec<BattleEvent>,
 }
 
@@ -152,6 +179,12 @@ pub enum GameError {
     InvalidMerge,
     #[error("lane must be between 0 and 2")]
     InvalidLane,
+    #[error("a relic choice must be resolved before continuing")]
+    RewardPending,
+    #[error("there is no pending relic choice")]
+    NoRelicChoice,
+    #[error("the selected relic is not one of the offered choices")]
+    InvalidRelicChoice,
 }
 
 impl RunState {
@@ -166,12 +199,39 @@ impl RunState {
             next_unit_id: 1,
             board: [[Sigil::Leaf; BOARD_SIZE]; BOARD_SIZE],
             party: Vec::new(),
+            relics: Vec::new(),
+            pending_relics: Vec::new(),
             total_draws: 0,
             battle_wins: 0,
         };
         let starter = state.make_unit(Sigil::Leaf, 1);
         state.party.push(starter);
         state
+    }
+
+    pub fn choose_relic(&mut self, relic: Relic) -> Result<(), GameError> {
+        if self.phase != RunPhase::RelicChoice {
+            return Err(GameError::NoRelicChoice);
+        }
+        if !self.pending_relics.contains(&relic) {
+            return Err(GameError::InvalidRelicChoice);
+        }
+
+        let choice_index = self
+            .pending_relics
+            .iter()
+            .position(|choice| *choice == relic)
+            .ok_or(GameError::InvalidRelicChoice)?;
+        self.pending_relics.remove(choice_index);
+        self.relics.push(relic);
+
+        for unit in &mut self.party {
+            Self::apply_relic_to_unit(unit, relic);
+        }
+
+        self.pending_relics.clear();
+        self.phase = RunPhase::Preparation;
+        Ok(())
     }
 
     pub fn set_lane(&mut self, unit_id: u64, lane: u8) -> Result<(), GameError> {
@@ -316,6 +376,7 @@ impl RunState {
         let surviving_enemies = enemies.iter().filter(|unit| unit.hp > 0).count();
         let victory = surviving_enemies == 0 && surviving_allies > 0;
         let essence_reward = if victory { 2 + self.wave / 3 } else { 0 };
+        let mut relic_choices = Vec::new();
 
         if victory {
             self.battle_wins += 1;
@@ -324,6 +385,13 @@ impl RunState {
             for unit in &mut self.party {
                 if unit.hp > 0 {
                     unit.hp = (unit.hp + 2).min(unit.max_hp);
+                }
+            }
+            if self.battle_wins % 3 == 0 {
+                relic_choices = self.generate_relic_choices();
+                if !relic_choices.is_empty() {
+                    self.pending_relics = relic_choices.clone();
+                    self.phase = RunPhase::RelicChoice;
                 }
             }
         } else {
@@ -346,15 +414,47 @@ impl RunState {
             surviving_enemies,
             hearts_left: self.hearts,
             essence_reward,
+            relic_choices,
             events,
         })
     }
 
     fn ensure_preparation(&self) -> Result<(), GameError> {
-        if self.phase == RunPhase::RunOver {
-            Err(GameError::RunOver)
-        } else {
-            Ok(())
+        match self.phase {
+            RunPhase::Preparation => Ok(()),
+            RunPhase::RelicChoice => Err(GameError::RewardPending),
+            RunPhase::RunOver => Err(GameError::RunOver),
+        }
+    }
+
+    fn generate_relic_choices(&mut self) -> Vec<Relic> {
+        let mut available: Vec<Relic> = Relic::ALL
+            .iter()
+            .copied()
+            .filter(|relic| !self.relics.contains(relic))
+            .collect();
+
+        let choice_count = available.len().min(3);
+        for index in 0..choice_count {
+            let swap_index = index + self.random_index(available.len() - index);
+            available.swap(index, swap_index);
+        }
+        available.truncate(choice_count);
+        available
+    }
+
+    fn apply_relic_to_unit(unit: &mut Unit, relic: Relic) {
+        match relic {
+            Relic::HoneyBell => unit.attack += 1,
+            Relic::CloverMantle => {
+                unit.max_hp += 4;
+                unit.hp += 4;
+            }
+            Relic::ThornBadge => unit.armor += 1,
+            Relic::SwiftFeather => {
+                unit.attack_cooldown = unit.attack_cooldown.saturating_sub(1).max(1);
+            }
+            Relic::TidesongThread => unit.support_heal_bonus += 2,
         }
     }
 
@@ -437,10 +537,14 @@ impl RunState {
             max_hp: hp + multiplier * 5,
             attack: attack + multiplier * 2,
             armor: armor + multiplier,
+            support_heal_bonus: 0,
             attack_cooldown: cooldown.max(1),
             cooldown_left: 0,
             rank,
         };
+        for relic in self.relics.iter().copied() {
+            Self::apply_relic_to_unit(&mut unit, relic);
+        }
         self.next_unit_id += 1;
         unit
     }
@@ -451,9 +555,18 @@ impl RunState {
             .map(|index| {
                 let sigil = Sigil::from_index(self.random_index(Sigil::ALL.len()));
                 let base_hp = 16 + self.wave as i32 * 4 + index as i32 * 3;
-                let unit = Unit {
+                let is_boss = self.wave % 3 == 0 && index == 0;
+                let max_hp = if is_boss { base_hp * 3 } else { base_hp };
+                let base_attack = 4 + self.wave as i32 * 2 + index as i32 / 2;
+                let boss_armor = if is_boss { 2 } else { 0 };
+
+                Unit {
                     id: i64::MAX as u64 - index as u64,
-                    name: format!("Gloomling {}", index + 1),
+                    name: if is_boss {
+                        "Mosswood Guardian".to_owned()
+                    } else {
+                        format!("Gloomling {}", index + 1)
+                    },
                     sigil,
                     role: match sigil {
                         Sigil::Leaf | Sigil::Stone => Role::Guardian,
@@ -462,15 +575,15 @@ impl RunState {
                         Sigil::Moon => Role::Mystic,
                     },
                     lane: (index % 3) as u8,
-                    hp: base_hp,
-                    max_hp: base_hp,
-                    attack: 4 + self.wave as i32 * 2 + index as i32 / 2,
-                    armor: (self.wave / 5) as i32,
+                    hp: max_hp,
+                    max_hp,
+                    attack: if is_boss { base_attack + 2 } else { base_attack },
+                    armor: (self.wave / 5) as i32 + boss_armor,
+                    support_heal_bonus: 0,
                     attack_cooldown: 3,
                     cooldown_left: 0,
-                    rank: 1,
-                };
-                unit
+                    rank: if is_boss { 3 } else { 1 },
+                }
             })
             .collect()
     }
@@ -519,7 +632,10 @@ impl RunState {
                 if let Some(target_index) = heal_target {
                     let sigil = attackers[attacker_index].sigil;
                     let synergy_bonus = Self::synergy_level(attackers, sigil) as u32;
-                    let heal_amount = 3 + u32::from(attackers[attacker_index].rank) + synergy_bonus;
+                    let heal_amount = 3
+                        + u32::from(attackers[attacker_index].rank)
+                        + synergy_bonus
+                        + attackers[attacker_index].support_heal_bonus as u32;
                     let target = &mut attackers[target_index];
                     let healed = (target.max_hp - target.hp).min(heal_amount as i32);
                     target.hp += healed;
@@ -883,6 +999,96 @@ mod tests {
     }
 
     #[test]
+    fn every_third_boss_victory_offers_three_unique_relics() {
+        let mut run = RunState::new(700);
+        run.wave = 3;
+        run.battle_wins = 2;
+        for unit in &mut run.party {
+            unit.hp = 10_000;
+            unit.max_hp = 10_000;
+            unit.attack = 10_000;
+            unit.armor = 10_000;
+            unit.attack_cooldown = 1;
+            unit.cooldown_left = 0;
+        }
+
+        let report = run.resolve_auto_battle().unwrap();
+
+        assert!(report.victory);
+        assert_eq!(report.relic_choices.len(), 3);
+        assert_eq!(run.phase, RunPhase::RelicChoice);
+        assert_eq!(run.pending_relics, report.relic_choices);
+        assert_eq!(report.relic_choices.iter().collect::<std::collections::HashSet<_>>().len(), 3);
+    }
+
+    #[test]
+    fn relic_choice_blocks_progress_until_a_valid_choice_is_selected() {
+        let mut run = RunState::new(701);
+        run.wave = 3;
+        run.battle_wins = 2;
+        for unit in &mut run.party {
+            unit.hp = 10_000;
+            unit.max_hp = 10_000;
+            unit.attack = 10_000;
+            unit.armor = 10_000;
+            unit.attack_cooldown = 1;
+            unit.cooldown_left = 0;
+        }
+
+        let report = run.resolve_auto_battle().unwrap();
+        let choice = report.relic_choices[0];
+        let before = run.clone();
+
+        assert_eq!(run.draw(), Err(GameError::RewardPending));
+        assert_eq!(run.choose_relic(Relic::HoneyBell), Err(GameError::InvalidRelicChoice));
+        assert_eq!(run.relics, before.relics);
+        assert_eq!(run.phase, RunPhase::RelicChoice);
+
+        run.choose_relic(choice).unwrap();
+        assert_eq!(run.phase, RunPhase::Preparation);
+        assert!(run.relics.contains(&choice));
+        assert!(run.pending_relics.is_empty());
+    }
+
+    #[test]
+    fn relics_buff_current_and_future_units() {
+        let mut run = RunState::new(702);
+        let starter_attack = run.party[0].attack;
+        run.relics.push(Relic::HoneyBell);
+        for unit in &mut run.party {
+            Self::apply_relic_to_unit(unit, Relic::HoneyBell);
+        }
+        assert_eq!(run.party[0].attack, starter_attack + 1);
+
+        let new_unit = run.make_unit(Sigil::Ember, 1);
+        assert_eq!(new_unit.attack, 9);
+    }
+
+    #[test]
+    fn relic_choices_are_deterministic_for_a_fixed_seed() {
+        let mut left = RunState::new(703);
+        let mut right = RunState::new(703);
+        left.wave = 3;
+        right.wave = 3;
+        left.battle_wins = 2;
+        right.battle_wins = 2;
+        for run in [&mut left, &mut right] {
+            for unit in &mut run.party {
+                unit.hp = 10_000;
+                unit.max_hp = 10_000;
+                unit.attack = 10_000;
+                unit.armor = 10_000;
+                unit.attack_cooldown = 1;
+                unit.cooldown_left = 0;
+            }
+        }
+
+        let left_report = left.resolve_auto_battle().unwrap();
+        let right_report = right.resolve_auto_battle().unwrap();
+        assert_eq!(left_report.relic_choices, right_report.relic_choices);
+    }
+
+    #[test]
     fn defeated_run_rejects_future_actions() {
         let mut run = RunState::new(1);
         run.hearts = 0;
@@ -890,5 +1096,6 @@ mod tests {
         assert_eq!(run.draw(), Err(GameError::RunOver));
         assert_eq!(run.resolve_auto_battle(), Err(GameError::RunOver));
         assert_eq!(run.merge_units(1, 2), Err(GameError::RunOver));
+        assert_eq!(run.choose_relic(Relic::HoneyBell), Err(GameError::NoRelicChoice));
     }
 }
