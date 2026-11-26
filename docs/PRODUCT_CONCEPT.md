@@ -156,3 +156,9 @@ Not yet implemented as a complete game: unit-by-unit combat, abilities and coold
 - Art and UI must be legible at actual play scale.
 - Every milestone has executable acceptance criteria.
 - Never describe a prototype, build or deployment as a finished game.
+
+## Implemented journey-event and battle-replay slice
+
+The first playable implementation now includes five seeded encounter families: lost cache, moonwell shrine, travelling merchant, wounded ranger and bandit ambush. Each encounter exposes two choices with explicit effects; choices can grant gold, restore hearts, heal or strengthen the army, purchase an item, recruit a unit or trade health for gold. Pending events and their resolutions are stored in the serialized run state. The API rejects invalid/replayed choices and prevents starting the next wave until the pending event is resolved.
+
+The browser now displays encounter cards and choices, a pixel-art battlefield snapshot, health bars and a replay control that steps through the Rust-authored combat event stream. Reduced-motion mode skips timed playback and renders the final battlefield state. This is a functional vertical slice, not the finished route-map or battle-art system: branching paths, expanded encounter content, lane-aware formations, authored sprites/projectiles, boss phase art and Playwright acceptance remain required.
