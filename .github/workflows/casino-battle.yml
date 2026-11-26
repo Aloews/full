@@ -1,0 +1,33 @@
+name: Casino Battle CI
+
+on:
+  push:
+    branches:
+      - casino-battle/foundation
+    paths:
+      - "casino-battle/**"
+      - ".github/workflows/casino-battle.yml"
+  pull_request:
+    paths:
+      - "casino-battle/**"
+      - ".github/workflows/casino-battle.yml"
+  workflow_dispatch:
+
+jobs:
+  rust:
+    name: Rust domain and server
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: casino-battle
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: casino-battle
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace --all-targets
