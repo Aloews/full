@@ -22,7 +22,7 @@ The project lives in this directory on the `casino-battle/foundation` branch. It
 
 ## Run
 
-Requirements: Rust stable (1.85+) and Godot 4.3+ for the client.
+Requirements: Rust stable (1.85+) and Godot 4.3+ for the client. The visual client renders at 640×360 and scales to a 1280×720 window using nearest-neighbour integer scaling.
 
 ```sh
 cargo fmt --all -- --check
