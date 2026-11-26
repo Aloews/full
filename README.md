@@ -29,10 +29,12 @@ Runs use PostgreSQL when `SLOTBOUND_DATABASE_URL` (or fallback `DATABASE_URL`) i
 - Select a keeper, lock important units and absorb donors to grow the keeper.
 - Choose promotions at growth thresholds.
 - Start an automatic battle, collect the result and continue.
+- Resolve a journey event after battle, then choose a route: normal battle, recovery, merchant, elite encounter or boss gate.
+- The Boss Gate grants +15% allied attack damage in the next boss battle (minimum +1 damage per hit).
 - Every fifth wave is a boss; a boss victory offers one of three Cores.
 - Use the between-wave cache for permanent attack, mitigation or healing items.
 
-The current combat resolver uses a deterministic tick timeline with class-specific effects, persistent survivor health, casualties and a typed combat log. This is an early combat foundation and still needs authored enemy waves, richer abilities and balance validation. The web visual layer is also a prototype: its symbols still need original pixel sprites, animation strips, bitmap typography and a full asset pipeline. See `docs/MAP.md` for implemented scope, limitations and release gates.
+The current combat resolver uses a deterministic tick timeline with class-specific effects, persistent survivor health, casualties and a typed combat log. Journey-event and route choices are saved in the run and the browser replays the authoritative battle event stream on a pixel battlefield. The route and battle model is still an early foundation: authored enemy waves, full lane formation, richer abilities, cooldowns and balance validation remain. The web client has first-pass coded pixel sprites and a procedural forest scene, not a finished production asset library; complete sprite sheets, animation strips, biome tilemaps, bitmap typography and full visual E2E checks are still required. The BossGate +15% damage rule is the latest gameplay patch and awaits its exact-head CI result. See `docs/MAP.md` for scope and release gates.
 
 ## Engineering contract
 

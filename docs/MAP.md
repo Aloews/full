@@ -32,16 +32,20 @@ Deliver a replayable 2D cozy-fantasy roguelite auto-battler. A 3×3 rune board r
 - 3×3 recruitment board with eight straight three-cell paylines.
 - Six unit classes: Guardian, Archer, Mage, Cleric, Rogue and Beast.
 - Three matching class symbols on a line summon one unit per winning line; all-nine-equal can complete all eight lines.
-- Six spins per wave; first spin 100 gold, each later paid spin costs 50 gold more.
-- One vertical column nudge per wave; nudge awards only newly completed matches.
+- Six sigil draws per wave; first paid draw 100 gold, each later paid draw costs 50 gold more.
+- One vertical column shift per wave; it awards only newly completed matches.
 - Roster capacity pressure, unit lock/unlock, keeper selection, donor absorption, stat growth, one current imprint field and promotion choices at absorption thresholds 5 and 12.
 - Deterministic tick-based automatic combat (maximum 40 ticks), stable initiative, Guardian-priority targeting, class-specific combat bonuses, Mage splash, Cleric healing, Guardian mitigation, enemy attacks and boss telegraph events.
 - Typed combat event history for attacks, healing, unit/enemy defeats and battle completion; surviving unit health persists across waves with a small camp recovery, while defeated units leave the roster.
 - Wave-derived enemy groups, boss unit on every fifth wave, hearts and rewards.
+- Five deterministic journey event families with two choices each, resource/unit effects, persisted event history and replay-safe choice handling.
+- A three-branch route decision after events with Battle, Rest, Merchant, Elite and BossGate routes; Rest restores hearts and unit HP, Merchant grants gold, Elite adds and strengthens an enemy.
+- BossGate is now coded to add 15% ally damage (rounded up with a minimum +1) during the next boss battle; exact-head CI for this change is pending.
+- Battle reports persist starting party/enemy snapshots and selected route; the browser renders a deterministic event replay by stable unit ID.
 - Boss marker every fifth wave; boss victory grants three Core choices.
 - Between-wave supply cache with attack, mitigation and healing items.
-- Axum endpoints for create/read run, spin, nudge, absorb, promotion, lock, battle, next wave, Core selection and item purchase.
-- Browser client with current run-ID recovery, recruitment board, roster, shop, Core selection, battle result and status panels.
+- Axum endpoints for create/read run, sigil draw, column shift, absorb, promotion, lock, battle, journey-event choice, route choice, next wave, Core selection and item purchase.
+- Browser client with run-ID recovery, Fate Board, roster, shop, Core selection, journey-event choices, route forks, pixel battlefield snapshots and deterministic battle replay.
 - PostgreSQL adapter uses transactions and row-level locking for run updates; local JSON snapshot fallback is single-process only.
 
 ## Exact-head verification evidence
@@ -50,7 +54,7 @@ The baseline source candidate commit `680ec889595b4defaa590f1721f000630d3c7ab4` 
 - push run [45849594472](https://github.com/Aloews/full/actions/runs/45849594472);
 - pull-request run [45849612291](https://github.com/Aloews/full/actions/runs/45849612291).
 
-The complete CI run [45896564769](https://github.com/Aloews/full/actions/runs/45896564769) passed on exact code candidate `cea19ed2c8de5731790fbc87999562b0c0b6e739` (GitHub Actions run 116). Every step succeeded: Rust format, Clippy, unit/integration tests, release API build, Vercel container build, browser JavaScript syntax, API/browser contract and autonomous patch-policy tests. A follow-up documentation-only commit `1b4083af1bfe43190d5b3fe9105c548e2d4be96f` updated the visual status and MAP; no gameplay or browser code changed after run 116. The final docs commit is being rechecked by CI.
+The last fully green CI evidence before the new route/battle work is run [45898539706](https://github.com/Aloews/full/actions/runs/45898539706) on code candidate `b912a76b8042759a452fbecafb183f981e469e24` (run 152). It covered Rust format, Clippy, Rust tests, release API, Vercel container, JavaScript syntax, API/browser contract and agent patch-policy checks. Subsequent commits add journey events, route forks, route presentation, battle replay snapshots and Boss Gate damage scaling. The current Boss Gate candidate is `50e5a08dbcd5b51e50a390a02550c052e1172994`; its exact-head CI run [45899779863](https://github.com/Aloews/full/actions/runs/45899779863) is pending/running. Do not treat the later route/boss code as passed until that run completes successfully.
 
 **Current journey-event/battle-replay candidate:** source changes are present on `feat/slotbound-rust-rebuild` through the latest route/battle snapshot work; see the branch head for exact source commits. The earlier run 116 does not cover these changes. An isolated draft validation PR was opened and closed without merging; no GitHub Actions run/check was exposed for its exact head. The only status reported on the validation commit was Vercel's daily build-rate-limit failure. Do not treat the current candidate as CI-passed or deployed until a new exact-head run is visible.
 

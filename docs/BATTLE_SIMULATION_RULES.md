@@ -55,8 +55,9 @@ These are initial role-defining hooks, not a full class ability kit. Cooldowns, 
 - A Vitality Charm reduces run-heart loss after defeat by 1; it does not reduce unit damage.
 - Each Fortune Core increases the gold reward by 15%.
 - A Command Core increases unit capacity by 1.
+- The BossGate route applies a 15% outgoing-damage bonus to allied attacks during the next boss battle. Calculate the base damage using the existing Core and class-synergy multipliers, then add `max(1, ceil(base_damage × 0.15))`. This effect applies to primary and Mage splash hits only on the boss wave. The route itself is consumed/reset by the battle transition; it must not leak into later waves.
 
-Integer order: base attack plus class/item bonuses, then Might Core multiplier, then class-count synergy multiplier, rounded down. At least 1 damage applies to a primary attack and Mage splash.
+Integer order: base attack plus class/item bonuses, then Might Core multiplier, then class-count synergy multiplier, rounded down; if BossGate is active on a boss wave, add the rounded-up 15% gate bonus (minimum +1) to each allied attack. At least 1 damage applies to a primary attack and Mage splash.
 
 ## Persistence and event log
 

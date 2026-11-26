@@ -126,7 +126,7 @@ A full release should include:
 - distinct enemy families and boss patterns;
 - class abilities, synergies and meaningful promotions;
 - typed imprint inheritance;
-- multiple reel tools with explicit charges/costs;
+- additional Fate Board manipulation tools with explicit charges/costs;
 - items with slot/stack rules;
 - a broad but controlled set of Cores;
 - seeded run generation and deterministic replays;
@@ -134,7 +134,7 @@ A full release should include:
 
 ## Economy and balance principles
 
-- Gold, spins, hearts, roster capacity and item slots are competing resources.
+- Gold, sigil draws, hearts, roster capacity and item slots are competing resources.
 - Randomness is visible and reproducible. State the actual symbol weights once a calibrated distribution exists.
 - Every action has a clear cost and phase restriction.
 - No resource transition may silently overflow or underflow.
@@ -143,9 +143,9 @@ A full release should include:
 
 ## Current implementation boundary
 
-Implemented in the current source candidate: 3×3 board and eight paylines; six classes; deterministic seed/RNG; six spins with increasing gold cost; one column nudge per wave; roster, lock/unlock, absorption, simple imprints, threshold promotions; deterministic tick combat with typed event history; boss/Core choice; supply cache; Axum API; browser state and run restoration; PostgreSQL persistence adapter with row-level transactions plus local single-process JSON fallback.
+Implemented in the current source candidate: 3×3 Fate Board and eight sigil lines; six classes; deterministic seed/RNG; six paid draws with increasing gold cost; one column shift per wave; roster, keeper/locks, absorption, imprints and threshold promotions; deterministic 40-tick unit-level auto-battle with class hooks, damage, healing, defeat and persistent HP; boss telegraphs; seeded journey events and two-choice outcomes; three-way route decisions with Battle, Rest, Merchant, Elite and BossGate routes; route/event history; event-driven pixel battlefield replay; Axum endpoints; browser run recovery; PostgreSQL persistence adapter with row-level transactions plus local single-process JSON fallback. The BossGate's +15% attack-damage effect on boss waves is the latest code change and is awaiting exact-head CI.
 
-Not yet implemented as a complete game: unit-by-unit combat, abilities and cooldowns, authored enemy waves, branching route map, stage/biome content, multi-slot imprint inheritance, calibrated weighted symbol probabilities, full asset pipeline and production-quality sprite sheets, real-browser end-to-end coverage, authentication and production operations. See `docs/MAP.md` for current delivery status.
+Not yet implemented as a complete game: true lane formation and full targeting grid, cooldown-based active abilities, status effects, shields, fully authored enemy and boss patterns, multi-step connected biome map, biome-specific events and encounters, calibrated symbol/event weights, typed multi-slot imprint inheritance, production sprite sheets and animation strips, complete bitmap UI, real-browser Playwright coverage, user authentication/ownership, production database operations and public deployment. See `docs/MAP.md` for exact status and evidence.
 
 ## Product principles
 
