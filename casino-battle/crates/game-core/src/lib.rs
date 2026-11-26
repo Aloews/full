@@ -1,7 +1,9 @@
+use std::collections::VecDeque;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-const BOARD_SIZE: usize = 3;
+const BOARD_SIZE: usize = 4;
 const PARTY_LIMIT: usize = 6;
 const MAX_BATTLE_TICKS: u32 = 240;
 
@@ -77,6 +79,12 @@ pub struct Unit {
     pub rank: u8,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SigilCluster {
+    pub sigil: Sigil,
+    pub size: u8,
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct RunState {
     pub seed: u64,
@@ -95,7 +103,7 @@ pub struct RunState {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DrawOutcome {
     pub board: [[Sigil; BOARD_SIZE]; BOARD_SIZE],
-    pub matches: Vec<Sigil>,
+    pub matches: Vec<SigilCluster>,
     pub recruited: Vec<Unit>,
     pub essence_left: u32,
     pub party_size: usize,
@@ -224,15 +232,21 @@ impl RunState {
 
         let matches = self.find_matches();
         let mut recruited = Vec::new();
-        for sigil in matches.iter().copied() {
+        for cluster in matches.iter().copied() {
+            let rank = Self::rank_for_cluster(cluster.size);
             if self.party.len() >= PARTY_LIMIT {
-                self.essence += 1;
+                self.essence = self
+                    .essence
+                    .saturating_add(1 + u32::from(cluster.size.saturating_sub(3)) / 3);
                 continue;
             }
 
-            let unit = self.make_unit(sigil, 1);
+            let unit = self.make_unit(cluster.sigil, rank);
             recruited.push(unit.clone());
             self.party.push(unit);
+            if cluster.size >= 8 {
+                self.essence = self.essence.saturating_add(1);
+            }
         }
 
         Ok(DrawOutcome {
@@ -307,27 +321,64 @@ impl RunState {
         }
     }
 
-    fn find_matches(&self) -> Vec<Sigil> {
-        let lines: [[(usize, usize); BOARD_SIZE]; 8] = [
-            [(0, 0), (0, 1), (0, 2)],
-            [(1, 0), (1, 1), (1, 2)],
-            [(2, 0), (2, 1), (2, 2)],
-            [(0, 0), (1, 0), (2, 0)],
-            [(0, 1), (1, 1), (2, 1)],
-            [(0, 2), (1, 2), (2, 2)],
-            [(0, 0), (1, 1), (2, 2)],
-            [(0, 2), (1, 1), (2, 0)],
-        ];
+    fn find_matches(&self) -> Vec<SigilCluster> {
+        let mut visited = [[false; BOARD_SIZE]; BOARD_SIZE];
+        let mut clusters = Vec::new();
+        let directions = [(-1_i32, 0_i32), (1, 0), (0, -1), (0, 1)];
 
-        lines
-            .iter()
-            .filter_map(|line| {
-                let first = self.board[line[0].0][line[0].1];
-                line.iter()
-                    .all(|(row, col)| self.board[*row][*col] == first)
-                    .then_some(first)
-            })
-            .collect()
+        for row in 0..BOARD_SIZE {
+            for col in 0..BOARD_SIZE {
+                if visited[row][col] {
+                    continue;
+                }
+
+                let sigil = self.board[row][col];
+                let mut queue = VecDeque::from([(row, col)]);
+                let mut cluster_size = 0_u8;
+                visited[row][col] = true;
+
+                while let Some((current_row, current_col)) = queue.pop_front() {
+                    cluster_size = cluster_size.saturating_add(1);
+                    for (row_delta, col_delta) in directions {
+                        let next_row = current_row as i32 + row_delta;
+                        let next_col = current_col as i32 + col_delta;
+                        if next_row < 0
+                            || next_col < 0
+                            || next_row >= BOARD_SIZE as i32
+                            || next_col >= BOARD_SIZE as i32
+                        {
+                            continue;
+                        }
+
+                        let next_row = next_row as usize;
+                        let next_col = next_col as usize;
+                        if !visited[next_row][next_col]
+                            && self.board[next_row][next_col] == sigil
+                        {
+                            visited[next_row][next_col] = true;
+                            queue.push_back((next_row, next_col));
+                        }
+                    }
+                }
+
+                if cluster_size >= 3 {
+                    clusters.push(SigilCluster {
+                        sigil,
+                        size: cluster_size,
+                    });
+                }
+            }
+        }
+
+        clusters
+    }
+
+    fn rank_for_cluster(size: u8) -> u8 {
+        match size {
+            8.. => 3,
+            5..=7 => 2,
+            _ => 1,
+        }
     }
 
     fn make_unit(&mut self, sigil: Sigil, rank: u8) -> Unit {
@@ -405,12 +456,22 @@ impl RunState {
         }
     }
 
-    fn random_index(&mut self, upper: usize) -> usize {
+    fn random_u64(&mut self) -> u64 {
         self.rng_state ^= self.rng_state >> 12;
         self.rng_state ^= self.rng_state << 25;
         self.rng_state ^= self.rng_state >> 27;
-        let value = self.rng_state.wrapping_mul(0x2545_F491_4F6C_DD1D);
-        (value as usize) % upper
+        self.rng_state.wrapping_mul(0x2545_F491_4F6C_DD1D)
+    }
+
+    fn random_index(&mut self, upper: usize) -> usize {
+        let bound = upper as u64;
+        let rejection_threshold = bound.wrapping_neg() % bound;
+        loop {
+            let value = self.random_u64();
+            if value >= rejection_threshold {
+                return (value % bound) as usize;
+            }
+        }
     }
 }
 
@@ -429,13 +490,44 @@ mod tests {
     }
 
     #[test]
-    fn draw_consumes_essence_and_adds_recruits_from_lines() {
+    fn draw_consumes_essence_and_resolves_connected_clusters() {
         let mut run = RunState::new(7);
         let start = run.essence;
         let result = run.draw().unwrap();
         assert_eq!(run.essence, result.essence_left);
-        assert!(run.essence <= start);
+        assert!(run.essence <= start + 8);
         assert!(run.party.len() <= PARTY_LIMIT);
+        assert!(result.matches.iter().all(|cluster| cluster.size >= 3));
+    }
+
+    #[test]
+    fn fate_board_matches_connected_shapes_not_paylines() {
+        let mut run = RunState::new(77);
+        run.board = [
+            [Sigil::Ember, Sigil::Ember, Sigil::Ember, Sigil::Tide],
+            [Sigil::Ember, Sigil::Ember, Sigil::Tide, Sigil::Stone],
+            [Sigil::Moon, Sigil::Tide, Sigil::Stone, Sigil::Wing],
+            [Sigil::Stone, Sigil::Moon, Sigil::Wing, Sigil::Leaf],
+        ];
+
+        let matches = run.find_matches();
+        assert_eq!(
+            matches,
+            vec![SigilCluster {
+                sigil: Sigil::Ember,
+                size: 5
+            }]
+        );
+    }
+
+    #[test]
+    fn cluster_size_controls_recruit_rank() {
+        assert_eq!(RunState::rank_for_cluster(3), 1);
+        assert_eq!(RunState::rank_for_cluster(4), 1);
+        assert_eq!(RunState::rank_for_cluster(5), 2);
+        assert_eq!(RunState::rank_for_cluster(7), 2);
+        assert_eq!(RunState::rank_for_cluster(8), 3);
+        assert_eq!(RunState::rank_for_cluster(16), 3);
     }
 
     #[test]
