@@ -760,6 +760,7 @@ mod tests {
             unit.health = 100;
             unit.current_health = None;
         }
+        legacy.units[0].imprint = Some("Pierce".to_string());
         legacy.battle().unwrap();
         assert_eq!(legacy.phase, slotbound_core::RunPhase::Intermission);
         let mut value = serde_json::to_value(&legacy).unwrap();
@@ -815,6 +816,8 @@ mod tests {
                 .unwrap();
         assert_eq!(migrated.ruleset_version, 3);
         assert!(migrated.pending_event.is_some());
+        assert!(migrated.units.iter().all(|unit| unit.traits.len() == 1));
+        assert_eq!(migrated.units[0].imprints[0].kind, slotbound_core::UnitImprint::Pierce);
 
         let resolved = router
             .clone()
