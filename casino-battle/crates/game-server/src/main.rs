@@ -160,7 +160,7 @@ impl ApiError {
             | GameError::InvalidMerge
             | GameError::RewardPending
             | GameError::NoRelicChoice
-            | GameError::InvalidRelicChoice => StatusCode::CONFLICT
+            | GameError::InvalidRelicChoice => StatusCode::CONFLICT,
             GameError::EmptyParty | GameError::InvalidLane => StatusCode::UNPROCESSABLE_ENTITY,
             GameError::UnitNotFound => StatusCode::NOT_FOUND,
         };
