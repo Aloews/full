@@ -85,6 +85,109 @@ pub enum RunPhase {
     Lost,
 }
 
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum UnitTrait {
+    Brutal,
+    Swift,
+    Stout,
+    Guarded,
+}
+
+impl UnitTrait {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Brutal => "Brutal",
+            Self::Swift => "Swift",
+            Self::Stout => "Stout",
+            Self::Guarded => "Guarded",
+        }
+    }
+
+    pub fn effect(self) -> &'static str {
+        match self {
+            Self::Brutal => "+2 attack damage",
+            Self::Swift => "+2 initiative",
+            Self::Stout => "+3 maximum health",
+            Self::Guarded => "-1 damage received",
+        }
+    }
+
+    fn from_roll(roll: u32) -> Self {
+        match roll % 4 {
+            0 => Self::Brutal,
+            1 => Self::Swift,
+            2 => Self::Stout,
+            _ => Self::Guarded,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum UnitImprint {
+    Fortify,
+    Pierce,
+    Spellpower,
+    Mending,
+    Critical,
+    Fury,
+}
+
+impl UnitImprint {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Fortify => "Fortify",
+            Self::Pierce => "Pierce",
+            Self::Spellpower => "Spellpower",
+            Self::Mending => "Mending",
+            Self::Critical => "Critical",
+            Self::Fury => "Fury",
+        }
+    }
+
+    pub fn effect(self) -> &'static str {
+        match self {
+            Self::Fortify => "-1 damage received",
+            Self::Pierce => "+1 primary attack damage",
+            Self::Spellpower => "+2 spell splash damage",
+            Self::Mending => "+1 healing",
+            Self::Critical => "+1 attack damage every 3rd tick",
+            Self::Fury => "+1 attack damage against healthy targets",
+        }
+    }
+
+    fn from_class(class: UnitClass) -> Self {
+        match class {
+            UnitClass::Guardian => Self::Fortify,
+            UnitClass::Archer => Self::Pierce,
+            UnitClass::Mage => Self::Spellpower,
+            UnitClass::Cleric => Self::Mending,
+            UnitClass::Rogue => Self::Critical,
+            UnitClass::Beast => Self::Fury,
+        }
+    }
+
+    fn from_legacy_name(name: &str) -> Option<Self> {
+        match name {
+            "Fortify" => Some(Self::Fortify),
+            "Pierce" => Some(Self::Pierce),
+            "Spellpower" => Some(Self::Spellpower),
+            "Mending" => Some(Self::Mending),
+            "Critical" => Some(Self::Critical),
+            "Fury" => Some(Self::Fury),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UnitImprintSlot {
+    pub kind: UnitImprint,
+    pub rank: u8,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Unit {
     pub id: u64,
@@ -96,6 +199,10 @@ pub struct Unit {
     #[serde(default)]
     pub current_health: Option<u32>,
     pub imprint: Option<String>,
+    #[serde(default)]
+    pub traits: Vec<UnitTrait>,
+    #[serde(default)]
+    pub imprints: Vec<UnitImprintSlot>,
     pub promotion: Option<String>,
     pub pending_promotion: bool,
     pub promotion_options: [String; 2],
@@ -193,6 +300,8 @@ struct Combatant {
     name: String,
     class: Option<UnitClass>,
     position: FormationPosition,
+    traits: Vec<UnitTrait>,
+    imprints: Vec<UnitImprintSlot>,
     attack: u32,
     max_health: u32,
     current_health: u32,
@@ -412,7 +521,7 @@ impl GameState {
             spins_used: 0,
             next_spin_cost: 100,
             shop_prices: item_prices(),
-            ruleset_version: 2,
+            ruleset_version: 3,
             nudge_available: true,
             board: [[UnitClass::Guardian; 3]; 3],
             units: Vec::new(),
@@ -443,30 +552,50 @@ impl GameState {
     }
 
     pub fn migrate_legacy_state(&mut self) -> bool {
-        if self.ruleset_version >= 2 {
+        if self.ruleset_version >= 3 {
             return false;
         }
 
-        if self.phase == RunPhase::Intermission
-            && self.last_battle.is_some()
-            && self.pending_event.is_none()
-            && self.pending_route.is_none()
-            && self.current_route.is_none()
-        {
-            let current_event_id = format!("wave-{}-event", self.wave);
-            let current_event_was_resolved = self
-                .event_history
-                .iter()
-                .any(|resolution| resolution.event_id == current_event_id);
+        if self.ruleset_version < 2 {
+            if self.phase == RunPhase::Intermission
+                && self.last_battle.is_some()
+                && self.pending_event.is_none()
+                && self.pending_route.is_none()
+                && self.current_route.is_none()
+            {
+                let current_event_id = format!("wave-{}-event", self.wave);
+                let current_event_was_resolved = self
+                    .event_history
+                    .iter()
+                    .any(|resolution| resolution.event_id == current_event_id);
 
-            if current_event_was_resolved {
-                self.pending_route = Some(self.generate_route_options(self.wave.saturating_add(1)));
-            } else {
-                self.pending_event = Some(self.generate_journey_event());
+                if current_event_was_resolved {
+                    self.pending_route = Some(self.generate_route_options(self.wave.saturating_add(1)));
+                } else {
+                    self.pending_event = Some(self.generate_journey_event());
+                }
             }
+            self.ruleset_version = 2;
         }
 
-        self.ruleset_version = 2;
+        if self.ruleset_version < 3 {
+            for unit in &mut self.units {
+                if unit.traits.is_empty() {
+                    let mixed = self.seed
+                        ^ unit.id.wrapping_mul(0x9E37_79B9_7F4A_7C15)
+                        ^ 0xD1B5_4A32_D192_ED03;
+                    unit.traits.push(UnitTrait::from_roll((mixed ^ (mixed >> 29)) as u32));
+                }
+                if unit.imprints.is_empty() {
+                    if let Some(legacy) = unit.imprint.as_deref() {
+                        if let Some(kind) = UnitImprint::from_legacy_name(legacy) {
+                            unit.imprints.push(UnitImprintSlot { kind, rank: 1 });
+                        }
+                    }
+                }
+            }
+            self.ruleset_version = 3;
+        }
         true
     }
 
