@@ -31,11 +31,9 @@ The map is the source of truth for autonomous coding agents. Update status only 
 - [x] Godot 2D pixel-art sandbox with original 16×16 code-drawn sprite maps.
 - [x] Godot client is connected to the API for run state, Fate draws and Auto-battle.
 - [x] Client replays server-authoritative battle events, damage, healing and defeat states.
-- [x] Prototype pixel idle blink/bob, attack lunge, hit flash and healing frame feedback.
-- [x] Pixel idle blink/bob, attack lunge, hit flash and healing frame feedback.
+- [x] Code-level pixel idle blink/bob, attack lunge, hit flash and healing frame feedback prototype.
 - [x] Rust CI workflow.
-- [x] Current full CI passed on visual candidate commit `aa512c9ffaefd8dfcb210bcdefd5d0ee49214263` in GitHub Actions run [45892465386](https://github.com/Aloews/full/actions/runs/45892465386): strict 2D/pixel-art audit, Godot 4.3 import and launch, Rust format, Clippy, tests, seeded balance sample, HTTP API smoke, PostgreSQL migration and restart-persistence checks.
-- [ ] Re-run full CI after subsequent code changes; the verified commit above is the current tested visual candidate.
+- [x] Full CI passed on commit `82d61f4ac2390df7136c57630eb9dd2fa47a2041` in GitHub Actions run [45892812904](https://github.com/Aloews/full/actions/runs/45892812904): strict 2D/pixel-art audit, Godot 4.3 import and launch, Rust format, Clippy, tests, seeded balance sample, HTTP API smoke, PostgreSQL migration and restart-persistence checks.
 
 ## Gameplay systems
 
