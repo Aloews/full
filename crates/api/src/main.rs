@@ -67,7 +67,8 @@ impl ApiError {
             | GameError::JourneyEventRequired
             | GameError::NoJourneyEvent
             | GameError::JourneyRouteRequired
-            | GameError::NoJourneyRoute => StatusCode::CONFLICT,
+            | GameError::NoJourneyRoute
+            | GameError::PromotionChoiceRequired => StatusCode::CONFLICT,
             GameError::NotEnoughGold | GameError::UnitCapacityReached | GameError::InvalidNudge => {
                 StatusCode::UNPROCESSABLE_ENTITY
             }
@@ -87,6 +88,7 @@ impl ApiError {
             GameError::TargetLocked => "target_locked",
             GameError::DonorLocked => "donor_locked",
             GameError::InvalidPromotion => "invalid_promotion",
+            GameError::PromotionChoiceRequired => "promotion_choice_required",
             GameError::InvalidCoreChoice => "invalid_core_choice",
             GameError::CoreChoiceRequired => "core_choice_required",
             GameError::JourneyEventRequired => "journey_event_required",
