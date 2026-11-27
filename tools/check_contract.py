@@ -13,11 +13,12 @@ required_routes = {
     "/api/runs/{run_id}/absorb", "/api/runs/{run_id}/promotion", "/api/runs/{run_id}/lock",
     "/api/runs/{run_id}/battle", "/api/runs/{run_id}/next-wave", "/api/runs/{run_id}/core",
     "/api/runs/{run_id}/item", "/api/runs/{run_id}/event", "/api/runs/{run_id}/route",
+    "/api/runs/{run_id}/formation",
 }
 missing_routes = sorted(required_routes - routes)
 if missing_routes:
     raise SystemExit(f"API route contract missing: {missing_routes}")
-for endpoint in ("spin", "nudge", "absorb", "promotion", "lock", "battle", "next-wave", "core", "item", "event", "route"):
+for endpoint in ("spin", "nudge", "absorb", "promotion", "lock", "battle", "next-wave", "core", "item", "event", "route", "formation"):
     if f"/{endpoint}" not in client:
         raise SystemExit(f"browser action missing API call suffix: /{endpoint}")
 
@@ -42,6 +43,14 @@ if "pub enum FormationRow" not in core or "pub lane: u8" not in core or "pub sta
     raise SystemExit("authoritative formation snapshot contract is missing")
 if "unit.row" not in client or "unit.lane" not in client or "const front = unit.row" not in client:
     raise SystemExit("browser battlefield does not render server formation positions")
+
+
+if 'data-action="formation"' not in client or "set_formation" not in api:
+    raise SystemExit("player formation editing is not connected to the API")
+if "pub formation_row: FormationRow" not in core or "pub formation_lane: u8" not in core:
+    raise SystemExit("player formation is not persisted on the unit")
+if "InvalidFormation" not in api:
+    raise SystemExit("formation lane validation is not mapped by the API")
 
 if "function playBattleReplay(report)" not in client:
     raise SystemExit("battle replay renderer is missing")
