@@ -531,24 +531,26 @@ impl GameState {
             }
         }
 
-        let mut front_slots = 0u8;
-        let mut back_slots = 0u8;
-        for unit in &mut self.units {
-            let row = default_formation_row(unit.class);
-            let slot = match row {
-                FormationRow::Front => {
-                    let slot = front_slots;
-                    front_slots = front_slots.saturating_add(1);
-                    slot
-                }
-                FormationRow::Back => {
-                    let slot = back_slots;
-                    back_slots = back_slots.saturating_add(1);
-                    slot
-                }
-            };
-            unit.formation_row = row;
-            unit.formation_lane = slot % 3;
+        if self.ruleset_version < 4 {
+            let mut front_slots = 0u8;
+            let mut back_slots = 0u8;
+            for unit in &mut self.units {
+                let row = default_formation_row(unit.class);
+                let slot = match row {
+                    FormationRow::Front => {
+                        let slot = front_slots;
+                        front_slots = front_slots.saturating_add(1);
+                        slot
+                    }
+                    FormationRow::Back => {
+                        let slot = back_slots;
+                        back_slots = back_slots.saturating_add(1);
+                        slot
+                    }
+                };
+                unit.formation_row = row;
+                unit.formation_lane = slot % 3;
+            }
         }
 
         // Version 5 adds explicit biome and stage metadata to each battle report.
@@ -2603,7 +2605,7 @@ mod tests {
         let selected = game.current_route;
         game.ruleset_version = 2;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 4);
+        assert_eq!(game.ruleset_version, 5);
         assert_eq!(game.current_route, selected);
         assert!(game.pending_event.is_none());
         assert!(!game.migrate_legacy_state());
@@ -2637,6 +2639,78 @@ mod tests {
         assert_eq!(unit.row, FormationRow::Back);
         assert_eq!(unit.lane, 0);
         assert_eq!(unit.stack, 0);
+    }
+
+
+    #[test]
+    fn biome_and_stage_progression_is_deterministic_across_five_wave_regions() {
+        assert_eq!(stage_for_wave(1), 1);
+        assert_eq!(stage_for_wave(5), 1);
+        assert_eq!(stage_for_wave(6), 2);
+        assert_eq!(stage_for_wave(10), 2);
+        assert_eq!(stage_for_wave(11), 3);
+        assert_eq!(stage_for_wave(16), 4);
+
+        assert_eq!(biome_for_wave(1), BiomeKind::MosslightMeadow);
+        assert_eq!(biome_for_wave(5), BiomeKind::MosslightMeadow);
+        assert_eq!(biome_for_wave(6), BiomeKind::Emberfen);
+        assert_eq!(biome_for_wave(10), BiomeKind::Emberfen);
+        assert_eq!(biome_for_wave(11), BiomeKind::CrystalCaverns);
+        assert_eq!(biome_for_wave(16), BiomeKind::MosslightMeadow);
+    }
+
+    #[test]
+    fn enemy_rosters_and_bosses_are_specific_to_the_current_biome() {
+        let moss = build_enemy_party(1, false, false, BiomeKind::MosslightMeadow);
+        let ember = build_enemy_party(6, false, false, BiomeKind::Emberfen);
+        let crystal = build_enemy_party(11, false, false, BiomeKind::CrystalCaverns);
+        assert_eq!(moss[0].name, "Thicket Slime");
+        assert_eq!(ember[0].name, "Cinder Moth");
+        assert_eq!(crystal[0].name, "Shard Beetle");
+
+        let moss_boss = build_enemy_party(5, true, false, BiomeKind::MosslightMeadow);
+        let ember_boss = build_enemy_party(10, true, false, BiomeKind::Emberfen);
+        let crystal_boss = build_enemy_party(15, true, false, BiomeKind::CrystalCaverns);
+        assert_eq!(moss_boss[0].name, "Mosswood Sentinel");
+        assert_eq!(ember_boss[0].name, "Emberfen Tyrant");
+        assert_eq!(crystal_boss[0].name, "Prism Colossus");
+        assert!(ember[0].attack > moss[0].attack);
+        assert!(crystal[0].max_health > moss[0].max_health);
+    }
+
+    #[test]
+    fn battle_report_records_the_biome_and_stage_for_its_wave() {
+        let mut game = run(751);
+        game.wave = 11;
+        let report = game.battle().unwrap();
+        assert_eq!(report.stage, 3);
+        assert_eq!(report.biome, BiomeKind::CrystalCaverns);
+        assert_eq!(report.enemies[0].name, "Shard Beetle");
+    }
+
+    #[test]
+    fn ruleset_v4_migration_preserves_player_formation_positions() {
+        let mut game = run(752);
+        let unit_id = game.units[0].id;
+        game.set_formation(unit_id, FormationRow::Back, 2).unwrap();
+        game.ruleset_version = 4;
+        assert!(game.migrate_legacy_state());
+        assert_eq!(game.ruleset_version, 5);
+        assert_eq!(game.units[0].formation_row, FormationRow::Back);
+        assert_eq!(game.units[0].formation_lane, 2);
+        assert!(!game.migrate_legacy_state());
+    }
+
+    #[test]
+    fn old_battle_reports_default_to_first_biome_and_legacy_stage() {
+        let mut game = run(753);
+        let mut value = serde_json::to_value(game.battle().unwrap()).unwrap();
+        let report = value.as_object_mut().unwrap();
+        report.remove("biome");
+        report.remove("stage");
+        let restored: BattleReport = serde_json::from_value(value).unwrap();
+        assert_eq!(restored.biome, BiomeKind::MosslightMeadow);
+        assert_eq!(restored.stage, 0);
     }
 
     #[test]
