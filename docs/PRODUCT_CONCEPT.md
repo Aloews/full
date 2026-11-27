@@ -174,3 +174,7 @@ The Guardian now casts Shieldwall every fourth combat tick. It grants up to 2 te
 ## Tactical front/back formation
 
 Every battle snapshot records a typed front/back row, one of three lanes and a stable stack index for each ally and enemy. Guardians, Beasts and Rogues form the front row; Archers, Mages and Clerics line up behind them. Enemy ranks alternate across three lanes, while a boss holds the centre-front position. Allies attack the nearest lane within the enemy front row before reaching the backline. Enemies attack the allied front row first and prefer a Guardian among its defenders. The browser places sprites directly from these Rust-authored positions. Player-controlled rearrangement remains future work.
+
+## Player-controlled tactical formation
+
+Each companion stores an editable row and lane. Players can move a unit between the front and back rows and assign it to one of three lanes before battle. Several units can share a cell; the Rust engine records a stable stack index and applies the same authoritative positions to frontline screening, nearest-lane targeting and battlefield rendering. New units receive a class-based default row and the least-occupied lane, but players can override that placement at any management phase. The browser never derives combat positioning independently.
