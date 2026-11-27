@@ -626,7 +626,7 @@ mod tests {
         let migrated: GameState =
             serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
                 .unwrap();
-        assert_eq!(migrated.ruleset_version, 2);
+        assert_eq!(migrated.ruleset_version, 3);
         assert!(migrated.pending_event.is_some());
         assert!(migrated.pending_route.is_none());
 
@@ -857,7 +857,7 @@ mod tests {
         let migrated: GameState =
             serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
                 .unwrap();
-        assert_eq!(migrated.ruleset_version, 2);
+        assert_eq!(migrated.ruleset_version, 3);
         assert!(migrated.pending_event.is_some());
 
         let resolved = router

@@ -118,6 +118,14 @@ pub struct SpinReport {
     pub gold_awarded: u32,
 }
 
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum FormationRow {
+    Front,
+    #[default]
+    Back,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CombatantSnapshot {
     pub id: u64,
@@ -125,6 +133,12 @@ pub struct CombatantSnapshot {
     pub class: Option<UnitClass>,
     pub max_health: u32,
     pub current_health: u32,
+    #[serde(default)]
+    pub row: FormationRow,
+    #[serde(default)]
+    pub lane: u8,
+    #[serde(default)]
+    pub stack: u8,
     pub boss: bool,
 }
 
@@ -184,6 +198,9 @@ struct Combatant {
     max_health: u32,
     current_health: u32,
     shield: u32,
+    row: FormationRow,
+    lane: u8,
+    stack: u8,
     initiative: u8,
     boss: bool,
 }
@@ -400,7 +417,7 @@ impl GameState {
             spins_used: 0,
             next_spin_cost: 100,
             shop_prices: item_prices(),
-            ruleset_version: 2,
+            ruleset_version: 3,
             nudge_available: true,
             board: [[UnitClass::Guardian; 3]; 3],
             units: Vec::new(),
@@ -431,7 +448,7 @@ impl GameState {
     }
 
     pub fn migrate_legacy_state(&mut self) -> bool {
-        if self.ruleset_version >= 2 {
+        if self.ruleset_version >= 3 {
             return false;
         }
 
@@ -454,7 +471,9 @@ impl GameState {
             }
         }
 
-        self.ruleset_version = 2;
+        // Version 3 adds server-authored formation positions to each battle snapshot.
+        // Old snapshots deserialize with safe back-row/default-lane values.
+        self.ruleset_version = 3;
         true
     }
 
@@ -673,30 +692,53 @@ impl GameState {
             boss_gate,
         );
 
+        let mut front_slots = 0u8;
+        let mut back_slots = 0u8;
         let mut allies: Vec<Combatant> = self
             .units
             .iter()
-            .map(|unit| Combatant {
-                id: unit.id,
-                name: format!("{} #{}", unit.class.label(), unit.id),
-                class: Some(unit.class),
-                attack: unit.attack,
-                max_health: unit.health.max(1),
-                current_health: unit
-                    .current_health
-                    .unwrap_or(unit.health)
-                    .min(unit.health)
-                    .max(1),
-                shield: 0,
-                initiative: match unit.class {
-                    UnitClass::Rogue => 10,
-                    UnitClass::Archer => 9,
-                    UnitClass::Mage => 8,
-                    UnitClass::Beast => 7,
-                    UnitClass::Guardian => 6,
-                    UnitClass::Cleric => 5,
-                },
-                boss: false,
+            .map(|unit| {
+                let row = match unit.class {
+                    UnitClass::Guardian | UnitClass::Beast | UnitClass::Rogue => FormationRow::Front,
+                    UnitClass::Archer | UnitClass::Mage | UnitClass::Cleric => FormationRow::Back,
+                };
+                let slot = match row {
+                    FormationRow::Front => {
+                        let slot = front_slots;
+                        front_slots = front_slots.saturating_add(1);
+                        slot
+                    }
+                    FormationRow::Back => {
+                        let slot = back_slots;
+                        back_slots = back_slots.saturating_add(1);
+                        slot
+                    }
+                };
+                Combatant {
+                    id: unit.id,
+                    name: format!("{} #{}", unit.class.label(), unit.id),
+                    class: Some(unit.class),
+                    attack: unit.attack,
+                    max_health: unit.health.max(1),
+                    current_health: unit
+                        .current_health
+                        .unwrap_or(unit.health)
+                        .min(unit.health)
+                        .max(1),
+                    shield: 0,
+                    row,
+                    lane: slot % 3,
+                    stack: slot / 3,
+                    initiative: match unit.class {
+                        UnitClass::Rogue => 10,
+                        UnitClass::Archer => 9,
+                        UnitClass::Mage => 8,
+                        UnitClass::Beast => 7,
+                        UnitClass::Guardian => 6,
+                        UnitClass::Cleric => 5,
+                    },
+                    boss: false,
+                }
             })
             .collect();
         let mut enemies = build_enemy_party(self.wave, boss, elite);
@@ -708,6 +750,9 @@ impl GameState {
                 class: unit.class,
                 max_health: unit.max_health,
                 current_health: unit.current_health,
+                row: unit.row,
+                lane: unit.lane,
+                stack: unit.stack,
                 boss: unit.boss,
             })
             .collect::<Vec<_>>();
@@ -719,6 +764,9 @@ impl GameState {
                 class: unit.class,
                 max_health: unit.max_health,
                 current_health: unit.current_health,
+                row: unit.row,
+                lane: unit.lane,
+                stack: unit.stack,
                 boss: unit.boss,
             })
             .collect::<Vec<_>>();
@@ -747,6 +795,11 @@ impl GameState {
                     .enumerate()
                     .min_by_key(|(_, enemy)| {
                         (
+                            match enemy.row {
+                                FormationRow::Front => 0u8,
+                                FormationRow::Back => 1u8,
+                            },
+                            actor.lane.abs_diff(enemy.lane),
                             enemy.current_health.saturating_mul(100) / enemy.max_health.max(1),
                             enemy.id,
                         )
@@ -909,11 +962,16 @@ impl GameState {
                     .filter(|(_, ally)| ally.current_health > 0)
                     .min_by_key(|(_, ally)| {
                         (
+                            match ally.row {
+                                FormationRow::Front => 0u8,
+                                FormationRow::Back => 1u8,
+                            },
                             if ally.class == Some(UnitClass::Guardian) {
                                 0u8
                             } else {
                                 1u8
                             },
+                            enemy.lane.abs_diff(ally.lane),
                             ally.current_health.saturating_mul(100) / ally.max_health.max(1),
                             ally.id,
                         )
@@ -1600,9 +1658,16 @@ fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> 
                 attack,
                 max_health: base_health,
                 current_health: base_health,
+                shield: 0,
+                row: if boss || index % 2 == 0 {
+                    FormationRow::Front
+                } else {
+                    FormationRow::Back
+                },
+                lane: if boss { 1 } else { ((index / 2) % 3) as u8 },
+                stack: 0,
                 initiative: if boss { 7 } else { 4 + (index % 2) as u8 },
                 boss,
-                shield: 0,
             }
         })
         .collect()
@@ -2048,7 +2113,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         let migrated_event = restored.pending_event.clone().unwrap();
-        assert_eq!(restored.ruleset_version, 2);
+        assert_eq!(restored.ruleset_version, 3);
         assert!(restored.pending_route.is_none());
         assert!(!restored.migrate_legacy_state());
         assert_eq!(restored.pending_event, Some(migrated_event));
@@ -2076,7 +2141,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         assert!(restored.pending_event.is_none());
-        assert_eq!(restored.ruleset_version, 2);
+        assert_eq!(restored.ruleset_version, 3);
         let options = restored.pending_route.as_ref().unwrap();
         assert_eq!(options.len(), 3);
         assert!(!restored.migrate_legacy_state());
@@ -2087,10 +2152,122 @@ mod tests {
         let mut game = run(703);
         game.ruleset_version = 1;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 2);
+        assert_eq!(game.ruleset_version, 3);
         assert!(game.pending_event.is_none());
         assert!(game.pending_route.is_none());
         assert!(!game.migrate_legacy_state());
+    }
+
+
+    #[test]
+    fn formation_positions_are_typed_stable_and_class_appropriate() {
+        let mut a = run(721);
+        let mut b = run(721);
+        let mut archer = a.spawn_unit(UnitClass::Archer);
+        archer.attack = 1;
+        a.units.push(archer);
+        let mut mage = a.spawn_unit(UnitClass::Mage);
+        mage.attack = 1;
+        a.units.push(mage);
+        let mut beast = a.spawn_unit(UnitClass::Beast);
+        beast.attack = 1;
+        a.units.push(beast);
+
+        let mut archer_b = b.spawn_unit(UnitClass::Archer);
+        archer_b.attack = 1;
+        b.units.push(archer_b);
+        let mut mage_b = b.spawn_unit(UnitClass::Mage);
+        mage_b.attack = 1;
+        b.units.push(mage_b);
+        let mut beast_b = b.spawn_unit(UnitClass::Beast);
+        beast_b.attack = 1;
+        b.units.push(beast_b);
+
+        let left = a.battle().unwrap();
+        let right = b.battle().unwrap();
+        assert_eq!(left.allies, right.allies);
+        assert_eq!(left.allies[0].row, FormationRow::Front);
+        assert_eq!(left.allies[0].lane, 0);
+        assert_eq!(left.allies[1].row, FormationRow::Back);
+        assert_eq!(left.allies[1].lane, 0);
+        assert_eq!(left.allies[2].row, FormationRow::Back);
+        assert_eq!(left.allies[2].lane, 1);
+        assert_eq!(left.allies[3].row, FormationRow::Front);
+        assert_eq!(left.allies[3].lane, 1);
+        assert!(left.allies.iter().all(|unit| unit.lane < 3));
+    }
+
+    #[test]
+    fn allied_attacks_clear_frontline_enemies_before_backline() {
+        let mut game = run(722);
+        game.wave = 7;
+        game.units[0].attack = 1;
+        let mut archer = game.spawn_unit(UnitClass::Archer);
+        archer.attack = 1;
+        game.units.push(archer);
+        let report = game.battle().unwrap();
+        let first = report.events.iter()
+            .find(|event| event.kind == BattleEventKind::AllyAttack)
+            .unwrap();
+        assert_eq!(first.target_id, u64::MAX, "frontline lane 0 must screen the backline");
+        let target = report.enemies.iter().find(|unit| unit.id == first.target_id).unwrap();
+        assert_eq!(target.row, FormationRow::Front);
+    }
+
+    #[test]
+    fn enemy_attacks_frontline_before_backline() {
+        let mut game = run(723);
+        game.units.clear();
+        let beast = game.spawn_unit(UnitClass::Beast);
+        let beast_id = beast.id;
+        let cleric = game.spawn_unit(UnitClass::Cleric);
+        let cleric_id = cleric.id;
+        game.units.extend([beast, cleric]);
+        let report = game.battle().unwrap();
+        let first = report.events.iter()
+            .find(|event| event.kind == BattleEventKind::EnemyAttack)
+            .unwrap();
+        assert_eq!(first.target_id, beast_id);
+        assert_ne!(first.target_id, cleric_id);
+        let target = report.allies.iter().find(|unit| unit.id == beast_id).unwrap();
+        assert_eq!(target.row, FormationRow::Front);
+    }
+
+    #[test]
+    fn ruleset_v2_save_upgrades_without_rerolling_a_selected_route() {
+        let mut game = run(724);
+        set_route(&mut game, RouteNodeKind::Battle);
+        game.choose_route(0).unwrap();
+        let selected = game.current_route;
+        game.ruleset_version = 2;
+        assert!(game.migrate_legacy_state());
+        assert_eq!(game.ruleset_version, 3);
+        assert_eq!(game.current_route, selected);
+        assert!(game.pending_event.is_none());
+        assert!(!game.migrate_legacy_state());
+    }
+
+    #[test]
+    fn legacy_battle_snapshot_defaults_missing_formation_positions() {
+        let mut game = run(725);
+        game.battle().unwrap();
+        let mut value = serde_json::to_value(game).unwrap();
+        let snapshot = value
+            .as_object_mut().unwrap()
+            .get_mut("last_battle").unwrap()
+            .as_object_mut().unwrap()
+            .get_mut("allies").unwrap()
+            .as_array_mut().unwrap()
+            .first_mut().unwrap()
+            .as_object_mut().unwrap();
+        snapshot.remove("row");
+        snapshot.remove("lane");
+        snapshot.remove("stack");
+        let restored: GameState = serde_json::from_value(value).unwrap();
+        let unit = restored.last_battle.unwrap().allies.remove(0);
+        assert_eq!(unit.row, FormationRow::Back);
+        assert_eq!(unit.lane, 0);
+        assert_eq!(unit.stack, 0);
     }
 
     #[test]

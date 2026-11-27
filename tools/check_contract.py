@@ -37,6 +37,12 @@ if "ShieldGranted" not in (ROOT / "crates/game-core/src/lib.rs").read_text(encod
 if "shield_granted" not in client or "shield_absorbed" not in client:
     raise SystemExit("Guardian Shieldwall replay is missing")
 
+core = (ROOT / "crates/game-core/src/lib.rs").read_text(encoding="utf-8")
+if "pub enum FormationRow" not in core or "pub lane: u8" not in core or "pub stack: u8" not in core:
+    raise SystemExit("authoritative formation snapshot contract is missing")
+if "unit.row" not in client or "unit.lane" not in client or "const front = unit.row" not in client:
+    raise SystemExit("browser battlefield does not render server formation positions")
+
 if "function playBattleReplay(report)" not in client:
     raise SystemExit("battle replay renderer is missing")
 if 'data-action="journey-choice"' not in client or "resolve_event" not in api:

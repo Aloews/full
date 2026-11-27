@@ -296,25 +296,36 @@ function paintBattlefield(report, eventLimit) {
   const add = (id, name, team, health, amount = 0) => {
     if (!id || !name || name === 'Squad') return;
     const initial = Number.isFinite(health) ? Math.max(1, health + amount) : 20;
-    const current = actors.get(id) || { id, name: normalizedName(name), team, hp: initial, max: initial, class: null, boss: false, shield: 0 };
+    const current = actors.get(id) || {
+      id, name: normalizedName(name), team, hp: initial, max: initial,
+      class: null, boss: false, shield: 0,
+      row: team === 'enemy' ? 'front' : 'back', lane: actors.size % 3, stack: Math.floor(actors.size / 3),
+    };
     current.name = normalizedName(name);
     current.team = team;
     if (Number.isFinite(health)) current.hp = Math.max(0, health);
     current.max = Math.max(current.max, (Number.isFinite(health) ? health : current.hp) + amount);
     actors.set(id, current);
   };
-  (report.allies || []).forEach((unit) => {
+  (report.allies || []).forEach((unit, index) => {
+    const melee = ['guardian', 'beast', 'rogue'].includes(unit.class);
     actors.set(unit.id, {
       id: unit.id, name: unit.name, team: 'ally',
       hp: unit.current_health, max: unit.max_health,
       class: unit.class, boss: Boolean(unit.boss), shield: 0,
+      row: unit.row || (melee ? 'front' : 'back'),
+      lane: Number.isInteger(unit.lane) ? unit.lane : index % 3,
+      stack: Number.isInteger(unit.stack) ? unit.stack : Math.floor(index / 3),
     });
   });
-  (report.enemies || []).forEach((unit) => {
+  (report.enemies || []).forEach((unit, index) => {
     actors.set(unit.id, {
       id: unit.id, name: unit.name, team: 'enemy',
       hp: unit.current_health, max: unit.max_health,
-      class: unit.class, boss: Boolean(unit.boss),
+      class: unit.class, boss: Boolean(unit.boss), shield: 0,
+      row: unit.row || (unit.boss || index % 2 === 0 ? 'front' : 'back'),
+      lane: Number.isInteger(unit.lane) ? unit.lane : Math.floor(index / 2) % 3,
+      stack: Number.isInteger(unit.stack) ? unit.stack : 0,
     });
   });
   events.forEach((entry) => {
@@ -347,8 +358,11 @@ function paintBattlefield(report, eventLimit) {
     cleric: '#72b9d2', rogue: '#a66da6', beast: '#d7a36a',
   };
   const drawUnit = (unit, index, team) => {
-    const x = team === 'ally' ? 22 + (index % 3) * 38 : 204 + (index % 3) * 34;
-    const y = 67 + Math.floor(index / 3) * 25;
+    const lane = Math.max(0, Math.min(2, Number.isInteger(unit.lane) ? unit.lane : index % 3));
+    const stack = Math.max(0, Number.isInteger(unit.stack) ? unit.stack : Math.floor(index / 3));
+    const front = unit.row === 'front';
+    const x = team === 'ally' ? (front ? 112 : 54) : (front ? 190 : 252);
+    const y = 22 + lane * 34 + stack * 7;
     positions.set(unit.id, { x: x + 12, y: y + 9 });
     const color = team === 'ally' ? (allyColors[unit.class] || '#9bc477') : (unit.boss ? '#b94c3e' : '#d77b59');
     px(x + 4, y, 12, 4, '#2b2638'); px(x + 2, y + 4, 16, 12, '#2b2638');

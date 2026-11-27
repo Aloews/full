@@ -170,3 +170,7 @@ After each resolved journey encounter, the expedition offers three deterministic
 ## Guardian Shieldwall
 
 The Guardian now casts Shieldwall every fourth combat tick. It grants up to 2 temporary shield to each living ally, with a maximum of 4 shield per unit. Enemy attacks consume shield before HP; the battle event stream records shield gain and shield absorption as distinct events. The browser displays a separate shield bar and replays each grant/block using the Rust-authored event sequence. Shields are battle-local and do not persist into the next wave.
+
+## Tactical front/back formation
+
+Every battle snapshot records a typed front/back row, one of three lanes and a stable stack index for each ally and enemy. Guardians, Beasts and Rogues form the front row; Archers, Mages and Clerics line up behind them. Enemy ranks alternate across three lanes, while a boss holds the centre-front position. Allies attack the nearest lane within the enemy front row before reaching the backline. Enemies attack the allied front row first and prefer a Guardian among its defenders. The browser places sprites directly from these Rust-authored positions. Player-controlled rearrangement remains future work.
