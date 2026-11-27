@@ -776,3 +776,31 @@ button:focus-visible, a:focus-visible {
 
 .combat-event.shield_granted > b,
 .combat-event.shield_absorbed > b { color:#4d9db3; }
+
+.formation-controls {
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  margin:9px 0 2px;
+  padding:8px;
+  border:1px dashed #8da36b;
+  background:#263b35;
+}
+.formation-position {
+  color:#f3c969;
+  font:700 9px "Courier New",monospace;
+  letter-spacing:.08em;
+}
+.formation-actions {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+}
+.formation-actions .button {
+  min-width:0;
+  white-space:nowrap;
+  font-size:8px;
+}
+@media(max-width:420px) {
+  .formation-actions { grid-template-columns:1fr; }
+}
