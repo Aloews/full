@@ -2197,7 +2197,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         assert!(restored.pending_event.is_none());
-        assert_eq!(restored.ruleset_version, 3);
+        assert_eq!(restored.ruleset_version, 4);
         let options = restored.pending_route.as_ref().unwrap();
         assert_eq!(options.len(), 3);
         assert!(!restored.migrate_legacy_state());
@@ -2208,7 +2208,7 @@ mod tests {
         let mut game = run(703);
         game.ruleset_version = 1;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 3);
+        assert_eq!(game.ruleset_version, 4);
         assert!(game.pending_event.is_none());
         assert!(game.pending_route.is_none());
         assert!(!game.migrate_legacy_state());
@@ -2346,6 +2346,97 @@ mod tests {
         assert_eq!(unit.row, FormationRow::Back);
         assert_eq!(unit.lane, 0);
         assert_eq!(unit.stack, 0);
+    }
+
+
+    #[test]
+    fn new_units_receive_balanced_class_default_formation_slots() {
+        let mut game = run(731);
+        let starter = &game.units[0];
+        assert_eq!(starter.formation_row, FormationRow::Front);
+        assert_eq!(starter.formation_lane, 0);
+
+        let archer = game.spawn_unit(UnitClass::Archer);
+        let mage = game.spawn_unit(UnitClass::Mage);
+        let beast = game.spawn_unit(UnitClass::Beast);
+        assert_eq!(archer.formation_row, FormationRow::Back);
+        assert_eq!(archer.formation_lane, 0);
+        assert_eq!(mage.formation_row, FormationRow::Back);
+        assert_eq!(mage.formation_lane, 0);
+        assert_eq!(beast.formation_row, FormationRow::Front);
+        assert_eq!(beast.formation_lane, 1);
+
+        game.units.extend([archer, mage, beast]);
+        assert_eq!(game.units.len(), 4);
+    }
+
+    #[test]
+    fn player_formation_choice_is_used_by_the_battle_snapshot() {
+        let mut game = run(732);
+        let unit_id = game.units[0].id;
+        game.set_formation(unit_id, FormationRow::Back, 2).unwrap();
+        let report = game.battle().unwrap();
+        let snapshot = report.allies.iter().find(|unit| unit.id == unit_id).unwrap();
+        assert_eq!(snapshot.row, FormationRow::Back);
+        assert_eq!(snapshot.lane, 2);
+        assert_eq!(snapshot.stack, 0);
+    }
+
+    #[test]
+    fn multiple_units_can_stack_in_a_formation_cell_without_losing_identity() {
+        let mut game = run(733);
+        let first = game.units[0].id;
+        let second = game.spawn_unit(UnitClass::Guardian);
+        let second_id = second.id;
+        game.units.push(second);
+        game.set_formation(first, FormationRow::Front, 1).unwrap();
+        game.set_formation(second_id, FormationRow::Front, 1).unwrap();
+        let report = game.battle().unwrap();
+        let first_snapshot = report.allies.iter().find(|unit| unit.id == first).unwrap();
+        let second_snapshot = report.allies.iter().find(|unit| unit.id == second_id).unwrap();
+        assert_eq!(first_snapshot.lane, 1);
+        assert_eq!(second_snapshot.lane, 1);
+        assert_eq!(first_snapshot.stack, 0);
+        assert_eq!(second_snapshot.stack, 1);
+    }
+
+    #[test]
+    fn invalid_formation_lane_does_not_mutate_unit_position() {
+        let mut game = run(734);
+        let before = game.units[0].clone();
+        assert_eq!(
+            game.set_formation(before.id, FormationRow::Back, 3),
+            Err(GameError::InvalidFormation)
+        );
+        assert_eq!(game.units[0], before);
+    }
+
+    #[test]
+    fn old_version_three_save_migrates_unit_class_positions_once() {
+        let mut game = run(735);
+        let archer = game.spawn_unit(UnitClass::Archer);
+        let mage = game.spawn_unit(UnitClass::Mage);
+        game.units.extend([archer, mage]);
+        game.ruleset_version = 3;
+
+        let mut value = serde_json::to_value(game).unwrap();
+        let object = value.as_object_mut().unwrap();
+        let units = object.get_mut("units").unwrap().as_array_mut().unwrap();
+        for unit in units {
+            let item = unit.as_object_mut().unwrap();
+            item.remove("formation_row");
+            item.remove("formation_lane");
+        }
+        let mut restored: GameState = serde_json::from_value(value).unwrap();
+        assert!(restored.migrate_legacy_state());
+        assert_eq!(restored.ruleset_version, 4);
+        assert_eq!(restored.units[0].formation_row, FormationRow::Front);
+        assert_eq!(restored.units[0].formation_lane, 0);
+        assert_eq!(restored.units[1].formation_row, FormationRow::Back);
+        assert_eq!(restored.units[1].formation_lane, 0);
+        assert_eq!(restored.units[2].formation_row, FormationRow::Back);
+        assert_eq!(restored.units[2].formation_lane, 1);
+        assert!(!restored.migrate_legacy_state());
     }
 
     #[test]
