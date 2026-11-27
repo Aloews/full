@@ -1,4 +1,4 @@
-# Combat Simulation Rules — Current Version 4
+# Combat Simulation Rules — Current Version 5
 
 ## Authority and determinism
 
@@ -14,7 +14,20 @@ The simulation is bounded to 40 ticks. It ends immediately when either side is e
 - Each ordinary enemy has `8 + 2 × wave` max HP and `2 + floor(wave / 5)` attack.
 - On every fifth wave, the first enemy is replaced by the Mosswood Sentinel with `30 + 3 × wave` max HP and `4 + floor(wave / 3)` attack. Boss flag enables telegraph events.
 
-Enemy names are original prototype definitions. Authored biome-specific waves are pending.
+Enemy names are original prototype definitions. Enemy families and boss names change by deterministic five-wave biome: Mosslight Meadow, Emberfen and Crystal Caverns. Emberfen adds +1 enemy attack; Crystal Caverns adds +15% enemy HP.
+
+
+## Stage and biome progression
+
+A stage spans five consecutive waves. `stage_for_wave(wave)` is `floor((wave - 1) / 5) + 1`. The stage's biome cycles deterministically through Mosslight Meadow, Emberfen and Crystal Caverns; stage four returns to Mosslight Meadow for the current endless-wave prototype. No independent random roll selects the biome.
+
+- **Mosslight Meadow:** Thicket Slime, Bramble Bat, Glow Wisp, Rootling and Mossling; boss: Mosswood Sentinel. Baseline enemy health and attack.
+- **Emberfen:** Cinder Moth, Ash Toad, Coal Sprite, Charred Rootling and Soot Wolf; boss: Emberfen Tyrant. Every enemy receives +1 attack.
+- **Crystal Caverns:** Shard Beetle, Echo Wisp, Quartz Golem, Prism Bat and Crystal Mite; boss: Prism Colossus. Every enemy receives +15% maximum HP, rounded down to an integer.
+
+Enemy count still follows the wave formula `2 + min(floor((wave - 1) / 3), 3)`; elite routes add one enemy and apply their existing health/attack modifiers after biome modifiers. Boss health and attack use the existing wave scaling, then the biome modifier. The stage and biome are recorded in `BattleReport`; older reports deserialize with the first biome and stage zero, and UI presentation falls back to the report wave to infer their displayed stage. Route option titles/descriptions and the original pixel-world/battlefield palettes use the same wave-derived biome.
+
+This is deterministic region theming and enemy roster variation, not yet a full stage-map system: stage selection is derived from wave rather than persisted as a separate node graph, environmental hazards and unique biome boss abilities are still open.
 
 ## Tick order
 
