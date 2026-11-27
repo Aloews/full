@@ -901,6 +901,11 @@ mod tests {
         ] {
             object.remove(key);
         }
+        for unit in object.get_mut("units").unwrap().as_array_mut().unwrap() {
+            let unit = unit.as_object_mut().unwrap();
+            unit.remove("formation_row");
+            unit.remove("formation_lane");
+        }
         let battle = object
             .get_mut("last_battle")
             .unwrap()
@@ -930,7 +935,7 @@ mod tests {
         let migrated: GameState =
             serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
                 .unwrap();
-        assert_eq!(migrated.ruleset_version, 3);
+        assert_eq!(migrated.ruleset_version, 4);
         assert!(migrated.pending_event.is_some());
 
         let resolved = router
