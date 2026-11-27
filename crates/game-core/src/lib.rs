@@ -2357,16 +2357,20 @@ mod tests {
         assert_eq!(starter.formation_lane, 0);
 
         let archer = game.spawn_unit(UnitClass::Archer);
-        let mage = game.spawn_unit(UnitClass::Mage);
-        let beast = game.spawn_unit(UnitClass::Beast);
         assert_eq!(archer.formation_row, FormationRow::Back);
         assert_eq!(archer.formation_lane, 0);
+        game.units.push(archer.clone());
+
+        let mage = game.spawn_unit(UnitClass::Mage);
         assert_eq!(mage.formation_row, FormationRow::Back);
-        assert_eq!(mage.formation_lane, 0);
+        assert_eq!(mage.formation_lane, 1);
+        game.units.push(mage.clone());
+
+        let beast = game.spawn_unit(UnitClass::Beast);
         assert_eq!(beast.formation_row, FormationRow::Front);
         assert_eq!(beast.formation_lane, 1);
+        game.units.push(beast);
 
-        game.units.extend([archer, mage, beast]);
         assert_eq!(game.units.len(), 4);
     }
 
