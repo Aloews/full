@@ -671,55 +671,79 @@ mod tests {
         fs::remove_dir_all(dir).unwrap();
     }
 
-
     #[tokio::test]
     async fn formation_selection_persists_and_rejects_invalid_lane() {
-        let dir = std::env::temp_dir().join(format!("slotbound-api-formation-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("slotbound-api-formation-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         let router = app_with_data_dir(dir.clone());
-        let created = router.clone().oneshot(
-            Request::builder().method("POST").uri("/api/runs")
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(r#"{"seed":812}"#)).unwrap()
-        ).await.unwrap();
+        let created = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/runs")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"seed":812}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(created.status(), StatusCode::OK);
-        let created: GameState = serde_json::from_slice(
-            &created.into_body().collect().await.unwrap().to_bytes()
-        ).unwrap();
+        let created: GameState =
+            serde_json::from_slice(&created.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
         let unit_id = created.units[0].id;
         let uri = format!("/api/runs/{}/formation", created.run_id);
-        let moved = router.clone().oneshot(
-            Request::builder().method("POST").uri(&uri)
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(format!(
-                    r#"{{"unit_id":{unit_id},"row":"back","lane":2}}"#
-                ))).unwrap()
-        ).await.unwrap();
+        let moved = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&uri)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"unit_id":{unit_id},"row":"back","lane":2}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(moved.status(), StatusCode::OK);
-        let moved: GameState = serde_json::from_slice(
-            &moved.into_body().collect().await.unwrap().to_bytes()
-        ).unwrap();
+        let moved: GameState =
+            serde_json::from_slice(&moved.into_body().collect().await.unwrap().to_bytes()).unwrap();
         assert_eq!(moved.units[0].formation_row, FormationRow::Back);
         assert_eq!(moved.units[0].formation_lane, 2);
 
-        let invalid = router.clone().oneshot(
-            Request::builder().method("POST").uri(&uri)
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(format!(
-                    r#"{{"unit_id":{unit_id},"row":"front","lane":3}}"#
-                ))).unwrap()
-        ).await.unwrap();
+        let invalid = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&uri)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"unit_id":{unit_id},"row":"front","lane":3}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(invalid.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
-        let restored = app_with_data_dir(dir.clone()).oneshot(
-            Request::builder()
-                .uri(format!("/api/runs/{}", created.run_id))
-                .body(Body::empty()).unwrap()
-        ).await.unwrap();
+        let restored = app_with_data_dir(dir.clone())
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/runs/{}", created.run_id))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
         assert_eq!(restored.status(), StatusCode::OK);
-        let restored: GameState = serde_json::from_slice(
-            &restored.into_body().collect().await.unwrap().to_bytes()
-        ).unwrap();
+        let restored: GameState =
+            serde_json::from_slice(&restored.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
         assert_eq!(restored.units[0].formation_row, FormationRow::Back);
         assert_eq!(restored.units[0].formation_lane, 2);
         fs::remove_dir_all(dir).unwrap();

@@ -1586,7 +1586,11 @@ impl GameState {
             FormationRow::Back => 1,
         };
         let mut lane_counts = [0u8; 3];
-        for unit in self.units.iter().filter(|unit| unit.formation_row == formation_row) {
+        for unit in self
+            .units
+            .iter()
+            .filter(|unit| unit.formation_row == formation_row)
+        {
             let lane = usize::from(unit.formation_lane.min(2));
             lane_counts[lane] = lane_counts[lane].saturating_add(1);
         }
@@ -2348,7 +2352,6 @@ mod tests {
         assert_eq!(unit.stack, 0);
     }
 
-
     #[test]
     fn new_units_receive_balanced_class_default_formation_slots() {
         let mut game = run(731);
@@ -2380,7 +2383,11 @@ mod tests {
         let unit_id = game.units[0].id;
         game.set_formation(unit_id, FormationRow::Back, 2).unwrap();
         let report = game.battle().unwrap();
-        let snapshot = report.allies.iter().find(|unit| unit.id == unit_id).unwrap();
+        let snapshot = report
+            .allies
+            .iter()
+            .find(|unit| unit.id == unit_id)
+            .unwrap();
         assert_eq!(snapshot.row, FormationRow::Back);
         assert_eq!(snapshot.lane, 2);
         assert_eq!(snapshot.stack, 0);
@@ -2394,10 +2401,15 @@ mod tests {
         let second_id = second.id;
         game.units.push(second);
         game.set_formation(first, FormationRow::Front, 1).unwrap();
-        game.set_formation(second_id, FormationRow::Front, 1).unwrap();
+        game.set_formation(second_id, FormationRow::Front, 1)
+            .unwrap();
         let report = game.battle().unwrap();
         let first_snapshot = report.allies.iter().find(|unit| unit.id == first).unwrap();
-        let second_snapshot = report.allies.iter().find(|unit| unit.id == second_id).unwrap();
+        let second_snapshot = report
+            .allies
+            .iter()
+            .find(|unit| unit.id == second_id)
+            .unwrap();
         assert_eq!(first_snapshot.lane, 1);
         assert_eq!(second_snapshot.lane, 1);
         assert_eq!(first_snapshot.stack, 0);
