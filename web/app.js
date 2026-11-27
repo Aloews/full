@@ -261,11 +261,21 @@ function renderUnit(unit) {
   const meta = CLASS_META[unit.class] || ['?', unit.class, ''];
   const keeper = keepId === unit.id;
   const canAct = ['preparation', 'intermission'].includes(game.phase) && !busy;
+  const row = unit.formation_row || (['guardian', 'beast', 'rogue'].includes(unit.class) ? 'front' : 'back');
+  const lane = Number.isInteger(unit.formation_lane) ? Math.max(0, Math.min(2, unit.formation_lane)) : 0;
+  const nextRow = row === 'front' ? 'back' : 'front';
   return `<article class="unit-card ${keeper ? 'is-keeper' : ''}">
     <div class="unit-top"><span class="unit-symbol">${pixelSpriteMarkup(unit.class, meta[1])}</span><span class="unit-type">${esc(meta[2])}</span><button class="lock-button" data-action="lock" data-id="${unit.id}" aria-label="${unit.locked ? 'Unlock' : 'Lock'} ${esc(meta[1])}" ${!canAct ? 'disabled' : ''}>${unit.locked ? '🔒' : '⌑'}</button></div>
     <h3>${esc(unit.promotion || meta[1])}</h3><div class="unit-level">LV ${unit.level} · ABSORB ${unit.absorb_level}</div>
     <div class="unit-stats"><span>⚔ ${unit.attack}</span><span>♥ ${unit.current_health ?? unit.health} / ${unit.health}</span></div>
     <div class="unit-imprint">${unit.imprint ? `✦ ${esc(unit.imprint)}` : 'No imprint'}</div>
+    <div class="formation-controls" aria-label="Formation position">
+      <div class="formation-position"><span class="formation-label">FORMATION</span><strong>${row.toUpperCase()} · LANE ${lane + 1}</strong></div>
+      <button class="button button-quiet button-small" data-action="formation" data-id="${unit.id}" data-row="${nextRow}" data-lane="${lane}" ${!canAct ? 'disabled' : ''}>MOVE TO ${nextRow.toUpperCase()}</button>
+      <div class="formation-lanes" role="group" aria-label="Choose lane">
+        ${[0, 1, 2].map((targetLane) => `<button class="lane-button ${targetLane === lane ? 'is-selected' : ''}" data-action="formation" data-id="${unit.id}" data-row="${row}" data-lane="${targetLane}" aria-pressed="${targetLane === lane}" aria-label="Move to lane ${targetLane + 1}" ${!canAct ? 'disabled' : ''}>${targetLane + 1}</button>`).join('')}
+      </div>
+    </div>
     ${unit.pending_promotion ? `<div class="promotion-options"><span>PROMOTION</span>${unit.promotion_options.map((name) => `<button class="button button-small" data-action="promote" data-id="${unit.id}" data-choice="${esc(name)}">${esc(name)}</button>`).join('')}</div>` : ''}
     <div class="unit-actions"><button class="button button-quiet button-small" data-action="keep" data-id="${unit.id}" ${!canAct || unit.locked ? 'disabled' : ''}>${keeper ? 'KEEPER SELECTED' : 'SELECT KEEPER'}</button><button class="button button-danger button-small" data-action="feed" data-id="${unit.id}" ${!canAct || unit.locked || !keepId || keepId === unit.id ? 'disabled' : ''}>FEED</button></div>
   </article>`;
@@ -534,6 +544,7 @@ document.addEventListener('click', (event) => {
     act('/absorb', { target_id: keepId, donor_id: Number(button.dataset.id) });
   }
   if (action === 'lock') act('/lock', { unit_id: Number(button.dataset.id) });
+  if (action === 'formation') act('/formation', { unit_id: Number(button.dataset.id), row: button.dataset.row, lane: Number(button.dataset.lane) });
   if (action === 'promote') act('/promotion', { unit_id: Number(button.dataset.id), choice: button.dataset.choice });
   if (action === 'core') act('/core', { index: Number(button.dataset.index) });
   if (action === 'journey-choice') act('/event', { index: Number(button.dataset.index) });
