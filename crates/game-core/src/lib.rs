@@ -697,7 +697,6 @@ impl GameState {
                     UnitClass::Cleric => 5,
                 },
                 boss: false,
-                shield: 0,
             })
             .collect();
         let mut enemies = build_enemy_party(self.wave, boss, elite);
@@ -784,7 +783,7 @@ impl GameState {
                     target_id: target.id,
                     actor: actor.name.clone(),
                     target: target.name.clone(),
-                    amount: health_damage,
+                    amount: damage,
                     remaining_health: remaining,
                 });
                 if remaining == 0 {
@@ -974,7 +973,7 @@ impl GameState {
                     target_id: target.id,
                     actor: enemy.name.clone(),
                     target: target.name.clone(),
-                    amount: damage,
+                    amount: health_damage,
                     remaining_health: remaining,
                 });
                 if remaining == 0 {
@@ -2384,9 +2383,9 @@ mod tests {
                     && event.target_id == block.target_id
             })
             .expect("the shield absorption must precede its authoritative enemy hit");
-        assert!(
-            hit.amount < 2,
-            "shielded Guardian should lose less than the enemy's 2 base damage"
+        assert_eq!(
+            hit.amount, 0,
+            "the newly granted shield should absorb the mitigated Guardian hit before HP"
         );
     }
 
