@@ -1585,7 +1585,8 @@ impl GameState {
             .units
             .iter()
             .filter(|unit| unit.formation_row == formation_row)
-            .count() as u8) % 3;
+            .count() as u8)
+            % 3;
         Unit {
             id,
             class,
@@ -2207,7 +2208,6 @@ mod tests {
         assert!(!game.migrate_legacy_state());
     }
 
-
     #[test]
     fn player_can_change_formation_row_and_lane_before_battle() {
         let mut game = run(731);
@@ -2216,7 +2216,11 @@ mod tests {
         assert_eq!(game.units[0].formation_row, FormationRow::Back);
         assert_eq!(game.units[0].formation_lane, 2);
         let report = game.battle().unwrap();
-        let snapshot = report.allies.iter().find(|unit| unit.id == unit_id).unwrap();
+        let snapshot = report
+            .allies
+            .iter()
+            .find(|unit| unit.id == unit_id)
+            .unwrap();
         assert_eq!(snapshot.row, FormationRow::Back);
         assert_eq!(snapshot.lane, 2);
         assert_eq!(snapshot.stack, 0);
