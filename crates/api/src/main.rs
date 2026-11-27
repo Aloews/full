@@ -579,14 +579,10 @@ mod tests {
         fs::remove_dir_all(dir).unwrap();
     }
 
-
     #[tokio::test]
     async fn get_run_migrates_and_persists_legacy_intermission_before_returning() {
-        let dir = std::env::temp_dir().join(format!(
-            "slotbound-api-legacy-{}-{}",
-            std::process::id(),
-            9
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("slotbound-api-legacy-{}-{}", std::process::id(), 9));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
 
