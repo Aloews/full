@@ -2309,7 +2309,6 @@ mod tests {
         assert_eq!(another.formation_lane, 1);
     }
 
-
     #[test]
     fn allied_attacks_can_flank_an_exposed_backline_lane() {
         let mut game = run(741);
@@ -2327,13 +2326,29 @@ mod tests {
         game.units.push(archer);
 
         let report = game.battle().unwrap();
-        let attacks: Vec<_> = report.events.iter()
+        let attacks: Vec<_> = report
+            .events
+            .iter()
             .filter(|event| event.kind == BattleEventKind::AllyAttack)
             .collect();
-        let rogue_attack = attacks.iter().find(|event| event.actor_id == rogue_id).unwrap();
-        assert_eq!(rogue_attack.target_id, u64::MAX - 2, "the Rogue clears the lane-1 front defender");
-        let archer_attack = attacks.iter().find(|event| event.actor_id == archer_id).unwrap();
-        assert_eq!(archer_attack.target_id, u64::MAX - 3, "the rear enemy in lane 1 is exposed after its local screen falls");
+        let rogue_attack = attacks
+            .iter()
+            .find(|event| event.actor_id == rogue_id)
+            .unwrap();
+        assert_eq!(
+            rogue_attack.target_id,
+            u64::MAX - 2,
+            "the Rogue clears the lane-1 front defender"
+        );
+        let archer_attack = attacks
+            .iter()
+            .find(|event| event.actor_id == archer_id)
+            .unwrap();
+        assert_eq!(
+            archer_attack.target_id,
+            u64::MAX - 3,
+            "the rear enemy in lane 1 is exposed after its local screen falls"
+        );
     }
 
     #[test]
@@ -2346,11 +2361,16 @@ mod tests {
         let cleric = game.spawn_unit(UnitClass::Cleric);
         let cleric_id = cleric.id;
         game.units.extend([guardian, cleric]);
-        game.set_formation(cleric_id, FormationRow::Back, 1).unwrap();
+        game.set_formation(cleric_id, FormationRow::Back, 1)
+            .unwrap();
 
         let report = game.battle().unwrap();
-        let flank_hit = report.events.iter()
-            .find(|event| event.kind == BattleEventKind::EnemyAttack && event.actor_id == u64::MAX - 2)
+        let flank_hit = report
+            .events
+            .iter()
+            .find(|event| {
+                event.kind == BattleEventKind::EnemyAttack && event.actor_id == u64::MAX - 2
+            })
             .expect("lane-1 front enemy should find the exposed lane-1 backliner");
         assert_eq!(flank_hit.target_id, cleric_id);
     }
