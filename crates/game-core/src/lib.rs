@@ -146,9 +146,62 @@ pub struct CombatantSnapshot {
     pub boss: bool,
 }
 
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum BiomeKind {
+    #[default]
+    MosslightMeadow,
+    Emberfen,
+    CrystalCaverns,
+}
+
+impl BiomeKind {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::MosslightMeadow => "Mosslight Meadow",
+            Self::Emberfen => "Emberfen",
+            Self::CrystalCaverns => "Crystal Caverns",
+        }
+    }
+
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::MosslightMeadow => "mosslight_meadow",
+            Self::Emberfen => "emberfen",
+            Self::CrystalCaverns => "crystal_caverns",
+        }
+    }
+
+    pub fn boss_name(self) -> &'static str {
+        match self {
+            Self::MosslightMeadow => "Mosswood Sentinel",
+            Self::Emberfen => "Emberfen Tyrant",
+            Self::CrystalCaverns => "Prism Colossus",
+        }
+    }
+}
+
+pub const WAVES_PER_STAGE: u32 = 5;
+
+pub fn stage_for_wave(wave: u32) -> u32 {
+    wave.saturating_sub(1) / WAVES_PER_STAGE + 1
+}
+
+pub fn biome_for_wave(wave: u32) -> BiomeKind {
+    match (stage_for_wave(wave) - 1) % 3 {
+        0 => BiomeKind::MosslightMeadow,
+        1 => BiomeKind::Emberfen,
+        _ => BiomeKind::CrystalCaverns,
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BattleReport {
     pub wave: u32,
+    #[serde(default)]
+    pub stage: u32,
+    #[serde(default)]
+    pub biome: BiomeKind,
     pub boss: bool,
     pub army_power: u32,
     pub enemy_power: u32,
@@ -423,7 +476,7 @@ impl GameState {
             spins_used: 0,
             next_spin_cost: 100,
             shop_prices: item_prices(),
-            ruleset_version: 4,
+            ruleset_version: 5,
             nudge_available: true,
             board: [[UnitClass::Guardian; 3]; 3],
             units: Vec::new(),
@@ -454,7 +507,7 @@ impl GameState {
     }
 
     pub fn migrate_legacy_state(&mut self) -> bool {
-        if self.ruleset_version >= 4 {
+        if self.ruleset_version >= 5 {
             return false;
         }
 
@@ -498,7 +551,9 @@ impl GameState {
             unit.formation_lane = slot % 3;
         }
 
-        self.ruleset_version = 4;
+        // Version 5 adds explicit biome and stage metadata to each battle report.
+        // Missing metadata in old reports defaults to the first biome and stage zero.
+        self.ruleset_version = 5;
         true
     }
 
@@ -686,7 +741,9 @@ impl GameState {
 
     pub fn battle(&mut self) -> Result<BattleReport, GameError> {
         self.ensure_preparation()?;
-        let boss = self.wave % 5 == 0;
+        let boss = self.wave % WAVES_PER_STAGE == 0;
+        let stage = stage_for_wave(self.wave);
+        let biome = biome_for_wave(self.wave);
         let route = self.current_route;
         let elite = route == Some(RouteNodeKind::Elite) && !boss;
         let boss_gate = boss && route == Some(RouteNodeKind::BossGate);
@@ -775,7 +832,7 @@ impl GameState {
                 }
             })
             .collect();
-        let mut enemies = build_enemy_party(self.wave, boss, elite);
+        let mut enemies = build_enemy_party(self.wave, boss, elite, biome);
         let ally_snapshots = allies
             .iter()
             .map(|unit| CombatantSnapshot {
@@ -1153,6 +1210,8 @@ impl GameState {
         });
         let report = BattleReport {
             wave: self.wave,
+            stage,
+            biome,
             boss,
             army_power,
             enemy_power,
@@ -1359,7 +1418,7 @@ impl GameState {
     }
 
     fn generate_route_options(&mut self, target_wave: u32) -> Vec<RouteOption> {
-        let kinds = if target_wave % 5 == 0 {
+        let kinds = if target_wave % WAVES_PER_STAGE == 0 {
             [
                 RouteNodeKind::Rest,
                 RouteNodeKind::Merchant,
@@ -1374,6 +1433,7 @@ impl GameState {
                 RouteNodeKind::Elite,
             ]
         };
+        let biome = biome_for_wave(target_wave);
         let start = (self.random_u32() % 4) as usize;
         let mut selected = Vec::with_capacity(3);
         for offset in 0..4 {
@@ -1384,26 +1444,66 @@ impl GameState {
             {
                 continue;
             }
-            let (title, description) = match kind {
-                RouteNodeKind::Battle => (
+            let (title, description) = match (biome, kind) {
+                (BiomeKind::MosslightMeadow, RouteNodeKind::Battle) => (
                     "Old forest road",
-                    "A standard encounter. No detours, no extra danger.",
+                    "A standard encounter beneath the Mosslight canopy.",
                 ),
-                RouteNodeKind::Rest => (
+                (BiomeKind::MosslightMeadow, RouteNodeKind::Rest) => (
                     "Mosslight sanctuary",
                     "Recover one heart and restore 5 health to each surviving companion.",
                 ),
-                RouteNodeKind::Merchant => (
+                (BiomeKind::MosslightMeadow, RouteNodeKind::Merchant) => (
                     "Caravan crossing",
                     "Find a travelling supply cart and gain 75 gold for the expedition.",
                 ),
-                RouteNodeKind::Elite => (
+                (BiomeKind::MosslightMeadow, RouteNodeKind::Elite) => (
                     "Thornwarden lair",
                     "Face an elite enemy group. The route pays an extra 35 gold if you win.",
                 ),
-                RouteNodeKind::BossGate => (
+                (BiomeKind::MosslightMeadow, RouteNodeKind::BossGate) => (
                     "Ancient boss gate",
-                    "The next boss waits beyond these gates. Allied attacks gain 15% damage in the boss battle.",
+                    "The Mosswood Sentinel waits beyond this gate. Allied attacks gain 15% damage in the boss battle.",
+                ),
+                (BiomeKind::Emberfen, RouteNodeKind::Battle) => (
+                    "Cinder marsh trail",
+                    "Cross the warm ash flats where Cinder Moths and Soot Wolves gather.",
+                ),
+                (BiomeKind::Emberfen, RouteNodeKind::Rest) => (
+                    "Basalt hot spring",
+                    "Rest beside a warm spring: recover one heart and restore 5 health to each survivor.",
+                ),
+                (BiomeKind::Emberfen, RouteNodeKind::Merchant) => (
+                    "Ashen caravan",
+                    "A smoke-road trader offers supplies and 75 gold for your expedition.",
+                ),
+                (BiomeKind::Emberfen, RouteNodeKind::Elite) => (
+                    "Pyreback den",
+                    "Challenge an elite cinder pack. The route pays an extra 35 gold if you win.",
+                ),
+                (BiomeKind::Emberfen, RouteNodeKind::BossGate) => (
+                    "Emberfen crown gate",
+                    "The Emberfen Tyrant guards the furnace crown. Allied attacks gain 15% damage in the boss battle.",
+                ),
+                (BiomeKind::CrystalCaverns, RouteNodeKind::Battle) => (
+                    "Shattered crystal bridge",
+                    "Cross the echoing span patrolled by Shard Beetles and Prism Bats.",
+                ),
+                (BiomeKind::CrystalCaverns, RouteNodeKind::Rest) => (
+                    "Echo sanctuary",
+                    "Rest among humming geodes: recover one heart and restore 5 health to each survivor.",
+                ),
+                (BiomeKind::CrystalCaverns, RouteNodeKind::Merchant) => (
+                    "Prism trader",
+                    "A cave merchant trades rare supplies and adds 75 gold to your purse.",
+                ),
+                (BiomeKind::CrystalCaverns, RouteNodeKind::Elite) => (
+                    "Quartz vault",
+                    "Break into a guarded geode vault. The route pays an extra 35 gold if you win.",
+                ),
+                (BiomeKind::CrystalCaverns, RouteNodeKind::BossGate) => (
+                    "Prism heart gate",
+                    "The Prism Colossus blocks the heart of the caverns. Allied attacks gain 15% damage in the boss battle.",
                 ),
             };
             selected.push(RouteOption {
@@ -1680,16 +1780,37 @@ fn default_formation_row(class: UnitClass) -> FormationRow {
     }
 }
 
-fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> {
+fn build_enemy_party(
+    wave: u32,
+    boss_wave: bool,
+    elite: bool,
+    biome: BiomeKind,
+) -> Vec<Combatant> {
     let extra = ((wave.saturating_sub(1) / 3).min(3)) as usize;
     let count = 2 + extra + if elite { 1 } else { 0 };
-    let names = [
-        "Thicket Slime",
-        "Bramble Bat",
-        "Glow Wisp",
-        "Rootling",
-        "Mossling",
-    ];
+    let names = match biome {
+        BiomeKind::MosslightMeadow => [
+            "Thicket Slime",
+            "Bramble Bat",
+            "Glow Wisp",
+            "Rootling",
+            "Mossling",
+        ],
+        BiomeKind::Emberfen => [
+            "Cinder Moth",
+            "Ash Toad",
+            "Coal Sprite",
+            "Charred Rootling",
+            "Soot Wolf",
+        ],
+        BiomeKind::CrystalCaverns => [
+            "Shard Beetle",
+            "Echo Wisp",
+            "Quartz Golem",
+            "Prism Bat",
+            "Crystal Mite",
+        ],
+    };
     (0..count)
         .map(|index| {
             let boss = boss_wave && index == 0;
@@ -1698,28 +1819,37 @@ fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> 
             } else {
                 8u32.saturating_add(wave.saturating_mul(2))
             };
-            let base_health = if elite && !boss {
-                base_health.saturating_mul(5) / 4
-            } else {
-                base_health
+            let biome_health = match biome {
+                BiomeKind::MosslightMeadow | BiomeKind::Emberfen => base_health,
+                BiomeKind::CrystalCaverns => base_health.saturating_mul(115) / 100,
             };
-            let attack = if boss {
-                4u32.saturating_add(wave / 3)
+            let elite_health = if elite && !boss {
+                biome_health.saturating_mul(5) / 4
             } else {
-                2u32.saturating_add(wave / 5)
+                biome_health
+            };
+            let biome_attack = if biome == BiomeKind::Emberfen { 1 } else { 0 };
+            let attack = if boss {
+                4u32
+                    .saturating_add(wave / 3)
+                    .saturating_add(biome_attack)
+            } else {
+                2u32
+                    .saturating_add(wave / 5)
                     .saturating_add(if elite { 1 } else { 0 })
+                    .saturating_add(biome_attack)
             };
             Combatant {
                 id: u64::MAX.saturating_sub(index as u64),
                 name: if boss {
-                    "Mosswood Sentinel".to_string()
+                    biome.boss_name().to_string()
                 } else {
                     names[index % names.len()].to_string()
                 },
                 class: None,
                 attack,
-                max_health: base_health,
-                current_health: base_health,
+                max_health: elite_health,
+                current_health: elite_health,
                 shield: 0,
                 row: if boss || index % 2 == 0 {
                     FormationRow::Front
@@ -2175,7 +2305,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         let migrated_event = restored.pending_event.clone().unwrap();
-        assert_eq!(restored.ruleset_version, 4);
+        assert_eq!(restored.ruleset_version, 5);
         assert!(restored.pending_route.is_none());
         assert!(!restored.migrate_legacy_state());
         assert_eq!(restored.pending_event, Some(migrated_event));
@@ -2203,7 +2333,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         assert!(restored.pending_event.is_none());
-        assert_eq!(restored.ruleset_version, 4);
+        assert_eq!(restored.ruleset_version, 5);
         let options = restored.pending_route.as_ref().unwrap();
         assert_eq!(options.len(), 3);
         assert!(!restored.migrate_legacy_state());
@@ -2214,7 +2344,7 @@ mod tests {
         let mut game = run(703);
         game.ruleset_version = 1;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 4);
+        assert_eq!(game.ruleset_version, 5);
         assert!(game.pending_event.is_none());
         assert!(game.pending_route.is_none());
         assert!(!game.migrate_legacy_state());
@@ -2282,7 +2412,7 @@ mod tests {
         game.units.extend([archer, mage, beast]);
         game.ruleset_version = 3;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 4);
+        assert_eq!(game.ruleset_version, 5);
         assert_eq!(game.units[0].formation_row, FormationRow::Front);
         assert_eq!(game.units[0].formation_lane, 0);
         assert_eq!(game.units[1].formation_row, FormationRow::Back);
