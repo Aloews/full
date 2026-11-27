@@ -10,7 +10,46 @@ const PIXEL_PALETTES = {
   beast: { ink: '#2B2638', main: '#9A6545', light: '#D7A36A', shadow: '#67432F', skin: '#F5E9BD', accent: '#5E9B58' },
 };
 
-function paintWorldScene() {
+const BIOME_META = Object.freeze({
+  mosslight_meadow: {
+    label: 'Mosslight Meadow',
+    world: {
+      sky: '#72b9d2', dusk: '#4f8294', mountain: '#3d5b55', mountainLight: '#6f9870',
+      deep: '#243d38', tree: '#315b42', leaf: '#5e9b58', leafLight: '#9bc477',
+      trunk: '#805638', ground: '#456b43', grass: '#9bc477', stone: '#8a8b70',
+      stoneLight: '#d8d09d', shadow: '#2b2638', gold: '#f3c969', window: '#f6dfa0',
+    },
+    battle: { sky: '#4f8294', field: '#456b43', ground: '#243d38', grass: '#9bc477' },
+  },
+  emberfen: {
+    label: 'Emberfen',
+    world: {
+      sky: '#d98b5f', dusk: '#8f4e4f', mountain: '#593d48', mountainLight: '#a45e50',
+      deep: '#342b3b', tree: '#46313b', leaf: '#9c5744', leafLight: '#e1a15e',
+      trunk: '#654333', ground: '#62433b', grass: '#c57949', stone: '#7a5a52',
+      stoneLight: '#d59b74', shadow: '#2b2638', gold: '#f4c66b', window: '#ffe2a0',
+    },
+    battle: { sky: '#8f4e4f', field: '#73513a', ground: '#342b3b', grass: '#e1a15e' },
+  },
+  crystal_caverns: {
+    label: 'Crystal Caverns',
+    world: {
+      sky: '#9fb6da', dusk: '#667ca9', mountain: '#4c587e', mountainLight: '#8b9ac8',
+      deep: '#2d3557', tree: '#394466', leaf: '#6077a8', leafLight: '#c0d8ed',
+      trunk: '#64536e', ground: '#4a587c', grass: '#90abc9', stone: '#7583a5',
+      stoneLight: '#d3dded', shadow: '#262742', gold: '#f3d37a', window: '#c7efff',
+    },
+    battle: { sky: '#667ca9', field: '#51516f', ground: '#292d4b', grass: '#9ec8d8' },
+  },
+});
+const BIOME_CYCLE = ['mosslight_meadow', 'emberfen', 'crystal_caverns'];
+function biomeForWave(wave) {
+  const stage = Math.max(1, Math.floor((Math.max(1, wave) - 1) / 5) + 1);
+  const key = BIOME_CYCLE[(stage - 1) % BIOME_CYCLE.length];
+  return { key, stage, label: BIOME_META[key].label };
+}
+
+function paintWorldScene(biomeKey = 'mosslight_meadow') {
   const canvas = $('world-scene');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -20,12 +59,7 @@ function paintWorldScene() {
     ctx.fillStyle = color;
     ctx.fillRect(x, y, w, h);
   };
-  const colors = {
-    sky: '#72b9d2', dusk: '#4f8294', mountain: '#3d5b55', mountainLight: '#6f9870',
-    deep: '#243d38', tree: '#315b42', leaf: '#5e9b58', leafLight: '#9bc477',
-    trunk: '#805638', ground: '#456b43', grass: '#9bc477', stone: '#8a8b70',
-    stoneLight: '#d8d09d', shadow: '#2b2638', gold: '#f3c969', window: '#f6dfa0'
-  };
+  const colors = BIOME_META[biomeKey]?.world || BIOME_META.mosslight_meadow.world;
   px(0, 0, 320, 64, colors.sky);
   px(0, 0, 320, 18, colors.dusk);
   // Distant stars and a blocky crescent moon.
@@ -38,14 +72,40 @@ function paintWorldScene() {
     px(x,y,w,h,colors.mountain);
     px(x+8,y-4,w-16,4,colors.mountainLight);
   });
-  // Woodland canopy layers.
-  [[8,35],[35,31],[60,37],[235,35],[260,29],[292,36]].forEach(([x,y],i) => {
-    px(x+5,y+10,5,13,colors.trunk);
-    px(x,y+3,15,12,colors.deep);
-    px(x+2,y,11,11,i%2?colors.leaf:colors.tree);
-    px(x+4,y+2,4,3,colors.leafLight);
-    px(x+12,y+7,3,4,colors.deep);
-  });
+  // Biome silhouettes retain the same 16-bit pixel grid but use distinct original landmarks.
+  if (biomeKey === 'emberfen') {
+    [[8,36],[40,31],[246,34],[288,29]].forEach(([x,y],i) => {
+      px(x+5,y+10,5,13,colors.trunk);
+      px(x,y+3,15,12,colors.deep);
+      px(x+2,y,11,11,i%2?colors.leaf:colors.tree);
+      px(x+4,y+2,4,3,colors.leafLight);
+      px(x+12,y+7,3,4,colors.deep);
+    });
+    [[45,47],[54,45],[230,48],[240,45]].forEach(([x,y]) => {
+      px(x,y,8,5,colors.shadow); px(x+2,y-4,4,4,colors.gold);
+      px(x+3,y-2,2,2,colors.window);
+    });
+  } else if (biomeKey === 'crystal_caverns') {
+    [[10,35],[42,28],[240,33],[285,27]].forEach(([x,y],i) => {
+      px(x+5,y+12,5,14,colors.deep);
+      px(x+2,y+5,11,10,colors.mountain);
+      px(x+5,y,5,9,i%2?colors.leaf:colors.mountainLight);
+      px(x+6,y-4,3,5,colors.leafLight);
+      px(x+7,y+3,2,4,colors.window);
+    });
+    [[45,45],[66,39],[226,44],[252,42]].forEach(([x,y]) => {
+      px(x,y+7,4,8,colors.mountain); px(x+2,y+3,5,5,colors.leafLight);
+      px(x+4,y,3,4,colors.window);
+    });
+  } else {
+    [[8,35],[35,31],[60,37],[235,35],[260,29],[292,36]].forEach(([x,y],i) => {
+      px(x+5,y+10,5,13,colors.trunk);
+      px(x,y+3,15,12,colors.deep);
+      px(x+2,y,11,11,i%2?colors.leaf:colors.tree);
+      px(x+4,y+2,4,3,colors.leafLight);
+      px(x+12,y+7,3,4,colors.deep);
+    });
+  }
   // Ground plane and stone path.
   px(0,48,320,16,colors.ground);
   for(let x=0;x<320;x+=16){px(x,48,8,2,colors.leaf);px(x+8,60,8,2,colors.deep);}
@@ -249,7 +309,9 @@ function render() {
   $('units').innerHTML = game.units.length ? game.units.map((unit) => renderUnit(unit)).join('') : '<div class="empty-state">No units in the formation.</div>';
   $('target-label').textContent = keepId ? `KEEPER #${keepId}` : 'NO KEEPER SELECTED';
   $('phase').textContent = game.phase.toUpperCase();
-  $('battle-title').textContent = game.wave % 5 === 0 ? `Judgment wave ${game.wave}` : `Wave ${game.wave}`;
+  const region = biomeForWave(game.wave);
+  $('battle-title').textContent = `${region.label} · STAGE ${region.stage} · ${game.wave % 5 === 0 ? 'BOSS WAVE' : `WAVE ${game.wave}`}`;
+  paintWorldScene(region.key);
   renderBattle(lost);
   renderCores();
   renderShop();
@@ -292,12 +354,13 @@ function paintBattlefield(report, eventLimit) {
   if (!ctx) return;
   ctx.imageSmoothingEnabled = false;
   const px = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
-  px(0, 0, 320, 128, '#243d38');
-  px(0, 0, 320, 54, '#4f8294');
-  px(0, 54, 320, 74, '#456b43');
+  const environment = BIOME_META[report.biome]?.battle || BIOME_META.mosslight_meadow.battle;
+  px(0, 0, 320, 128, environment.ground);
+  px(0, 0, 320, 54, environment.sky);
+  px(0, 54, 320, 74, environment.field);
   for (let x = 0; x < 320; x += 16) {
-    px(x, 54 + (x % 3) * 2, 8, 2, '#9bc477');
-    px(x + 8, 116 - (x % 4) * 2, 8, 2, '#315b42');
+    px(x, 54 + (x % 3) * 2, 8, 2, environment.grass);
+    px(x + 8, 116 - (x % 4) * 2, 8, 2, environment.ground);
   }
   px(154, 0, 2, 128, '#f3c969');
   px(156, 0, 1, 128, '#f5e9bd');
@@ -487,7 +550,7 @@ function renderBattle(lost) {
     const routeMarkup = !event && route.length ? `<section class="route-fork"><div class="route-heading"><span class="eyebrow">CHOOSE YOUR PATH</span><strong>THE ROAD TO WAVE ${game.wave + 1}</strong></div>${routeTrailMarkup}<div class="route-branches">${route.map((option, index) => `<button class="route-option route-${esc(option.kind)}" data-action="route-choice" data-index="${index}"><span class="route-node">${option.kind === 'rest' ? '✚' : option.kind === 'merchant' ? '◈' : option.kind === 'elite' ? '⚔' : option.kind === 'boss_gate' ? '☠' : '➜'}</span><strong>${esc(option.title)}</strong><small>${esc(option.description)}</small></button>`).join('')}</div></section>` : '';
     const latestRoute = game.route_history?.[game.route_history.length - 1];
     const routeSelectedMarkup = !event && !route.length && latestRoute && latestRoute.wave === game.wave + 1 ? `<div class="journey-outcome route-selected"><span class="eyebrow">NEXT ROUTE · WAVE ${latestRoute.wave}</span><strong>${esc(latestRoute.outcome)}</strong></div>` : '';
-    $('battle-content').innerHTML = `<div class="battle-result ${report.victory ? 'victory' : 'defeat'}"><strong>${report.victory ? 'VICTORY' : 'DEFEAT'}</strong><span>${report.boss ? 'Boss encounter' : `Wave ${report.wave}`} · ${report.rounds || 0} rounds · ${game.units.length} survivors · ${report.route ? esc(report.route.replaceAll('_',' ')) + ' route' : 'main path'}</span><small>${report.victory ? `+${report.gold_awarded} gold` : `-${report.damage_taken} hearts · +${report.gold_awarded} gold`}</small></div><canvas id="battlefield" class="battlefield" width="320" height="128" role="img" aria-label="Pixel-art battlefield showing the last battle formation and combat health"></canvas>${journeyMarkup}${routeMarkup}${routeSelectedMarkup}${latestOutcome}<div class="combat-log"><span class="eyebrow">COMBAT LOG</span>${timeline || '<div class="empty-state">No combat events recorded.</div>'}</div>`;
+    $('battle-content').innerHTML = `<div class="battle-result ${report.victory ? 'victory' : 'defeat'}"><strong>${report.victory ? 'VICTORY' : 'DEFEAT'}</strong><span>${BIOME_META[report.biome]?.label || BIOME_META.mosslight_meadow.label} · STAGE ${report.stage || Math.floor((report.wave - 1) / 5) + 1} · ${report.boss ? 'Boss encounter' : `Wave ${report.wave}`} · ${report.rounds || 0} rounds · ${game.units.length} survivors · ${report.route ? esc(report.route.replaceAll('_',' ')) + ' route' : 'main path'}</span><small>${report.victory ? `+${report.gold_awarded} gold` : `-${report.damage_taken} hearts · +${report.gold_awarded} gold`}</small></div><canvas id="battlefield" class="battlefield" width="320" height="128" role="img" aria-label="Pixel-art battlefield showing the last battle formation and combat health"></canvas>${journeyMarkup}${routeMarkup}${routeSelectedMarkup}${latestOutcome}<div class="combat-log"><span class="eyebrow">COMBAT LOG</span>${timeline || '<div class="empty-state">No combat events recorded.</div>'}</div>`;
     playBattleReplay(report);
     const blocked = Boolean(game.core_offer || event || game.pending_route);
     const buttonLabel = game.core_offer ? 'CHOOSE A CORE FIRST' : event ? 'RESOLVE JOURNEY EVENT' : game.pending_route ? 'CHOOSE A PATH FIRST' : 'PREPARE NEXT WAVE';
@@ -518,7 +581,10 @@ function renderShop() {
 }
 
 function renderStatus() {
-  $('status-list').innerHTML = `<div class="status-row"><span>Gold reserve</span><strong>◈ ${game.gold.toLocaleString()}</strong></div>
+  const region = biomeForWave(game.wave);
+  $('status-list').innerHTML = `<div class="status-row"><span>Expedition region</span><strong>${region.label}</strong></div>
+    <div class="status-row"><span>Stage</span><strong>${region.stage} · WAVE ${game.wave}</strong></div>
+    <div class="status-row"><span>Gold reserve</span><strong>◈ ${game.gold.toLocaleString()}</strong></div>
     <div class="status-row"><span>Defence integrity</span><strong>${game.hearts} / 5</strong></div>
     <div class="status-row"><span>Army capacity</span><strong>${game.units.length} / ${game.unit_limit}</strong></div>
     <div class="status-row"><span>Draws remaining</span><strong>${game.spins_remaining} / 6</strong></div>
