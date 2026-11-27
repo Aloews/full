@@ -1581,12 +1581,18 @@ impl GameState {
         let variance = self.random_u32() % 3;
         let options = class.promotions();
         let formation_row = default_formation_row(class);
-        let formation_lane = (self
+        let mut lane_occupancy = [0u8; 3];
+        for unit in self
             .units
             .iter()
             .filter(|unit| unit.formation_row == formation_row)
-            .count() as u8)
-            % 3;
+        {
+            let lane = usize::from(unit.formation_lane.min(2));
+            lane_occupancy[lane] = lane_occupancy[lane].saturating_add(1);
+        }
+        let formation_lane = (0..3)
+            .min_by_key(|lane| (lane_occupancy[*lane], *lane))
+            .unwrap_or(0) as u8;
         Unit {
             id,
             class,
@@ -2279,6 +2285,22 @@ mod tests {
         assert_eq!(game.units[3].formation_row, FormationRow::Front);
         assert_eq!(game.units[3].formation_lane, 1);
         assert!(!game.migrate_legacy_state());
+    }
+
+
+    #[test]
+    fn new_units_choose_the_least_occupied_lane_after_manual_repositioning() {
+        let mut game = run(736);
+        let starter_id = game.units[0].id;
+        game.set_formation(starter_id, FormationRow::Front, 2).unwrap();
+
+        let next = game.spawn_unit(UnitClass::Guardian);
+        assert_eq!(next.formation_row, FormationRow::Front);
+        assert_eq!(next.formation_lane, 0);
+
+        game.units.push(next);
+        let another = game.spawn_unit(UnitClass::Guardian);
+        assert_eq!(another.formation_lane, 1);
     }
 
     #[test]
