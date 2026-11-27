@@ -74,6 +74,26 @@ These are code-level statements. Runtime/CI status must be added only after GitH
 - [ ] Playwright end-to-end journeys and accessibility audit.
 - [ ] Build artifacts, signed desktop packaging, crash reporting and release checklist.
 
+## S0.5 — Retro pixel UI pass (branch-only, unverified)
+- [x] Restore original 16-bit pixel-art design direction to product concept.
+- [x] Add an override stylesheet for square pixel panels, chunky borders, palette, and short stepped win flash.
+- [x] Wire `web/pixel.css` before the existing base stylesheet so original layout rules stay intact and pixel overrides win.
+- [ ] Run CSS/HTML validation and real browser screenshot inspection.
+- [ ] Replace glyph/emoji placeholders with original sprite-sheet assets.
+- [ ] Add battle scene/event feed visuals after combat simulation emits structured events.
+
+## Next implementation milestones
+
+1. **S1-A Combat event model (Rust core):** expose deterministic event records (battle start, enemy spawn, target selection, hit, block, status, unit defeated, wave result) in the battle report. Keep simulation seed and event ordering deterministic; add exact-seed replay tests.
+2. **S1-B Tactical auto-battle:** replace power-only resolution with tick-based unit simulation, class-specific attack range/target rules, cooldown/status timers, Guardian interception, Cleric healing, enemy wave compositions and boss patterns. No client-side rules.
+3. **S1-C Living-world events:** add event deck/weighting driven by wave, party traits, class composition, recent outcomes, and deterministic RNG; each event must have choices, costs/effects, and logged consequences. Validate action availability and reject invalid choices without mutating state.
+4. **S1-D Army and formation:** define slot/position data, roster reserve, battlefield placement, party synergies, casualty/injury states and formation UI. Explicitly test limits and overflow.
+5. **S1-E Playable journey:** automate start → spin/recruit → select keeper/absorb → event choice → battle → reward/cache → next wave → boss/core with browser and API assertions.
+
 ## Acceptance gates
 
 A milestone is accepted only when its domain invariants pass, fixed-seed replays match, API tests exercise the real router, save/load round-trips preserve state, browser journeys use the real API, CI is green on the exact candidate SHA, and an independent QA role records no unresolved critical/high defects. A successful compile alone is not acceptance.
+
+## Branch isolation
+
+This branch is based on current `main` SHA `d9cb82d10104e3b6a019274193f74d57cb385325`. Pixel UI edits are intentionally isolated; production deploy and merge are not authorized by this branch-only continuation. The last deployed version is not assumed to include this branch.
