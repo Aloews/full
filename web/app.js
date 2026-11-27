@@ -272,8 +272,10 @@ function renderUnit(unit) {
     <div class="formation-controls">
       <span class="formation-position">${row.toUpperCase()} · LANE ${lane + 1}</span>
       <div class="formation-actions">
-        <button class="button button-quiet button-small" data-action="formation-row" data-id="${unit.id}" data-row="${nextRow}" data-lane="${lane}" ${!canAct ? 'disabled' : ''}>SWAP ROW</button>
-        <button class="button button-quiet button-small" data-action="formation-lane" data-id="${unit.id}" data-row="${row}" data-lane="${(lane + 1) % 3}" ${!canAct ? 'disabled' : ''}>SHIFT LANE →</button>
+        <button class="button button-quiet button-small formation-row-button" data-action="formation-row" data-id="${unit.id}" data-row="${nextRow}" data-lane="${lane}" ${!canAct ? 'disabled' : ''}>MOVE TO ${nextRow.toUpperCase()}</button>
+        <div class="formation-lanes" role="group" aria-label="Choose formation lane">
+          ${[0, 1, 2].map((targetLane) => `<button class="lane-button ${targetLane === lane ? 'is-selected' : ''}" data-action="formation-lane" data-id="${unit.id}" data-row="${row}" data-lane="${targetLane}" aria-pressed="${targetLane === lane}" aria-label="Move ${esc(meta[1])} to lane ${targetLane + 1}" ${!canAct ? 'disabled' : ''}>${targetLane + 1}</button>`).join('')}
+        </div>
       </div>
     </div>
     ${unit.pending_promotion ? `<div class="promotion-options"><span>PROMOTION</span>${unit.promotion_options.map((name) => `<button class="button button-small" data-action="promote" data-id="${unit.id}" data-choice="${esc(name)}">${esc(name)}</button>`).join('')}</div>` : ''}
