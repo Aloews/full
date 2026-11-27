@@ -95,6 +95,10 @@ pub struct Unit {
     pub health: u32,
     #[serde(default)]
     pub current_health: Option<u32>,
+    #[serde(default)]
+    pub formation_row: FormationRow,
+    #[serde(default)]
+    pub formation_lane: u8,
     pub imprint: Option<String>,
     pub promotion: Option<String>,
     pub pending_promotion: bool,
@@ -401,6 +405,8 @@ pub enum GameError {
     InvalidRouteChoice,
     #[error("item is not available or the selected item is invalid")]
     InvalidItem,
+    #[error("formation lane must be between 0 and 2")]
+    InvalidFormationLane,
 }
 
 impl GameState {
@@ -417,7 +423,7 @@ impl GameState {
             spins_used: 0,
             next_spin_cost: 100,
             shop_prices: item_prices(),
-            ruleset_version: 3,
+            ruleset_version: 4,
             nudge_available: true,
             board: [[UnitClass::Guardian; 3]; 3],
             units: Vec::new(),
@@ -448,11 +454,12 @@ impl GameState {
     }
 
     pub fn migrate_legacy_state(&mut self) -> bool {
-        if self.ruleset_version >= 3 {
+        if self.ruleset_version >= 4 {
             return false;
         }
 
-        if self.phase == RunPhase::Intermission
+        if self.ruleset_version < 3
+            && self.phase == RunPhase::Intermission
             && self.last_battle.is_some()
             && self.pending_event.is_none()
             && self.pending_route.is_none()
@@ -471,9 +478,27 @@ impl GameState {
             }
         }
 
-        // Version 3 adds server-authored formation positions to each battle snapshot.
-        // Old snapshots deserialize with safe back-row/default-lane values.
-        self.ruleset_version = 3;
+        let mut front_slots = 0u8;
+        let mut back_slots = 0u8;
+        for unit in &mut self.units {
+            let row = default_formation_row(unit.class);
+            let slot = match row {
+                FormationRow::Front => {
+                    let slot = front_slots;
+                    front_slots = front_slots.saturating_add(1);
+                    slot
+                }
+                FormationRow::Back => {
+                    let slot = back_slots;
+                    back_slots = back_slots.saturating_add(1);
+                    slot
+                }
+            };
+            unit.formation_row = row;
+            unit.formation_lane = slot % 3;
+        }
+
+        self.ruleset_version = 4;
         true
     }
 
@@ -639,6 +664,26 @@ impl GameState {
         Ok(())
     }
 
+    pub fn set_formation(
+        &mut self,
+        unit_id: u64,
+        row: FormationRow,
+        lane: u8,
+    ) -> Result<(), GameError> {
+        self.ensure_management_phase()?;
+        if lane >= 3 {
+            return Err(GameError::InvalidFormationLane);
+        }
+        let unit = self
+            .units
+            .iter_mut()
+            .find(|unit| unit.id == unit_id)
+            .ok_or(GameError::UnitNotFound)?;
+        unit.formation_row = row;
+        unit.formation_lane = lane;
+        Ok(())
+    }
+
     pub fn battle(&mut self) -> Result<BattleReport, GameError> {
         self.ensure_preparation()?;
         let boss = self.wave % 5 == 0;
@@ -692,30 +737,17 @@ impl GameState {
             boss_gate,
         );
 
-        let mut front_slots = 0u8;
-        let mut back_slots = 0u8;
+        let mut formation_stacks = [[0u8; 3]; 2];
         let mut allies: Vec<Combatant> = self
             .units
             .iter()
             .map(|unit| {
-                let row = match unit.class {
-                    UnitClass::Guardian | UnitClass::Beast | UnitClass::Rogue => {
-                        FormationRow::Front
-                    }
-                    UnitClass::Archer | UnitClass::Mage | UnitClass::Cleric => FormationRow::Back,
-                };
-                let slot = match row {
-                    FormationRow::Front => {
-                        let slot = front_slots;
-                        front_slots = front_slots.saturating_add(1);
-                        slot
-                    }
-                    FormationRow::Back => {
-                        let slot = back_slots;
-                        back_slots = back_slots.saturating_add(1);
-                        slot
-                    }
-                };
+                let row = unit.formation_row;
+                let lane = unit.formation_lane.min(2);
+                let row_index = if row == FormationRow::Front { 0 } else { 1 };
+                let stack = formation_stacks[row_index][lane as usize];
+                formation_stacks[row_index][lane as usize] =
+                    formation_stacks[row_index][lane as usize].saturating_add(1);
                 Combatant {
                     id: unit.id,
                     name: format!("{} #{}", unit.class.label(), unit.id),
@@ -729,8 +761,8 @@ impl GameState {
                         .max(1),
                     shield: 0,
                     row,
-                    lane: slot % 3,
-                    stack: slot / 3,
+                    lane,
+                    stack,
                     initiative: match unit.class {
                         UnitClass::Rogue => 10,
                         UnitClass::Archer => 9,
@@ -1548,6 +1580,12 @@ impl GameState {
         let (attack, health) = class.base_stats();
         let variance = self.random_u32() % 3;
         let options = class.promotions();
+        let formation_row = default_formation_row(class);
+        let formation_lane = (self
+            .units
+            .iter()
+            .filter(|unit| unit.formation_row == formation_row)
+            .count() as u8) % 3;
         Unit {
             id,
             class,
@@ -1556,6 +1594,8 @@ impl GameState {
             attack: attack + variance,
             health: health + variance,
             current_health: None,
+            formation_row,
+            formation_lane,
             imprint: None,
             promotion: None,
             pending_promotion: false,
@@ -1618,6 +1658,13 @@ fn apply_boss_gate_bonus(base_damage: u32, enabled: bool) -> u32 {
     }
     let bonus = base_damage.saturating_mul(15).saturating_add(99) / 100;
     base_damage.saturating_add(bonus.max(1))
+}
+
+fn default_formation_row(class: UnitClass) -> FormationRow {
+    match class {
+        UnitClass::Guardian | UnitClass::Beast | UnitClass::Rogue => FormationRow::Front,
+        UnitClass::Archer | UnitClass::Mage | UnitClass::Cleric => FormationRow::Back,
+    }
 }
 
 fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> {
@@ -2115,7 +2162,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         let migrated_event = restored.pending_event.clone().unwrap();
-        assert_eq!(restored.ruleset_version, 3);
+        assert_eq!(restored.ruleset_version, 4);
         assert!(restored.pending_route.is_none());
         assert!(!restored.migrate_legacy_state());
         assert_eq!(restored.pending_event, Some(migrated_event));
@@ -2143,7 +2190,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         assert!(restored.pending_event.is_none());
-        assert_eq!(restored.ruleset_version, 3);
+        assert_eq!(restored.ruleset_version, 4);
         let options = restored.pending_route.as_ref().unwrap();
         assert_eq!(options.len(), 3);
         assert!(!restored.migrate_legacy_state());
@@ -2154,9 +2201,79 @@ mod tests {
         let mut game = run(703);
         game.ruleset_version = 1;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 3);
+        assert_eq!(game.ruleset_version, 4);
         assert!(game.pending_event.is_none());
         assert!(game.pending_route.is_none());
+        assert!(!game.migrate_legacy_state());
+    }
+
+
+    #[test]
+    fn player_can_change_formation_row_and_lane_before_battle() {
+        let mut game = run(731);
+        let unit_id = game.units[0].id;
+        game.set_formation(unit_id, FormationRow::Back, 2).unwrap();
+        assert_eq!(game.units[0].formation_row, FormationRow::Back);
+        assert_eq!(game.units[0].formation_lane, 2);
+        let report = game.battle().unwrap();
+        let snapshot = report.allies.iter().find(|unit| unit.id == unit_id).unwrap();
+        assert_eq!(snapshot.row, FormationRow::Back);
+        assert_eq!(snapshot.lane, 2);
+        assert_eq!(snapshot.stack, 0);
+    }
+
+    #[test]
+    fn invalid_formation_lane_does_not_mutate_unit_position() {
+        let mut game = run(732);
+        let unit_id = game.units[0].id;
+        let row_before = game.units[0].formation_row;
+        let lane_before = game.units[0].formation_lane;
+        assert_eq!(
+            game.set_formation(unit_id, FormationRow::Back, 3),
+            Err(GameError::InvalidFormationLane)
+        );
+        assert_eq!(game.units[0].formation_row, row_before);
+        assert_eq!(game.units[0].formation_lane, lane_before);
+    }
+
+    #[test]
+    fn units_can_stack_in_a_lane_with_stable_stack_indices() {
+        let mut game = run(733);
+        let first = game.units[0].id;
+        let second = game.spawn_unit(UnitClass::Guardian);
+        let third = game.spawn_unit(UnitClass::Guardian);
+        let second_id = second.id;
+        let third_id = third.id;
+        game.units.extend([second, third]);
+        for id in [first, second_id, third_id] {
+            game.set_formation(id, FormationRow::Front, 1).unwrap();
+        }
+        let report = game.battle().unwrap();
+        for (id, expected_stack) in [(first, 0), (second_id, 1), (third_id, 2)] {
+            let unit = report.allies.iter().find(|unit| unit.id == id).unwrap();
+            assert_eq!(unit.row, FormationRow::Front);
+            assert_eq!(unit.lane, 1);
+            assert_eq!(unit.stack, expected_stack);
+        }
+    }
+
+    #[test]
+    fn ruleset_v3_save_upgrades_with_class_default_formation() {
+        let mut game = run(734);
+        let archer = game.spawn_unit(UnitClass::Archer);
+        let mage = game.spawn_unit(UnitClass::Mage);
+        let beast = game.spawn_unit(UnitClass::Beast);
+        game.units.extend([archer, mage, beast]);
+        game.ruleset_version = 3;
+        assert!(game.migrate_legacy_state());
+        assert_eq!(game.ruleset_version, 4);
+        assert_eq!(game.units[0].formation_row, FormationRow::Front);
+        assert_eq!(game.units[0].formation_lane, 0);
+        assert_eq!(game.units[1].formation_row, FormationRow::Back);
+        assert_eq!(game.units[1].formation_lane, 0);
+        assert_eq!(game.units[2].formation_lane, 1);
+        assert_eq!(game.units[3].formation_row, FormationRow::Front);
+        assert_eq!(game.units[3].formation_lane, 1);
         assert!(!game.migrate_legacy_state());
     }
 
@@ -2258,7 +2375,7 @@ mod tests {
         let selected = game.current_route;
         game.ruleset_version = 2;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 3);
+        assert_eq!(game.ruleset_version, 4);
         assert_eq!(game.current_route, selected);
         assert!(game.pending_event.is_none());
         assert!(!game.migrate_legacy_state());
