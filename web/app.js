@@ -296,7 +296,7 @@ function paintBattlefield(report, eventLimit) {
   const add = (id, name, team, health, amount = 0) => {
     if (!id || !name || name === 'Squad') return;
     const initial = Number.isFinite(health) ? Math.max(1, health + amount) : 20;
-    const current = actors.get(id) || { id, name: normalizedName(name), team, hp: initial, max: initial, class: null, boss: false };
+    const current = actors.get(id) || { id, name: normalizedName(name), team, hp: initial, max: initial, class: null, boss: false, shield: 0 };
     current.name = normalizedName(name);
     current.team = team;
     if (Number.isFinite(health)) current.hp = Math.max(0, health);
@@ -307,7 +307,7 @@ function paintBattlefield(report, eventLimit) {
     actors.set(unit.id, {
       id: unit.id, name: unit.name, team: 'ally',
       hp: unit.current_health, max: unit.max_health,
-      class: unit.class, boss: Boolean(unit.boss),
+      class: unit.class, boss: Boolean(unit.boss), shield: 0,
     });
   });
   (report.enemies || []).forEach((unit) => {
@@ -329,6 +329,14 @@ function paintBattlefield(report, eventLimit) {
     if (entry.kind === 'enemy_defeated') add(entry.target_id, entry.target, 'enemy', 0);
     if (entry.kind === 'ally_defeated') add(entry.target_id, entry.target, 'ally', 0);
     if (entry.kind === 'unit_healed') add(entry.target_id, entry.target, 'ally', entry.remaining_health);
+    if (entry.kind === 'shield_granted') {
+      const target = actors.get(entry.target_id);
+      if (target) target.shield = Math.min(4, (target.shield || 0) + entry.amount);
+    }
+    if (entry.kind === 'shield_absorbed') {
+      const target = actors.get(entry.target_id);
+      if (target) target.shield = Math.max(0, (target.shield || 0) - entry.amount);
+    }
     if (entry.kind === 'boss_telegraph') add(entry.actor_id, entry.actor, 'enemy');
   });
   const allies = [...actors.values()].filter((unit) => unit.team === 'ally');
@@ -349,19 +357,23 @@ function paintBattlefield(report, eventLimit) {
     px(x + 5, y + 14, 4, 4, '#2b2638'); px(x + 12, y + 14, 4, 4, '#2b2638');
     px(x, y - 5, 24, 3, '#2b2638');
     px(x, y - 5, Math.max(0, Math.round(24 * unit.hp / Math.max(1, unit.max))), 3, team === 'ally' ? '#9bc477' : '#e87958');
+    if (unit.shield > 0) {
+      px(x, y - 9, 24, 2, '#2b2638');
+      px(x, y - 9, Math.round(24 * unit.shield / 4), 2, '#72b9d2');
+    }
     if (unit.boss) { px(x + 8, y - 11, 6, 4, '#f3c969'); }
   };
   allies.forEach((unit, index) => drawUnit(unit, index, 'ally'));
   enemies.forEach((unit, index) => drawUnit(unit, index, 'enemy'));
   const lastEvent = events[events.length - 1];
-  if (lastEvent && ['ally_attack', 'enemy_attack', 'unit_healed'].includes(lastEvent.kind)) {
+  if (lastEvent && ['ally_attack', 'enemy_attack', 'unit_healed', 'shield_granted', 'shield_absorbed'].includes(lastEvent.kind)) {
     const from = positions.get(lastEvent.actor_id);
     const to = positions.get(lastEvent.target_id);
     if (from && to) {
-      ctx.strokeStyle = lastEvent.kind === 'unit_healed' ? '#9bc477' : '#f3c969';
+      ctx.strokeStyle = ['unit_healed', 'shield_granted'].includes(lastEvent.kind) ? '#72b9d2' : '#f3c969';
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke();
-      px(to.x - 3, to.y - 3, 6, 6, lastEvent.kind === 'unit_healed' ? '#b7e0a1' : '#f3c969');
+      px(to.x - 3, to.y - 3, 6, 6, ['unit_healed', 'shield_granted'].includes(lastEvent.kind) ? '#b7e0a1' : '#f3c969');
     }
   }
   if (lastEvent?.kind === 'boss_telegraph') {
@@ -431,11 +443,13 @@ function renderBattle(lost) {
         ally_defeated: 'is defeated by',
         enemy_defeated: 'defeats',
         unit_healed: 'restores health to',
+        shield_granted: 'raises a shield for',
+        shield_absorbed: 'blocks damage for',
         boss_telegraph: 'telegraphs an attack at',
         battle_ended: 'ends the battle:',
       };
       const verb = verbs[entry.kind] || 'acts on';
-      const amount = entry.amount ? ` · ${entry.kind === 'unit_healed' ? '+' : '-'}${entry.amount} HP` : '';
+      const amount = entry.amount ? ` · ${['unit_healed', 'shield_granted'].includes(entry.kind) ? '+' : '-'}${entry.amount} ${entry.kind.startsWith('shield_') ? 'SHIELD' : 'HP'}` : '';
       return `<div class="combat-event ${esc(entry.kind)}"><span>R${entry.tick}</span><strong>${esc(entry.actor)}</strong> ${verb} <b>${esc(entry.target)}</b>${amount}</div>`;
     }).join('');
     const event = game.pending_event;

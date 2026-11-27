@@ -166,3 +166,7 @@ The browser now displays encounter cards and choices, a pixel-art battlefield sn
 ## Branching route choice implementation
 
 After each resolved journey encounter, the expedition offers three deterministic route options. The available path types include a standard encounter, a sanctuary rest, a merchant crossing and an elite lair; on the approach to a fifth-wave boss, the route set includes the boss gate with rest and supply detours. Route selections are persisted, cannot be replayed, and gate progression to the next wave. The browser retains the recent selected routes as a visual path trail leading into the next fork. Rest restores one heart and up to five health per surviving unit, merchants add 75 gold, and elite routes add an enemy, increase enemy stats and grant an additional victory reward. The browser presents the fork as connected pixel-styled route nodes. This is a per-wave branching fork, not yet a full connected multi-step world map with biome transitions.
+
+## Guardian Shieldwall
+
+The Guardian now casts Shieldwall every fourth combat tick. It grants up to 2 temporary shield to each living ally, with a maximum of 4 shield per unit. Enemy attacks consume shield before HP; the battle event stream records shield gain and shield absorption as distinct events. The browser displays a separate shield bar and replays each grant/block using the Rust-authored event sequence. Shields are battle-local and do not persist into the next wave.

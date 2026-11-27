@@ -773,3 +773,6 @@ button:focus-visible, a:focus-visible {
   text-transform:uppercase;
   white-space:nowrap;
 }
+
+.combat-event.shield_granted > b,
+.combat-event.shield_absorbed > b { color:#4d9db3; }

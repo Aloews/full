@@ -32,6 +32,11 @@ if "target_id" not in client or "BossTelegraph" not in api + (ROOT / "crates/gam
 if "route-trail" not in client:
     raise SystemExit("route history trail is missing")
 
+if "ShieldGranted" not in (ROOT / "crates/game-core/src/lib.rs").read_text(encoding="utf-8"):
+    raise SystemExit("Guardian Shieldwall domain event is missing")
+if "shield_granted" not in client or "shield_absorbed" not in client:
+    raise SystemExit("Guardian Shieldwall replay is missing")
+
 if "function playBattleReplay(report)" not in client:
     raise SystemExit("battle replay renderer is missing")
 if 'data-action="journey-choice"' not in client or "resolve_event" not in api:

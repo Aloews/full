@@ -38,7 +38,7 @@ Initiative: Rogue 10, Archer 9, Mage 8, Beast 7, Guardian 6, Cleric 5.
 
 | Class | Current effect |
 |---|---|
-| Guardian | Reduces each incoming hit by 1 HP, but damage is never reduced below 1 |
+| Guardian | Reduces each incoming hit by 1 HP (minimum 1); every fourth tick grants 2 temporary shield to each living ally, stacking to a cap of 4 per unit. Shields absorb incoming damage before HP |
 | Archer | Adds 2 damage to its primary attack on even ticks |
 | Mage | Adds a 2 HP splash hit to the weakest remaining enemy on even ticks |
 | Cleric | Restores up to 2 HP to the most wounded living ally on even ticks |
@@ -63,7 +63,7 @@ Integer order: base attack plus class/item bonuses, then Might Core multiplier, 
 
 Surviving units retain current HP in `Unit.current_health`; defeated units are removed. A full-health survivor serialises as `None`, while a damaged survivor stores numeric HP. The camp restores 2 HP at the next wave, capped at max health. The API persists updated hearts, gold, Core offer and report in the run transaction.
 
-Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `UnitHealed`, `BossTelegraph` and `BattleEnded`. Each includes a tick, stable actor/target IDs, display labels, amount and remaining health. A `BossTelegraph` uses the real defender ID (not a generic front-line label), `amount` is the upcoming post-mitigation damage, and `remaining_health` is the target's HP immediately before the hit. The browser replay draws a warning line and target frame, then plays the following attack event. The UI shows the last eight events; the saved report retains the complete event list.
+Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `UnitHealed`, `ShieldGranted`, `ShieldAbsorbed`, `BossTelegraph` and `BattleEnded`. Each includes a tick, stable actor/target IDs, display labels, amount and remaining health. A `BossTelegraph` uses the real defender ID (not a generic front-line label), `amount` is the upcoming post-mitigation damage, and `remaining_health` is the target's HP immediately before the hit. The browser replay draws a warning line and target frame, then plays the following attack event. The UI shows the last eight events; the saved report retains the complete event list.
 
 ## Battle report estimates
 
@@ -71,7 +71,7 @@ Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `
 
 ## Test requirements
 
-Current Rust tests cover same-seed timelines, Guardian-first targeting, Cleric healing, ally defeat/removal, survivor recovery, boss telegraph target identity and pre-hit damage preview. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
+Current Rust tests cover same-seed timelines, Guardian-first targeting, Cleric healing, Guardian Shieldwall cadence and shield-before-HP ordering, ally defeat/removal, survivor recovery, boss telegraph target identity and pre-hit damage preview. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
 
 ## Known limitations
 

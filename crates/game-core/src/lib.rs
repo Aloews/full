@@ -153,6 +153,8 @@ pub struct BattleReport {
 #[serde(rename_all = "snake_case")]
 pub enum BattleEventKind {
     AllyAttack,
+    ShieldGranted,
+    ShieldAbsorbed,
     EnemyAttack,
     AllyDefeated,
     EnemyDefeated,
@@ -181,6 +183,7 @@ struct Combatant {
     attack: u32,
     max_health: u32,
     current_health: u32,
+    shield: u32,
     initiative: u8,
     boss: bool,
 }
@@ -684,6 +687,7 @@ impl GameState {
                     .unwrap_or(unit.health)
                     .min(unit.health)
                     .max(1),
+                shield: 0,
                 initiative: match unit.class {
                     UnitClass::Rogue => 10,
                     UnitClass::Archer => 9,
@@ -693,6 +697,7 @@ impl GameState {
                     UnitClass::Cleric => 5,
                 },
                 boss: false,
+                shield: 0,
             })
             .collect();
         let mut enemies = build_enemy_party(self.wave, boss, elite);
@@ -779,7 +784,7 @@ impl GameState {
                     target_id: target.id,
                     actor: actor.name.clone(),
                     target: target.name.clone(),
-                    amount: damage,
+                    amount: health_damage,
                     remaining_health: remaining,
                 });
                 if remaining == 0 {
@@ -870,6 +875,26 @@ impl GameState {
                         });
                     }
                 }
+                if actor.class == Some(UnitClass::Guardian) && tick % 4 == 0 {
+                    for ally in allies.iter_mut().filter(|ally| ally.current_health > 0) {
+                        let granted = 2u32.min(4u32.saturating_sub(ally.shield));
+                        if granted == 0 {
+                            continue;
+                        }
+                        ally.shield = ally.shield.saturating_add(granted);
+                        events.push(BattleEvent {
+                            tick,
+                            kind: BattleEventKind::ShieldGranted,
+                            actor_id: actor.id,
+                            target_id: ally.id,
+                            actor: actor.name.clone(),
+                            target: ally.name.clone(),
+                            amount: granted,
+                            remaining_health: ally.current_health,
+                        });
+                    }
+                }
+
             }
 
             let enemy_turn: Vec<Combatant> = enemies.clone();
@@ -906,11 +931,13 @@ impl GameState {
                 } else {
                     0
                 };
-                let damage = enemy
+                let incoming_damage = enemy
                     .attack
                     .saturating_add(telegraph_bonus)
                     .saturating_sub(guard_reduction)
                     .max(1);
+                let shield_absorbed = incoming_damage.min(target.shield);
+                let health_damage = incoming_damage.saturating_sub(shield_absorbed);
                 if enemy.boss && tick % 3 == 0 {
                     events.push(BattleEvent {
                         tick,
@@ -919,12 +946,26 @@ impl GameState {
                         target_id: target.id,
                         actor: enemy.name.clone(),
                         target: target.name.clone(),
-                        amount: damage,
+                        amount: health_damage,
+                        remaining_health: target.current_health,
+                    });
+                }
+                if shield_absorbed > 0 {
+                    allies[target_index].shield =
+                        allies[target_index].shield.saturating_sub(shield_absorbed);
+                    events.push(BattleEvent {
+                        tick,
+                        kind: BattleEventKind::ShieldAbsorbed,
+                        actor_id: enemy.id,
+                        target_id: target.id,
+                        actor: enemy.name.clone(),
+                        target: target.name.clone(),
+                        amount: shield_absorbed,
                         remaining_health: target.current_health,
                     });
                 }
                 allies[target_index].current_health =
-                    allies[target_index].current_health.saturating_sub(damage);
+                    allies[target_index].current_health.saturating_sub(health_damage);
                 let remaining = allies[target_index].current_health;
                 events.push(BattleEvent {
                     tick,
@@ -1562,6 +1603,7 @@ fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool) -> Vec<Combatant> 
                 current_health: base_health,
                 initiative: if boss { 7 } else { 4 + (index % 2) as u8 },
                 boss,
+                shield: 0,
             }
         })
         .collect()
@@ -2293,6 +2335,41 @@ mod tests {
             assert_eq!(resolution.choice_index, 0);
             assert!(!resolution.outcome.is_empty());
         }
+    }
+
+
+    #[test]
+    fn guardian_shieldwall_grants_shields_and_absorbs_enemy_damage_before_hp() {
+        let mut game = run(712);
+        game.wave = 4;
+        game.units[0].attack = 1;
+        game.units[0].health = 80;
+        let guardian_id = game.units[0].id;
+        let mut archer = game.spawn_unit(UnitClass::Archer);
+        archer.attack = 1;
+        archer.health = 80;
+        game.units.push(archer);
+
+        let report = game.battle().unwrap();
+        let grants = report.events.iter()
+            .filter(|event| event.kind == BattleEventKind::ShieldGranted)
+            .collect::<Vec<_>>();
+        assert!(!grants.is_empty(), "Guardian must cast Shieldwall on its four-tick cooldown");
+        assert!(grants.iter().all(|event| event.tick % 4 == 0 && event.amount > 0 && event.amount <= 2));
+        assert!(grants.iter().any(|event| event.target_id == guardian_id));
+
+        let block_index = report.events.iter()
+            .position(|event| event.kind == BattleEventKind::ShieldAbsorbed)
+            .expect("an incoming hit should consume the Guardian's shield");
+        let block = &report.events[block_index];
+        assert!(block.amount > 0);
+        let hit = report.events.iter().skip(block_index + 1)
+            .find(|event| event.kind == BattleEventKind::EnemyAttack
+                && event.tick == block.tick
+                && event.actor_id == block.actor_id
+                && event.target_id == block.target_id)
+            .expect("the shield absorption must precede its authoritative enemy hit");
+        assert!(hit.amount < 2, "shielded Guardian should lose less than the enemy's 2 base damage");
     }
 
     #[test]
