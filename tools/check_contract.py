@@ -52,6 +52,15 @@ if "formation-lanes" not in client or "[0, 1, 2].map" not in client or "aria-pre
     raise SystemExit("direct three-lane formation selector is missing")
 if "least_occupied_lane" not in core and "lane_occupancy" not in core:
     raise SystemExit("new unit placement does not account for current lane occupancy")
+if "pub enum BiomeKind" not in core or "pub biome: BiomeKind" not in core:
+    raise SystemExit("battle reports do not persist their biome")
+if "stage_for_wave" not in core or "biome_for_wave" not in core or "build_enemy_party(self.wave, boss, elite, biome)" not in core:
+    raise SystemExit("wave-to-biome progression is not connected to enemy generation")
+for family in ("Cinder Moth", "Shard Beetle", "Emberfen Tyrant", "Prism Colossus"):
+    if family not in core:
+        raise SystemExit(f"biome enemy roster or boss is missing: {family}")
+if "const BIOME_META" not in client or "paintWorldScene(region.key)" not in client or "report.biome" not in client:
+    raise SystemExit("biome-specific world and battle presentation are missing")
 
 if "function playBattleReplay(report)" not in client:
     raise SystemExit("battle replay renderer is missing")
