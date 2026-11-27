@@ -699,7 +699,9 @@ impl GameState {
             .iter()
             .map(|unit| {
                 let row = match unit.class {
-                    UnitClass::Guardian | UnitClass::Beast | UnitClass::Rogue => FormationRow::Front,
+                    UnitClass::Guardian | UnitClass::Beast | UnitClass::Rogue => {
+                        FormationRow::Front
+                    }
                     UnitClass::Archer | UnitClass::Mage | UnitClass::Cleric => FormationRow::Back,
                 };
                 let slot = match row {
@@ -2158,7 +2160,6 @@ mod tests {
         assert!(!game.migrate_legacy_state());
     }
 
-
     #[test]
     fn formation_positions_are_typed_stable_and_class_appropriate() {
         let mut a = run(721);
@@ -2206,11 +2207,21 @@ mod tests {
         archer.attack = 1;
         game.units.push(archer);
         let report = game.battle().unwrap();
-        let first = report.events.iter()
+        let first = report
+            .events
+            .iter()
             .find(|event| event.kind == BattleEventKind::AllyAttack)
             .unwrap();
-        assert_eq!(first.target_id, u64::MAX, "frontline lane 0 must screen the backline");
-        let target = report.enemies.iter().find(|unit| unit.id == first.target_id).unwrap();
+        assert_eq!(
+            first.target_id,
+            u64::MAX,
+            "frontline lane 0 must screen the backline"
+        );
+        let target = report
+            .enemies
+            .iter()
+            .find(|unit| unit.id == first.target_id)
+            .unwrap();
         assert_eq!(target.row, FormationRow::Front);
     }
 
@@ -2224,12 +2235,18 @@ mod tests {
         let cleric_id = cleric.id;
         game.units.extend([beast, cleric]);
         let report = game.battle().unwrap();
-        let first = report.events.iter()
+        let first = report
+            .events
+            .iter()
             .find(|event| event.kind == BattleEventKind::EnemyAttack)
             .unwrap();
         assert_eq!(first.target_id, beast_id);
         assert_ne!(first.target_id, cleric_id);
-        let target = report.allies.iter().find(|unit| unit.id == beast_id).unwrap();
+        let target = report
+            .allies
+            .iter()
+            .find(|unit| unit.id == beast_id)
+            .unwrap();
         assert_eq!(target.row, FormationRow::Front);
     }
 
@@ -2253,13 +2270,20 @@ mod tests {
         game.battle().unwrap();
         let mut value = serde_json::to_value(game).unwrap();
         let snapshot = value
-            .as_object_mut().unwrap()
-            .get_mut("last_battle").unwrap()
-            .as_object_mut().unwrap()
-            .get_mut("allies").unwrap()
-            .as_array_mut().unwrap()
-            .first_mut().unwrap()
-            .as_object_mut().unwrap();
+            .as_object_mut()
+            .unwrap()
+            .get_mut("last_battle")
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .get_mut("allies")
+            .unwrap()
+            .as_array_mut()
+            .unwrap()
+            .first_mut()
+            .unwrap()
+            .as_object_mut()
+            .unwrap();
         snapshot.remove("row");
         snapshot.remove("lane");
         snapshot.remove("stack");
