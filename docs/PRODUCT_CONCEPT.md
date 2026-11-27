@@ -32,3 +32,15 @@ The project may use broad genre-level ideas (reel-based recruitment, auto-battle
 ## Initial balance model
 
 The first playable slice uses six classes, an eight-line 3×3 board, six spins per wave, an initial spin cost of 100 gold increasing by 50 each paid spin, a five-unit starting capacity, absorption thresholds at levels 5 and 12, and a boss milestone every five waves. These are explicit prototype parameters, not claims about the commercial game's exact internal balance. Each parameter must be moved into a versioned ruleset/configuration module before balance expansion.
+
+## Visual direction — original 16-bit pixel-art fantasy
+
+Use an authored pixel-art language inspired by the clear silhouettes and charm of classic console adventures. These are broad genre references only: every sprite, map, icon, effect, sound, text, and layout must be original.
+
+- Logical tile grid, integer pixel scale, nearest-neighbour rendering. Never smooth pixel sprites.
+- Palette: forest green, teal shadow, parchment, brass/gold reward accents, restrained danger reds.
+- Readable class silhouettes at 16×16 or 24×24 source size; shape before color.
+- Chunky outlines, limited highlight tones, purposeful empty space; avoid glass panels, gradients, soft shadows and rounded SaaS cards.
+- Treat the slot machine as a fantasy relic/arcade altar. Reels stop, paylines flash, units pop in, fighters recoil, bosses enter, and rewards reveal in stepped animations; honor reduced-motion settings.
+- Separate world, character, machine, HUD and feedback layers. Critical information never relies on color alone.
+- Browser rendering is presentation only; Rust remains authoritative for simulation, state transitions and combat. Pixel assets are data-driven and versioned; current glyphs are placeholders until sprite art lands.
