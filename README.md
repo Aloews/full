@@ -27,6 +27,7 @@ Runs use PostgreSQL when `SLOTBOUND_DATABASE_URL` (or fallback `DATABASE_URL`) i
 - Three matching class symbols on a line summon a creature.
 - Use one column shift per wave.
 - Select a keeper, lock important units and absorb donors to grow the keeper.
+- Arrange each companion in the front/back row and one of three lanes before combat; the selected formation persists across waves.
 - Choose promotions at growth thresholds.
 - Start an automatic battle, collect the result and continue.
 - Resolve a journey event after battle, then choose a route: normal battle, recovery, merchant, elite encounter or boss gate.
