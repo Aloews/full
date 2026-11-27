@@ -1,4 +1,4 @@
-# Combat Simulation Rules — Current Version 1
+# Combat Simulation Rules — Current Version 2
 
 ## Authority and determinism
 
@@ -22,7 +22,7 @@ Enemy names are original prototype definitions. Authored biome-specific waves ar
 2. Increment tick.
 3. Sort allies by descending initiative, then ascending stable unit ID.
 4. Resolve living ally actions in that order. Each ally attacks one enemy; class effects follow its primary attack.
-5. Resolve enemy actions in stable roster order. A boss telegraphs every third tick immediately before its attack.
+5. Resolve enemy actions in stable roster order. A boss telegraphs every third tick immediately before its attack; the warning contains the stable ID of the actual selected target and the calculated damage after target mitigation.
 6. Remove defeated allies. Stop if either side is empty.
 7. If tick 40 is reached with both teams alive, finish as a non-victory.
 
@@ -63,7 +63,7 @@ Integer order: base attack plus class/item bonuses, then Might Core multiplier, 
 
 Surviving units retain current HP in `Unit.current_health`; defeated units are removed. A full-health survivor serialises as `None`, while a damaged survivor stores numeric HP. The camp restores 2 HP at the next wave, capped at max health. The API persists updated hearts, gold, Core offer and report in the run transaction.
 
-Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `UnitHealed`, `BossTelegraph` and `BattleEnded`. Each includes a tick, stable actor/target IDs, display labels, amount and remaining health. The UI shows the last eight events; the saved report retains the complete event list.
+Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `UnitHealed`, `BossTelegraph` and `BattleEnded`. Each includes a tick, stable actor/target IDs, display labels, amount and remaining health. A `BossTelegraph` uses the real defender ID (not a generic front-line label), `amount` is the upcoming post-mitigation damage, and `remaining_health` is the target's HP immediately before the hit. The browser replay draws a warning line and target frame, then plays the following attack event. The UI shows the last eight events; the saved report retains the complete event list.
 
 ## Battle report estimates
 
@@ -71,8 +71,8 @@ Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `
 
 ## Test requirements
 
-Current Rust tests cover same-seed timelines, Guardian-first targeting, Cleric healing, ally defeat/removal, survivor recovery and boss telegraphs. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
+Current Rust tests cover same-seed timelines, Guardian-first targeting, Cleric healing, ally defeat/removal, survivor recovery, boss telegraph target identity and pre-hit damage preview. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
 
 ## Known limitations
 
-This is a first combat foundation, not a balanced full game system. It has no authored lane grid, active ability cooldown system, status effects, shields, resistance system, enemy skill families, boss phase changes or live combat animation. These remain in `.github/agent-backlog.json` and `docs/MAP.md`.
+This is a first combat foundation, not a balanced full game system. It has no authored lane grid, active ability cooldown system, status effects, shields, resistance system, enemy skill families, boss phase changes or live tick-by-tick combat. The browser presents a deterministic post-battle replay of the authoritative event stream, not a real-time simulation. These remain in `.github/agent-backlog.json` and `docs/MAP.md`.

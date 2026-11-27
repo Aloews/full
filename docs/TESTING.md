@@ -18,7 +18,7 @@ The current domain tests cover the eight paylines, fixed-seed spin determinism, 
 
 ## API test coverage
 
-The API tests cover health, run creation/read, a real spin action, persisted snapshot reload in a fresh router instance, invalid phase rejection, and journey-event resolution persistence/replay rejection through the event endpoint, and branching route selection persistence/replay rejection through the route endpoint. The browser currently has JavaScript syntax and static API/DOM contract checks, including the journey-event and route endpoints, both choice flows, pixel battlefield starting snapshots and replay integration. The battlefield replay supports skip and reduced-motion rendering. Real-browser E2E, visual regression and a full tactical lane/sprite presentation are outstanding release gates.
+The API tests cover health, run creation/read, a real spin action, persisted snapshot reload in a fresh router instance, invalid phase rejection, journey-event resolution persistence/replay rejection through the event endpoint, branching route selection persistence/replay rejection through the route endpoint, and legacy intermission-save migration persisted on first GET. The browser currently has JavaScript syntax and static API/DOM contract checks, including the journey-event and route endpoints, both choice flows, pixel battlefield starting snapshots, boss telegraph target/damage previews, route-history trail and replay integration. The battlefield replay supports skip and reduced-motion rendering. Real-browser E2E, visual regression and a full tactical lane/sprite presentation are outstanding release gates.
 
 ## Evidence policy
 
@@ -27,7 +27,9 @@ CI checks must be read from the exact candidate commit. A local command that cou
 
 ## Current verification boundary
 
-The event-system, API and browser changes are authored on `feat/slotbound-rust-rebuild`. They have not yet been confirmed by an exact-head GitHub Actions run. The previously documented passing CI run applies only to its earlier commit and must not be used as evidence for the current candidate. Vercel has reported a daily build-rate-limit failure; no deployment is claimed.
+GitHub Actions run [45995006734](https://github.com/Aloews/full/actions/runs/45995006734) completed successfully for the boss-telegraph, route-history and migration-persistence candidate. The workflow was triggered by source commit `eed92ff6664440be19f0cece377f5c7f94e6b6f4`; its formatting/dependency-pinning step generated branch commit `75bf25a27e29f35ea8491d4904574ae3757019ba` before the remaining checks ran in the same job. The full job passed: Rust formatting, Clippy, unit/integration tests (including PostgreSQL-backed tests), release API build, Vercel container image build, JavaScript syntax, API/browser contract and autonomous agent patch-policy tests. No step failed or was skipped except the optional one-time bootstrap archive expansion.
+
+The GitHub Actions check is attached to the triggering SHA; the format step's generated branch head is the source snapshot that subsequent checks validated. Vercel deployment/Preview is a separate release gate and has not been claimed as deployed from this CI result.
 
 
 The Rust game-core test target now declares `serde_json` as a dev-dependency for backwards-compatibility fixtures; `Cargo.lock` already includes the workspace package.
