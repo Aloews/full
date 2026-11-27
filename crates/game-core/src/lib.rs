@@ -100,6 +100,10 @@ pub struct Unit {
     pub pending_promotion: bool,
     pub promotion_options: [String; 2],
     pub locked: bool,
+    #[serde(default)]
+    pub formation_row: FormationRow,
+    #[serde(default)]
+    pub formation_lane: u8,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -399,6 +403,8 @@ pub enum GameError {
     NoJourneyRoute,
     #[error("route choice is invalid for this expedition stage")]
     InvalidRouteChoice,
+    #[error("formation position is invalid; lane must be between 0 and 2")]
+    InvalidFormation,
     #[error("item is not available or the selected item is invalid")]
     InvalidItem,
 }
@@ -417,7 +423,7 @@ impl GameState {
             spins_used: 0,
             next_spin_cost: 100,
             shop_prices: item_prices(),
-            ruleset_version: 3,
+            ruleset_version: 4,
             nudge_available: true,
             board: [[UnitClass::Guardian; 3]; 3],
             units: Vec::new(),
@@ -448,11 +454,12 @@ impl GameState {
     }
 
     pub fn migrate_legacy_state(&mut self) -> bool {
-        if self.ruleset_version >= 3 {
+        if self.ruleset_version >= 4 {
             return false;
         }
 
-        if self.phase == RunPhase::Intermission
+        if self.ruleset_version < 3
+            && self.phase == RunPhase::Intermission
             && self.last_battle.is_some()
             && self.pending_event.is_none()
             && self.pending_route.is_none()
@@ -471,9 +478,25 @@ impl GameState {
             }
         }
 
-        // Version 3 adds server-authored formation positions to each battle snapshot.
-        // Old snapshots deserialize with safe back-row/default-lane values.
-        self.ruleset_version = 3;
+        if self.ruleset_version < 4 {
+            let mut occupied = [[0u8; 3]; 2];
+            for unit in &mut self.units {
+                let row = default_formation_row_for_class(unit.class);
+                let row_index = match row {
+                    FormationRow::Front => 0,
+                    FormationRow::Back => 1,
+                };
+                let lane = (0..3)
+                    .min_by_key(|lane| (occupied[row_index][*lane], *lane))
+                    .unwrap_or(0);
+                unit.formation_row = row;
+                unit.formation_lane = lane as u8;
+                occupied[row_index][lane] = occupied[row_index][lane].saturating_add(1);
+            }
+        }
+
+        // Version 4 persists player-editable formation row and lane on every unit.
+        self.ruleset_version = 4;
         true
     }
 
@@ -628,6 +651,26 @@ impl GameState {
         Ok(())
     }
 
+    pub fn set_formation(
+        &mut self,
+        unit_id: u64,
+        row: FormationRow,
+        lane: u8,
+    ) -> Result<(), GameError> {
+        self.ensure_management_phase()?;
+        if lane > 2 {
+            return Err(GameError::InvalidFormation);
+        }
+        let unit = self
+            .units
+            .iter_mut()
+            .find(|unit| unit.id == unit_id)
+            .ok_or(GameError::UnitNotFound)?;
+        unit.formation_row = row;
+        unit.formation_lane = lane;
+        Ok(())
+    }
+
     pub fn toggle_lock(&mut self, unit_id: u64) -> Result<(), GameError> {
         self.ensure_management_phase()?;
         let unit = self
@@ -692,30 +735,19 @@ impl GameState {
             boss_gate,
         );
 
-        let mut front_slots = 0u8;
-        let mut back_slots = 0u8;
+        let mut occupied = [[0u8; 3]; 2];
         let mut allies: Vec<Combatant> = self
             .units
             .iter()
             .map(|unit| {
-                let row = match unit.class {
-                    UnitClass::Guardian | UnitClass::Beast | UnitClass::Rogue => {
-                        FormationRow::Front
-                    }
-                    UnitClass::Archer | UnitClass::Mage | UnitClass::Cleric => FormationRow::Back,
+                let row = unit.formation_row;
+                let lane = unit.formation_lane.min(2);
+                let row_index = match row {
+                    FormationRow::Front => 0,
+                    FormationRow::Back => 1,
                 };
-                let slot = match row {
-                    FormationRow::Front => {
-                        let slot = front_slots;
-                        front_slots = front_slots.saturating_add(1);
-                        slot
-                    }
-                    FormationRow::Back => {
-                        let slot = back_slots;
-                        back_slots = back_slots.saturating_add(1);
-                        slot
-                    }
-                };
+                let stack = occupied[row_index][usize::from(lane)];
+                occupied[row_index][usize::from(lane)] = stack.saturating_add(1);
                 Combatant {
                     id: unit.id,
                     name: format!("{} #{}", unit.class.label(), unit.id),
@@ -729,8 +761,8 @@ impl GameState {
                         .max(1),
                     shield: 0,
                     row,
-                    lane: slot % 3,
-                    stack: slot / 3,
+                    lane,
+                    stack,
                     initiative: match unit.class {
                         UnitClass::Rogue => 10,
                         UnitClass::Archer => 9,
@@ -1548,6 +1580,19 @@ impl GameState {
         let (attack, health) = class.base_stats();
         let variance = self.random_u32() % 3;
         let options = class.promotions();
+        let formation_row = default_formation_row_for_class(class);
+        let row_index = match formation_row {
+            FormationRow::Front => 0,
+            FormationRow::Back => 1,
+        };
+        let mut lane_counts = [0u8; 3];
+        for unit in self.units.iter().filter(|unit| unit.formation_row == formation_row) {
+            let lane = usize::from(unit.formation_lane.min(2));
+            lane_counts[lane] = lane_counts[lane].saturating_add(1);
+        }
+        let formation_lane = (0..3)
+            .min_by_key(|lane| (lane_counts[*lane], *lane))
+            .unwrap_or(row_index) as u8;
         Unit {
             id,
             class,
@@ -1561,6 +1606,8 @@ impl GameState {
             pending_promotion: false,
             promotion_options: [options[0].to_string(), options[1].to_string()],
             locked: false,
+            formation_row,
+            formation_lane,
         }
     }
 
@@ -1609,6 +1656,13 @@ impl GameState {
         x ^= x << 17;
         self.rng_state = x;
         (x >> 16) as u32
+    }
+}
+
+fn default_formation_row_for_class(class: UnitClass) -> FormationRow {
+    match class {
+        UnitClass::Guardian | UnitClass::Beast | UnitClass::Rogue => FormationRow::Front,
+        UnitClass::Archer | UnitClass::Mage | UnitClass::Cleric => FormationRow::Back,
     }
 }
 
@@ -2115,7 +2169,7 @@ mod tests {
 
         assert!(restored.migrate_legacy_state());
         let migrated_event = restored.pending_event.clone().unwrap();
-        assert_eq!(restored.ruleset_version, 3);
+        assert_eq!(restored.ruleset_version, 4);
         assert!(restored.pending_route.is_none());
         assert!(!restored.migrate_legacy_state());
         assert_eq!(restored.pending_event, Some(migrated_event));
@@ -2256,7 +2310,7 @@ mod tests {
         set_route(&mut game, RouteNodeKind::Battle);
         game.choose_route(0).unwrap();
         let selected = game.current_route;
-        game.ruleset_version = 2;
+        game.ruleset_version = 3;
         assert!(game.migrate_legacy_state());
         assert_eq!(game.ruleset_version, 3);
         assert_eq!(game.current_route, selected);
