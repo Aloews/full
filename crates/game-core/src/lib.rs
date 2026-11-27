@@ -894,7 +894,6 @@ impl GameState {
                         });
                     }
                 }
-
             }
 
             let enemy_turn: Vec<Combatant> = enemies.clone();
@@ -964,8 +963,9 @@ impl GameState {
                         remaining_health: target.current_health,
                     });
                 }
-                allies[target_index].current_health =
-                    allies[target_index].current_health.saturating_sub(health_damage);
+                allies[target_index].current_health = allies[target_index]
+                    .current_health
+                    .saturating_sub(health_damage);
                 let remaining = allies[target_index].current_health;
                 events.push(BattleEvent {
                     tick,
@@ -2337,7 +2337,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn guardian_shieldwall_grants_shields_and_absorbs_enemy_damage_before_hp() {
         let mut game = run(712);
@@ -2351,25 +2350,44 @@ mod tests {
         game.units.push(archer);
 
         let report = game.battle().unwrap();
-        let grants = report.events.iter()
+        let grants = report
+            .events
+            .iter()
             .filter(|event| event.kind == BattleEventKind::ShieldGranted)
             .collect::<Vec<_>>();
-        assert!(!grants.is_empty(), "Guardian must cast Shieldwall on its four-tick cooldown");
-        assert!(grants.iter().all(|event| event.tick % 4 == 0 && event.amount > 0 && event.amount <= 2));
+        assert!(
+            !grants.is_empty(),
+            "Guardian must cast Shieldwall on its four-tick cooldown"
+        );
+        assert!(
+            grants
+                .iter()
+                .all(|event| event.tick % 4 == 0 && event.amount > 0 && event.amount <= 2)
+        );
         assert!(grants.iter().any(|event| event.target_id == guardian_id));
 
-        let block_index = report.events.iter()
+        let block_index = report
+            .events
+            .iter()
             .position(|event| event.kind == BattleEventKind::ShieldAbsorbed)
             .expect("an incoming hit should consume the Guardian's shield");
         let block = &report.events[block_index];
         assert!(block.amount > 0);
-        let hit = report.events.iter().skip(block_index + 1)
-            .find(|event| event.kind == BattleEventKind::EnemyAttack
-                && event.tick == block.tick
-                && event.actor_id == block.actor_id
-                && event.target_id == block.target_id)
+        let hit = report
+            .events
+            .iter()
+            .skip(block_index + 1)
+            .find(|event| {
+                event.kind == BattleEventKind::EnemyAttack
+                    && event.tick == block.tick
+                    && event.actor_id == block.actor_id
+                    && event.target_id == block.target_id
+            })
             .expect("the shield absorption must precede its authoritative enemy hit");
-        assert!(hit.amount < 2, "shielded Guardian should lose less than the enemy's 2 base damage");
+        assert!(
+            hit.amount < 2,
+            "shielded Guardian should lose less than the enemy's 2 base damage"
+        );
     }
 
     #[test]
