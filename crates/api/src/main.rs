@@ -378,27 +378,9 @@ async fn get_run(
     State(state): State<AppState>,
     Path(run_id): Path<String>,
 ) -> Result<Json<GameState>, ApiError> {
-    if let Some(pool) = &state.pool {
-        let stored: Option<sqlx::types::Json<GameState>> =
-            sqlx::query_scalar("SELECT state FROM slotbound_runs WHERE run_id = $1")
-                .bind(&run_id)
-                .fetch_optional(pool)
-                .await
-                .map_err(|_| ApiError::database())?;
-        let mut game = stored.map(|row| row.0).ok_or_else(ApiError::not_found)?;
-        game.migrate_legacy_state();
-        return Ok(Json(game));
-    }
-
-    let mut game = state
-        .runs
-        .read()
-        .await
-        .get(&run_id)
-        .cloned()
-        .ok_or_else(ApiError::not_found)?;
-    game.migrate_legacy_state();
-    Ok(Json(game))
+    // Use the same transaction/snapshot path as mutations so a legacy save is
+    // migrated and durably persisted on first read rather than only in memory.
+    mutate_run(state, run_id, |_| Ok(())).await
 }
 async fn spin(
     State(state): State<AppState>,
@@ -594,6 +576,77 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+
+    #[tokio::test]
+    async fn get_run_migrates_and_persists_legacy_intermission_before_returning() {
+        let dir = std::env::temp_dir().join(format!(
+            "slotbound-api-legacy-{}-{}",
+            std::process::id(),
+            9
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let mut legacy = GameState::new(701, "legacy-api-test");
+        legacy.battle().unwrap();
+        assert_eq!(legacy.phase, slotbound_core::RunPhase::Intermission);
+
+        let mut value = serde_json::to_value(&legacy).unwrap();
+        let object = value.as_object_mut().unwrap();
+        object.insert("ruleset_version".to_string(), serde_json::json!(1));
+        for key in [
+            "pending_event",
+            "event_history",
+            "pending_route",
+            "current_route",
+            "route_history",
+        ] {
+            object.remove(key);
+        }
+        let path = dir.join("legacy-api-test.json");
+        fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+
+        let router = app_with_data_dir(dir.clone());
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/api/runs/legacy-api-test")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let migrated: GameState =
+            serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        assert_eq!(migrated.ruleset_version, 2);
+        assert!(migrated.pending_event.is_some());
+        assert!(migrated.pending_route.is_none());
+
+        // GET must persist the migration; a fresh router must not recreate or
+        // reroll the encounter on the next boot.
+        let saved: GameState = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        assert_eq!(saved, migrated);
+        let restored = app_with_data_dir(dir.clone())
+            .oneshot(
+                Request::builder()
+                    .uri("/api/runs/legacy-api-test")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let restored: GameState =
+            serde_json::from_slice(&restored.into_body().collect().await.unwrap().to_bytes())
+                .unwrap();
+        assert_eq!(restored.pending_event, migrated.pending_event);
+        assert_eq!(restored.event_history, migrated.event_history);
+
         fs::remove_dir_all(dir).unwrap();
     }
 
