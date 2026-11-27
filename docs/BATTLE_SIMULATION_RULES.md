@@ -1,4 +1,4 @@
-# Combat Simulation Rules — Current Version 3
+# Combat Simulation Rules — Current Version 4
 
 ## Authority and determinism
 
@@ -31,7 +31,7 @@ Initiative: Rogue 10, Archer 9, Mage 8, Beast 7, Guardian 6, Cleric 5.
 ## Formation and target selection
 
 - Combatants occupy one of three lanes (`0..=2`) and a typed `Front` or `Back` row. The browser renders these positions from server-authored snapshots; it does not calculate the formation for current saves.
-- Guardian, Beast and Rogue are assigned to the front row. Archer, Mage and Cleric line up behind them. Members of each row take the next free lane in stable roster order; overflow is stacked in the same lane using the persisted snapshot `stack` index.
+- Default positions put Guardian, Beast and Rogue in the front row and Archer, Mage and Cleric in the back row. Players can move any unit between rows and three lanes during preparation or intermission. Positions persist on the unit; multiple units may stack in one cell using a stable stack index.
 - Enemies are arranged in paired front/back lanes. The boss occupies front lane 1; regular enemies alternate rows and advance through lanes deterministically.
 - Allied attacks clear the enemy front row first, then choose the nearest lane, lowest remaining-health percentage and ascending stable ID.
 - Enemies attack the allied front row first, prefer a Guardian within that row, then choose the nearest lane, lowest remaining-health percentage and ascending stable ID.
@@ -74,7 +74,7 @@ Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `
 
 ## Test requirements
 
-Current Rust tests cover same-seed timelines, typed row/lane snapshots, frontline blocking, nearest-lane targeting, Guardian frontline priority, Cleric healing, Guardian Shieldwall cadence/cap/event ledger, ally defeat/removal, survivor recovery, boss telegraph target identity and pre-hit damage preview. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
+Current Rust tests cover same-seed timelines, typed row/lane snapshots, player-controlled row/lane changes, stacked cells, invalid lane rejection, v3 save migration, frontline blocking, nearest-lane targeting, Guardian frontline priority, Cleric healing, Guardian Shieldwall cadence/cap/event ledger, ally defeat/removal, survivor recovery, boss telegraph target identity and pre-hit damage preview. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
 
 ## Known limitations
 
