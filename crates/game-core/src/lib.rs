@@ -2379,9 +2379,11 @@ mod tests {
                             shield_ledger.len() - 1
                         });
                     shield_ledger[index].1 = shield_ledger[index].1.saturating_add(event.amount);
-                    shield_ledger[index].2 =
-                        shield_ledger[index].2.max(shield_ledger[index].1);
-                    assert!(shield_ledger[index].1 <= 4, "Shieldwall must respect the per-unit cap");
+                    shield_ledger[index].2 = shield_ledger[index].2.max(shield_ledger[index].1);
+                    assert!(
+                        shield_ledger[index].1 <= 4,
+                        "Shieldwall must respect the per-unit cap"
+                    );
                 }
                 BattleEventKind::ShieldAbsorbed => {
                     let index = shield_ledger
