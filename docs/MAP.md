@@ -124,7 +124,7 @@ The latest completed full CI run is [45995006734](https://github.com/Aloews/full
 - [ ] Monte Carlo simulator with seed ranges, sample sizes and uncertainty intervals.
 - [ ] Typed imprint slots, donor inheritance and promotion tree.
 - [ ] More reel tools (including Blast) with explicit charges, targets, costs and phase rules.
-- [x] Deterministic three-lane front/back formation positions; server-authored battle snapshots drive frontline blocking, nearest-lane target selection and pixel battlefield placement.
+- [x] Deterministic three-lane front/back formation positions; server-authored battle snapshots drive lane-local frontline screening, flanking, nearest-lane target selection and pixel battlefield placement.
 - [x] Player-controlled formation editing: every unit can move between front/back rows and directly select any of the three lanes; positions persist and are used by Rust combat resolution.
 - [x] Automatic recruitment assigns new units to the least-occupied lane in their class-default row, respecting prior player rearrangements; ties select the lower lane.
 - [ ] Formation synergies, stage map and advanced route choices.

@@ -827,12 +827,9 @@ impl GameState {
                 let target_index = enemies
                     .iter()
                     .enumerate()
+                    .filter(|(_, enemy)| is_targetable_with_lane_screen(&enemies, enemy))
                     .min_by_key(|(_, enemy)| {
                         (
-                            match enemy.row {
-                                FormationRow::Front => 0u8,
-                                FormationRow::Back => 1u8,
-                            },
                             actor.lane.abs_diff(enemy.lane),
                             enemy.current_health.saturating_mul(100) / enemy.max_health.max(1),
                             enemy.id,
@@ -891,8 +888,10 @@ impl GameState {
                     let splash_index = enemies
                         .iter()
                         .enumerate()
+                        .filter(|(_, enemy)| is_targetable_with_lane_screen(&enemies, enemy))
                         .min_by_key(|(_, enemy)| {
                             (
+                                actor.lane.abs_diff(enemy.lane),
                                 enemy.current_health.saturating_mul(100) / enemy.max_health.max(1),
                                 enemy.id,
                             )
@@ -993,19 +992,17 @@ impl GameState {
                 let target_index = allies
                     .iter()
                     .enumerate()
-                    .filter(|(_, ally)| ally.current_health > 0)
+                    .filter(|(_, ally)| {
+                        ally.current_health > 0 && is_targetable_with_lane_screen(&allies, ally)
+                    })
                     .min_by_key(|(_, ally)| {
                         (
-                            match ally.row {
-                                FormationRow::Front => 0u8,
-                                FormationRow::Back => 1u8,
-                            },
+                            enemy.lane.abs_diff(ally.lane),
                             if ally.class == Some(UnitClass::Guardian) {
                                 0u8
                             } else {
                                 1u8
                             },
-                            enemy.lane.abs_diff(ally.lane),
                             ally.current_health.saturating_mul(100) / ally.max_health.max(1),
                             ally.id,
                         )
@@ -1667,6 +1664,15 @@ fn apply_boss_gate_bonus(base_damage: u32, enabled: bool) -> u32 {
     base_damage.saturating_add(bonus.max(1))
 }
 
+fn is_targetable_with_lane_screen(combatants: &[Combatant], candidate: &Combatant) -> bool {
+    candidate.row == FormationRow::Front
+        || !combatants.iter().any(|other| {
+            other.current_health > 0
+                && other.row == FormationRow::Front
+                && other.lane == candidate.lane
+        })
+}
+
 fn default_formation_row(class: UnitClass) -> FormationRow {
     match class {
         UnitClass::Guardian | UnitClass::Beast | UnitClass::Rogue => FormationRow::Front,
@@ -2301,6 +2307,52 @@ mod tests {
         game.units.push(next);
         let another = game.spawn_unit(UnitClass::Guardian);
         assert_eq!(another.formation_lane, 1);
+    }
+
+
+    #[test]
+    fn allied_attacks_can_flank_an_exposed_backline_lane() {
+        let mut game = run(741);
+        game.wave = 7;
+
+        let mut rogue = game.spawn_unit(UnitClass::Rogue);
+        rogue.attack = 200;
+        let rogue_id = rogue.id;
+        game.units.push(rogue);
+
+        let mut archer = game.spawn_unit(UnitClass::Archer);
+        archer.attack = 1;
+        archer.formation_lane = 1;
+        let archer_id = archer.id;
+        game.units.push(archer);
+
+        let report = game.battle().unwrap();
+        let attacks: Vec<_> = report.events.iter()
+            .filter(|event| event.kind == BattleEventKind::AllyAttack)
+            .collect();
+        let rogue_attack = attacks.iter().find(|event| event.actor_id == rogue_id).unwrap();
+        assert_eq!(rogue_attack.target_id, u64::MAX - 2, "the Rogue clears the lane-1 front defender");
+        let archer_attack = attacks.iter().find(|event| event.actor_id == archer_id).unwrap();
+        assert_eq!(archer_attack.target_id, u64::MAX - 3, "the rear enemy in lane 1 is exposed after its local screen falls");
+    }
+
+    #[test]
+    fn enemy_flank_can_reach_backline_when_its_lane_has_no_front_defender() {
+        let mut game = run(742);
+        game.wave = 7;
+        game.units.clear();
+
+        let guardian = game.spawn_unit(UnitClass::Guardian);
+        let cleric = game.spawn_unit(UnitClass::Cleric);
+        let cleric_id = cleric.id;
+        game.units.extend([guardian, cleric]);
+        game.set_formation(cleric_id, FormationRow::Back, 1).unwrap();
+
+        let report = game.battle().unwrap();
+        let flank_hit = report.events.iter()
+            .find(|event| event.kind == BattleEventKind::EnemyAttack && event.actor_id == u64::MAX - 2)
+            .expect("lane-1 front enemy should find the exposed lane-1 backliner");
+        assert_eq!(flank_hit.target_id, cleric_id);
     }
 
     #[test]
