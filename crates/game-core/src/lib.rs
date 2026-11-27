@@ -2287,12 +2287,12 @@ mod tests {
         assert!(!game.migrate_legacy_state());
     }
 
-
     #[test]
     fn new_units_choose_the_least_occupied_lane_after_manual_repositioning() {
         let mut game = run(736);
         let starter_id = game.units[0].id;
-        game.set_formation(starter_id, FormationRow::Front, 2).unwrap();
+        game.set_formation(starter_id, FormationRow::Front, 2)
+            .unwrap();
 
         let next = game.spawn_unit(UnitClass::Guardian);
         assert_eq!(next.formation_row, FormationRow::Front);
