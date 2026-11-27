@@ -646,7 +646,7 @@ mod tests {
         let migrated: GameState =
             serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes())
                 .unwrap();
-        assert_eq!(migrated.ruleset_version, 4);
+        assert_eq!(migrated.ruleset_version, 5);
         assert!(migrated.pending_event.is_some());
         assert!(migrated.pending_route.is_none());
 
