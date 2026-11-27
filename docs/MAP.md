@@ -111,10 +111,14 @@ The latest completed full CI run is [45995006734](https://github.com/Aloews/full
 - [x] Add Guardian Shieldwall: every fourth tick grants up to 2 temporary shield to each living ally (cap 4 per unit); the Rust resolver consumes shield before HP and the browser replay renders shield bars and block events.
 - [x] Show the recent expedition route history as a connected path trail alongside the next route fork.
 - [x] Migrate legacy intermission saves on first API read/mutation, persist the migrated event/route state, and avoid writes when a GET leaves state unchanged.
+- [x] Migrate v3 saves to ruleset v4 with class-default formation positions; preserve event and route state, then persist player-edited row/lane on each unit.
 - [ ] Add Playwright browser E2E tests for event choice effects, save/restore mid-run, event determinism, battle playback ordering and replay protection (Rust domain and API persistence tests added).
 
 
 **Journey and battle implementation status:** the Rust domain now generates one seeded encounter after a surviving battle, persists it in the run state, validates two consequential choices and records the selected outcome. Five event families are implemented with seeded selection weights of 25%, 20%, 20%, 15% and 20% respectively: cache, moonwell, merchant, wounded ranger and bandit ambush. The API exposes `POST /api/runs/{run_id}/event`; next-wave progression is blocked until the pending event is resolved. The browser renders the encounter choices and replays the authoritative combat event stream on a pixel battlefield canvas with ally/enemy health bars, target-specific boss warnings and a route-history trail. Legacy saves are migrated and persisted on first access. This is a functional first pass; a multi-step biome map, richer event catalogue, authored combat sprites/lanes and real-browser E2E remain open acceptance work. Battle reports now include server-authored initial ally/enemy formation snapshots with three-lane front/back positions and stack offsets, so the browser renders the actual formation as well as exact starting HP and event deltas. Guardian Shieldwall is resolved in Rust and shown as shield gain/absorption events.
+
+
+**Player-controlled formation status:** each Unit stores its selected `formation_row` and `formation_lane`. The client exposes front/back and lane 1–3 controls on each roster card; the API validates and persists `POST /api/runs/{run_id}/formation`. The Rust battle builder calculates stable stack offsets for multiple units in one cell and uses the selected row/lane in targeting. Older saves migrate to ruleset v4 with class-default positions exactly once. This feature is implemented in the formation-controls candidate branch; its exact-head CI is still a release gate.
 
 **Acceptance:** a fresh run must demonstrate recruitment → army composition/development → a meaningful non-battle event with at least two consequential choices → an animated battle that visibly corresponds to the authoritative event stream → rewards and a route choice. A screenshot of the battle report alone does not satisfy visible-battle acceptance.
 
@@ -125,7 +129,8 @@ The latest completed full CI run is [45995006734](https://github.com/Aloews/full
 - [ ] Typed imprint slots, donor inheritance and promotion tree.
 - [ ] More reel tools (including Blast) with explicit charges, targets, costs and phase rules.
 - [x] Deterministic three-lane front/back formation positions; server-authored battle snapshots drive frontline blocking, nearest-lane target selection and pixel battlefield placement.
-- [ ] Player-controlled formation editing, role synergies, stage map and advanced route choices.
+- [x] Player-controlled formation editing with persisted front/back row and three-lane placement; the Rust battle resolver uses the selected positions for targeting and the browser draws the same positions.
+- [ ] Role synergies, stage map and advanced route choices.
 - [ ] Distinct biomes, enemy families, bosses and environmental effects.
 
 ### S3 — Production-quality player experience
