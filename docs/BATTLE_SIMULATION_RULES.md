@@ -71,7 +71,7 @@ Typed events are `AllyAttack`, `EnemyAttack`, `AllyDefeated`, `EnemyDefeated`, `
 
 ## Test requirements
 
-Current Rust tests cover same-seed timelines, Guardian-first targeting, Cleric healing, Guardian Shieldwall cadence and shield-before-HP ordering, ally defeat/removal, survivor recovery, boss telegraph target identity and pre-hit damage preview. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
+Current Rust tests cover same-seed timelines, Guardian-first targeting, Cleric healing, Guardian Shieldwall cadence, per-unit shield cap, non-negative shield ledger and shield-before-HP event ordering, ally defeat/removal, survivor recovery, boss telegraph target identity and pre-hit damage preview. Extend coverage for empty army, simultaneous final elimination, tick-40 terminal outcome, damage and multiplier boundaries, every class trigger, multiple support units, old save fixtures and event replay across persistence reload.
 
 ## Known limitations
 

@@ -2365,6 +2365,43 @@ mod tests {
         );
         assert!(grants.iter().any(|event| event.target_id == guardian_id));
 
+        // Reconstruct each unit's shield ledger from the authoritative event stream.
+        // No grant may exceed the cap, and absorption may never spend unavailable shield.
+        let mut shield_ledger = Vec::<(u64, u32, u32)>::new();
+        for event in &report.events {
+            match event.kind {
+                BattleEventKind::ShieldGranted => {
+                    let index = shield_ledger
+                        .iter()
+                        .position(|(unit_id, _, _)| *unit_id == event.target_id)
+                        .unwrap_or_else(|| {
+                            shield_ledger.push((event.target_id, 0, 0));
+                            shield_ledger.len() - 1
+                        });
+                    shield_ledger[index].1 = shield_ledger[index].1.saturating_add(event.amount);
+                    shield_ledger[index].2 =
+                        shield_ledger[index].2.max(shield_ledger[index].1);
+                    assert!(shield_ledger[index].1 <= 4, "Shieldwall must respect the per-unit cap");
+                }
+                BattleEventKind::ShieldAbsorbed => {
+                    let index = shield_ledger
+                        .iter()
+                        .position(|(unit_id, _, _)| *unit_id == event.target_id)
+                        .expect("shield absorption must have a prior grant");
+                    assert!(
+                        shield_ledger[index].1 >= event.amount,
+                        "shield ledger must never underflow"
+                    );
+                    shield_ledger[index].1 -= event.amount;
+                }
+                _ => {}
+            }
+        }
+        assert!(
+            shield_ledger.iter().any(|(_, _, maximum)| *maximum == 4),
+            "an unhit living ally should accumulate to the four-point shield cap"
+        );
+
         let block_index = report
             .events
             .iter()
