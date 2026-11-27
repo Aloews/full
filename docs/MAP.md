@@ -129,7 +129,9 @@ The latest completed full CI run is [46000731001](https://github.com/Aloews/full
 - [x] Player-controlled formation editing: every unit can move between front/back rows and directly select any of the three lanes; positions persist and are used by Rust combat resolution.
 - [x] Automatic recruitment assigns new units to the least-occupied lane in their class-default row, respecting prior player rearrangements; ties select the lower lane.
 - [ ] Formation synergies, stage map and advanced route choices.
-- [ ] Distinct biomes, enemy families, bosses and environmental effects.
+- [x] Add deterministic five-wave stage progression through Mosslight Meadow, Emberfen and Crystal Caverns; biome metadata is included in battle reports and enemy rosters/bosses change by region.
+- [x] Give Emberfen enemies +1 attack and Crystal Caverns enemies +15% max HP; biome-specific route labels and world/battlefield pixel palettes change with the current wave.
+- [ ] Persist authored stage/biome selection as a versioned run map, add multi-step biome route gates, environmental combat hazards and unique boss abilities.
 
 ### S3 — Production-quality player experience
 - [ ] Original pixel sprite/tile production pipeline, complete character strips, effects and bitmap typography.
