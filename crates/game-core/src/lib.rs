@@ -880,18 +880,6 @@ impl GameState {
                 {
                     continue;
                 }
-                if enemy.boss && tick % 3 == 0 {
-                    events.push(BattleEvent {
-                        tick,
-                        kind: BattleEventKind::BossTelegraph,
-                        actor_id: enemy.id,
-                        target_id: 0,
-                        actor: enemy.name.clone(),
-                        target: "front line".to_string(),
-                        amount: 0,
-                        remaining_health: 0,
-                    });
-                }
                 let target_index = allies
                     .iter()
                     .enumerate()
@@ -923,6 +911,18 @@ impl GameState {
                     .saturating_add(telegraph_bonus)
                     .saturating_sub(guard_reduction)
                     .max(1);
+                if enemy.boss && tick % 3 == 0 {
+                    events.push(BattleEvent {
+                        tick,
+                        kind: BattleEventKind::BossTelegraph,
+                        actor_id: enemy.id,
+                        target_id: target.id,
+                        actor: enemy.name.clone(),
+                        target: target.name.clone(),
+                        amount: damage,
+                        remaining_health: target.current_health,
+                    });
+                }
                 allies[target_index].current_health =
                     allies[target_index].current_health.saturating_sub(damage);
                 let remaining = allies[target_index].current_health;
@@ -2307,5 +2307,13 @@ mod tests {
                 .iter()
                 .any(|event| event.kind == BattleEventKind::BossTelegraph)
         );
+        let telegraph = report
+            .events
+            .iter()
+            .find(|event| event.kind == BattleEventKind::BossTelegraph)
+            .unwrap();
+        assert_ne!(telegraph.target_id, 0);
+        assert!(telegraph.amount > 0);
+        assert!(telegraph.remaining_health > 0);
     }
 }

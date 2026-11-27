@@ -27,6 +27,11 @@ if 'data-action="route-choice"' not in client or "choose_route" not in api:
 if "JourneyRouteRequired" not in api or "pending_route" not in client:
     raise SystemExit("route progression gate or browser state is missing")
 
+if "target_id" not in client or "BossTelegraph" not in api + (ROOT / "crates/game-core/src/lib.rs").read_text(encoding="utf-8"):
+    raise SystemExit("boss telegraph target data is missing")
+if "route-trail" not in client:
+    raise SystemExit("route history trail is missing")
+
 if "function playBattleReplay(report)" not in client:
     raise SystemExit("battle replay renderer is missing")
 if 'data-action="journey-choice"' not in client or "resolve_event" not in api:

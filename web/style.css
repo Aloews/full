@@ -721,3 +721,55 @@ button:focus-visible, a:focus-visible {
   .route-option { transition:none; }
   .route-option:hover:not(:disabled) { transform:none; }
 }
+
+.route-trail {
+  position:relative;
+  display:flex;
+  align-items:stretch;
+  gap:0;
+  overflow-x:auto;
+  padding:4px 2px 12px;
+  margin:0 0 11px;
+  scrollbar-width:thin;
+}
+.route-trail-stop {
+  position:relative;
+  display:grid;
+  min-width:82px;
+  flex:1 0 82px;
+  justify-items:center;
+  align-content:start;
+  gap:4px;
+  color:#c6c9a7;
+  text-align:center;
+}
+.route-trail-stop:not(:last-child)::after {
+  content:"";
+  position:absolute;
+  top:12px;
+  left:calc(50% + 17px);
+  width:calc(100% - 34px);
+  border-top:2px dashed #8da36b;
+}
+.route-trail-node {
+  position:relative;
+  z-index:1;
+  display:grid;
+  width:24px;
+  height:24px;
+  place-items:center;
+  border:2px solid #c49a4d;
+  background:#263b35;
+  color:#f3c969;
+  font-size:12px;
+}
+.route-trail-stop small { font-size:8px;color:#8da36b; }
+.route-trail-stop strong {
+  max-width:80px;
+  overflow:hidden;
+  color:#e4dfc3;
+  font:700 8px "Courier New",monospace;
+  text-overflow:ellipsis;
+  text-transform:uppercase;
+  white-space:nowrap;
+}

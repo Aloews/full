@@ -366,10 +366,26 @@ function paintBattlefield(report, eventLimit) {
   }
   if (lastEvent?.kind === 'boss_telegraph') {
     const boss = positions.get(lastEvent.actor_id);
+    const target = positions.get(lastEvent.target_id);
     if (boss) {
       px(boss.x - 4, boss.y - 18, 8, 8, '#b94c3e');
       px(boss.x - 1, boss.y - 16, 2, 4, '#f5e9bd');
       px(boss.x - 1, boss.y - 11, 2, 2, '#f5e9bd');
+    }
+    if (boss && target) {
+      ctx.save();
+      ctx.strokeStyle = '#e6a05d';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 2]);
+      ctx.beginPath();
+      ctx.moveTo(boss.x, boss.y);
+      ctx.lineTo(target.x, target.y);
+      ctx.stroke();
+      ctx.restore();
+      px(target.x - 10, target.y - 10, 20, 2, '#e6a05d');
+      px(target.x - 10, target.y + 8, 20, 2, '#e6a05d');
+      px(target.x - 10, target.y - 10, 2, 20, '#e6a05d');
+      px(target.x + 8, target.y - 10, 2, 20, '#e6a05d');
     }
   }
   ctx.fillStyle = '#f5e9bd'; ctx.font = 'bold 7px monospace';
@@ -426,7 +442,9 @@ function renderBattle(lost) {
     const journeyMarkup = event ? `<section class="journey-event"><span class="eyebrow">JOURNEY ENCOUNTER · WAVE ${event.wave}</span><h3>${esc(event.title)}</h3><p>${esc(event.description)}</p><div class="journey-choices">${event.choices.map((choice, index) => { const costs = { moonwell_shrine: 60, travelling_merchant: 80, wounded_ranger: 50, bandit_ambush: 40 }; const cost = index === 0 ? (costs[event.kind] || 0) : 0; const blocked = game.gold < cost || (event.kind === "wounded_ranger" && index === 0 && game.units.length >= game.unit_limit); return `<button class="journey-choice" data-action="journey-choice" data-index="${index}" ${blocked ? "disabled" : ""}><strong>${esc(choice.label)}</strong><small>${esc(choice.description)}</small></button>`; }).join('')}</div></section>` : '';
     const latestOutcome = !event && game.event_history?.length ? `<div class="journey-outcome"><span class="eyebrow">JOURNEY CONSEQUENCE</span><strong>${esc(game.event_history[game.event_history.length - 1].outcome)}</strong></div>` : '';
     const route = game.pending_route || [];
-    const routeMarkup = !event && route.length ? `<section class="route-fork"><div class="route-heading"><span class="eyebrow">CHOOSE YOUR PATH</span><strong>THE ROAD TO WAVE ${game.wave + 1}</strong></div><div class="route-branches">${route.map((option, index) => `<button class="route-option route-${esc(option.kind)}" data-action="route-choice" data-index="${index}"><span class="route-node">${option.kind === 'rest' ? '✚' : option.kind === 'merchant' ? '◈' : option.kind === 'elite' ? '⚔' : option.kind === 'boss_gate' ? '☠' : '➜'}</span><strong>${esc(option.title)}</strong><small>${esc(option.description)}</small></button>`).join('')}</div></section>` : '';
+    const routeTrail = (game.route_history || []).slice(-4);
+    const routeTrailMarkup = routeTrail.length ? `<div class="route-trail" aria-label="Recent expedition path">${routeTrail.map((entry) => `<div class="route-trail-stop"><span class="route-trail-node route-${esc(entry.kind)}">${entry.kind === 'rest' ? '✚' : entry.kind === 'merchant' ? '◈' : entry.kind === 'elite' ? '⚔' : entry.kind === 'boss_gate' ? '☠' : '➜'}</span><small>W${entry.wave}</small><strong>${esc(entry.kind.replaceAll('_', ' '))}</strong></div>`).join('')}</div>` : '';
+    const routeMarkup = !event && route.length ? `<section class="route-fork"><div class="route-heading"><span class="eyebrow">CHOOSE YOUR PATH</span><strong>THE ROAD TO WAVE ${game.wave + 1}</strong></div>${routeTrailMarkup}<div class="route-branches">${route.map((option, index) => `<button class="route-option route-${esc(option.kind)}" data-action="route-choice" data-index="${index}"><span class="route-node">${option.kind === 'rest' ? '✚' : option.kind === 'merchant' ? '◈' : option.kind === 'elite' ? '⚔' : option.kind === 'boss_gate' ? '☠' : '➜'}</span><strong>${esc(option.title)}</strong><small>${esc(option.description)}</small></button>`).join('')}</div></section>` : '';
     const latestRoute = game.route_history?.[game.route_history.length - 1];
     const routeSelectedMarkup = !event && !route.length && latestRoute && latestRoute.wave === game.wave + 1 ? `<div class="journey-outcome route-selected"><span class="eyebrow">NEXT ROUTE · WAVE ${latestRoute.wave}</span><strong>${esc(latestRoute.outcome)}</strong></div>` : '';
     $('battle-content').innerHTML = `<div class="battle-result ${report.victory ? 'victory' : 'defeat'}"><strong>${report.victory ? 'VICTORY' : 'DEFEAT'}</strong><span>${report.boss ? 'Boss encounter' : `Wave ${report.wave}`} · ${report.rounds || 0} rounds · ${game.units.length} survivors · ${report.route ? esc(report.route.replaceAll('_',' ')) + ' route' : 'main path'}</span><small>${report.victory ? `+${report.gold_awarded} gold` : `-${report.damage_taken} hearts · +${report.gold_awarded} gold`}</small></div><canvas id="battlefield" class="battlefield" width="320" height="128" role="img" aria-label="Pixel-art battlefield showing the last battle formation and combat health"></canvas>${journeyMarkup}${routeMarkup}${routeSelectedMarkup}${latestOutcome}<div class="combat-log"><span class="eyebrow">COMBAT LOG</span>${timeline || '<div class="empty-state">No combat events recorded.</div>'}</div>`;

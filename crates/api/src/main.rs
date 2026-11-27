@@ -163,8 +163,7 @@ fn app_state(data_dir: PathBuf, pool: Option<PgPool>) -> AppState {
                     .ok()
                     .and_then(|bytes| serde_json::from_slice::<GameState>(&bytes).ok())
                 {
-                    Some(mut game) => {
-                        game.migrate_legacy_state();
+                    Some(game) => {
                         runs.insert(game.run_id.clone(), game);
                     }
                     None => eprintln!("Skipping unreadable Slotbound save: {}", path.display()),
@@ -271,16 +270,21 @@ where
                 .await
                 .map_err(|_| ApiError::database())?;
         let mut game = stored.map(|row| row.0).ok_or_else(ApiError::not_found)?;
+        let previous = game.clone();
         game.migrate_legacy_state();
 
         mutation(&mut game).map_err(ApiError::from_game)?;
 
-        sqlx::query("UPDATE slotbound_runs SET state = $2, updated_at = now() WHERE run_id = $1")
-            .bind(&run_id)
-            .bind(sqlx::types::Json(game.clone()))
-            .execute(&mut *transaction)
-            .await
-            .map_err(|_| ApiError::database())?;
+        // Reads use the same path to migrate legacy saves, but avoid rewriting
+        // PostgreSQL rows when neither migration nor the requested action changed state.
+        if game != previous {
+            sqlx::query("UPDATE slotbound_runs SET state = $2, updated_at = now() WHERE run_id = $1")
+                .bind(&run_id)
+                .bind(sqlx::types::Json(game.clone()))
+                .execute(&mut *transaction)
+                .await
+                .map_err(|_| ApiError::database())?;
+        }
 
         transaction
             .commit()
@@ -297,7 +301,7 @@ where
         *game = previous;
         return Err(ApiError::from_game(error));
     }
-    if save_game(&state.data_dir, game).await.is_err() {
+    if *game != previous && save_game(&state.data_dir, game).await.is_err() {
         *game = previous;
         return Err(ApiError::storage());
     }
