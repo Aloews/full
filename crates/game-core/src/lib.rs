@@ -2694,7 +2694,7 @@ mod tests {
 
     #[test]
     fn old_battle_reports_default_to_first_biome_and_legacy_stage() {
-        let mut game = run(753);
+        let game = run(753);
         let mut value = serde_json::to_value(game.battle().unwrap()).unwrap();
         let report = value.as_object_mut().unwrap();
         report.remove("biome");
