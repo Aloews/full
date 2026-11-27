@@ -48,6 +48,10 @@ if 'data-action="formation-row"' not in client or 'data-action="formation-lane"'
     raise SystemExit("player formation controls are not connected")
 if "set_formation" not in api or "FormationRequest" not in api:
     raise SystemExit("formation endpoint does not call the Rust domain")
+if "formation-lanes" not in client or "[0, 1, 2].map" not in client or "aria-pressed" not in client:
+    raise SystemExit("direct three-lane formation selector is missing")
+if "least_occupied_lane" not in core and "lane_occupancy" not in core:
+    raise SystemExit("new unit placement does not account for current lane occupancy")
 
 if "function playBattleReplay(report)" not in client:
     raise SystemExit("battle replay renderer is missing")
