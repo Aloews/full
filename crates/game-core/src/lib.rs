@@ -2312,7 +2312,7 @@ mod tests {
         let selected = game.current_route;
         game.ruleset_version = 3;
         assert!(game.migrate_legacy_state());
-        assert_eq!(game.ruleset_version, 3);
+        assert_eq!(game.ruleset_version, 4);
         assert_eq!(game.current_route, selected);
         assert!(game.pending_event.is_none());
         assert!(!game.migrate_legacy_state());
