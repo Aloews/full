@@ -1782,12 +1782,7 @@ fn default_formation_row(class: UnitClass) -> FormationRow {
     }
 }
 
-fn build_enemy_party(
-    wave: u32,
-    boss_wave: bool,
-    elite: bool,
-    biome: BiomeKind,
-) -> Vec<Combatant> {
+fn build_enemy_party(wave: u32, boss_wave: bool, elite: bool, biome: BiomeKind) -> Vec<Combatant> {
     let extra = ((wave.saturating_sub(1) / 3).min(3)) as usize;
     let count = 2 + extra + if elite { 1 } else { 0 };
     let names = match biome {
@@ -1832,12 +1827,9 @@ fn build_enemy_party(
             };
             let biome_attack = if biome == BiomeKind::Emberfen { 1 } else { 0 };
             let attack = if boss {
-                4u32
-                    .saturating_add(wave / 3)
-                    .saturating_add(biome_attack)
+                4u32.saturating_add(wave / 3).saturating_add(biome_attack)
             } else {
-                2u32
-                    .saturating_add(wave / 5)
+                2u32.saturating_add(wave / 5)
                     .saturating_add(if elite { 1 } else { 0 })
                     .saturating_add(biome_attack)
             };
@@ -2640,7 +2632,6 @@ mod tests {
         assert_eq!(unit.lane, 0);
         assert_eq!(unit.stack, 0);
     }
-
 
     #[test]
     fn biome_and_stage_progression_is_deterministic_across_five_wave_regions() {
