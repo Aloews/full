@@ -278,12 +278,14 @@ where
         // Reads use the same path to migrate legacy saves, but avoid rewriting
         // PostgreSQL rows when neither migration nor the requested action changed state.
         if game != previous {
-            sqlx::query("UPDATE slotbound_runs SET state = $2, updated_at = now() WHERE run_id = $1")
-                .bind(&run_id)
-                .bind(sqlx::types::Json(game.clone()))
-                .execute(&mut *transaction)
-                .await
-                .map_err(|_| ApiError::database())?;
+            sqlx::query(
+                "UPDATE slotbound_runs SET state = $2, updated_at = now() WHERE run_id = $1",
+            )
+            .bind(&run_id)
+            .bind(sqlx::types::Json(game.clone()))
+            .execute(&mut *transaction)
+            .await
+            .map_err(|_| ApiError::database())?;
         }
 
         transaction
